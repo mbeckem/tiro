@@ -1,6 +1,7 @@
 #include "api/internal.hpp"
 
 #include "vm/builtins/modules.hpp"
+#include "vm/heap/chunks.hpp"
 #include "vm/modules/load.hpp"
 #include "vm/modules/registry.hpp"
 #include "vm/objects/all.hpp"
@@ -26,8 +27,11 @@ void tiro_vm_settings_init(tiro_vm_settings_t* settings) {
 tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings, tiro_error_t* err) {
     return entry_point(err, nullptr, [&] {
         auto& raw_settings = settings ? *settings : default_settings;
-
         tiro::vm::ContextSettings internal_settings;
+
+        if (auto page_size = raw_settings.page_size) // 0 -> leave at default value
+            internal_settings.page_size = page_size;
+
         if (raw_settings.print_stdout) {
             auto func = raw_settings.print_stdout;
             auto userdata = raw_settings.userdata;
@@ -49,6 +53,12 @@ void* tiro_vm_userdata(tiro_vm_t vm) {
         return nullptr;
 
     return vm->external_userdata;
+}
+
+size_t tiro_vm_page_size(tiro_vm_t vm) {
+    if (!vm)
+        return 0;
+    return vm->ctx.heap().layout().page_size;
 }
 
 void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {

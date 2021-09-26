@@ -42,7 +42,6 @@ struct ContextSettings {
     // TODO: Make this an option.
     DefaultHeapAllocator alloc;
 
-    // TODO: Make this an option.
     size_t page_size = Page::default_size_bytes;
 };
 

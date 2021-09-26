@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Functions and type definitions for working with the tiro virtual machine.
- * 
+ *
  */
 
 #include "tiro/def.h"
@@ -20,6 +20,18 @@ extern "C" {
  * Use tiro_vm_settings_init to initialize this struct to default values.
  */
 typedef struct tiro_vm_settings {
+    /**
+     * The size (in bytes) of heap pages allocated by the virtual machine for the storage of most objects.
+     * Must be a power of two between 2^16 and 2^24 or zero to use the default value.
+     *
+     * Smaller pages waste less memory if only small workloads are to be expected.
+     * Larger page sizes can be more performant because fewer chunks need to be allocated for the same number of objects.
+     *
+     * Note that objects that do not fit into a single page reasonably well will be
+     * allocated "on the side" using a separate allocation.
+     */
+    size_t page_size;
+
     /**
      * Arbitrary user data that will be accessible by calling `tiro_vm_userdata()`. This value
      * is never interpreted in any way. This value is NULL by default.
@@ -70,6 +82,11 @@ TIRO_API void tiro_vm_free(tiro_vm_t vm);
  * Returns the userdata pointer that was passed in the settings struct during vm construction.
  */
 TIRO_API void* tiro_vm_userdata(tiro_vm_t vm);
+
+/**
+ * Returns the vm's page size.
+ */
+TIRO_API size_t tiro_vm_page_size(tiro_vm_t vm);
 
 /**
  * Load the default modules provided by the runtime.

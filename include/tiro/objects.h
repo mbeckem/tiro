@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Functions and type definitions for working with objects of the tiro virtual machine.
- * 
+ *
  */
 
 #include "tiro/def.h"
@@ -412,7 +412,7 @@ typedef struct tiro_native_type {
 
     /**
      * This function will be invoked exactly once for each object when it is being garbage collected.
-     * This member may be NULL if no finalization is needed.
+     * It may be NULL if no finalization is needed.
      *
      * \param data The address to the native object's data. Any resourced owned by `data` should be freed.
      * \param size The size of the native object, in bytes.

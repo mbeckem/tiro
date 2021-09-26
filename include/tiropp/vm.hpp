@@ -16,6 +16,16 @@ namespace tiro {
 
 /// Settings to control the construction of a virtual machine.
 struct vm_settings {
+    /// The size (in bytes) of heap pages allocated by the virtual machine for the storage of most objects.
+    /// Must be a power of two between 2^16 and 2^24 or zero to use the default value.
+    ///
+    /// Smaller pages waste less memory if only small workloads are to be expected.
+    /// Larger page sizes can be more performant because fewer chunks need to be allocated for the same number of objects.
+    ///
+    /// Note that objects that do not fit into a single page reasonably well will be
+    /// allocated "on the side" using a separate allocation.
+    size_t page_size = 0;
+
     /// Invoked by the vm to print a message to the standard output, e.g. when
     /// `std.print(...)` was called. The vm will print to the process's standard output
     /// when this function is not set.
@@ -33,6 +43,9 @@ public:
 
     vm(vm&&) noexcept = delete;
     vm& operator=(vm&&) noexcept = delete;
+
+    /// Returns the vm's page size, in bytes.
+    size_t page_size() const { return tiro_vm_page_size(raw_vm_); }
 
     const std::any& userdata() const { return userdata_; }
     std::any& userdata() { return userdata_; }
@@ -68,6 +81,7 @@ private:
     tiro_vm_t construct_vm() {
         tiro_vm_settings_t raw_settings;
         tiro_vm_settings_init(&raw_settings);
+        raw_settings.page_size = settings_.page_size;
         raw_settings.userdata = this;
 
         if (settings_.print_stdout) {

@@ -46,6 +46,65 @@ static void sync_call(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t args, tiro
         throw std::runtime_error("test function did not complete synchronously");
 }
 
+TEST_CASE("Virtual machine should use a default page size", "[api]") {
+    tiro_vm_settings_t settings;
+    tiro_vm_settings_init(&settings);
+    REQUIRE(settings.page_size == 0);
+
+    struct Holder {
+        tiro_vm_t vm = nullptr;
+        ~Holder() { tiro_vm_free(vm); }
+    };
+
+    SECTION("Default value when null settings") {
+        Holder holder;
+        settings.page_size = 0;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(nullptr, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_page_size(vm) == 1 << 20);
+    }
+
+    SECTION("Default value when not set") {
+        Holder holder;
+        settings.page_size = 0;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_page_size(vm) == 1 << 20);
+    }
+
+    SECTION("Custom value is accepted") {
+        Holder holder;
+        settings.page_size = 1 << 17;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_page_size(vm) == 1 << 17);
+    }
+
+    SECTION("Error when too small") {
+        Holder holder;
+        settings.page_size = 1 << 15;
+        tiro_errc_t errc = TIRO_OK;
+        holder.vm = tiro_vm_new(&settings, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Error when too large") {
+        Holder holder;
+        settings.page_size = 1 << 30;
+        tiro_errc_t errc = TIRO_OK;
+        holder.vm = tiro_vm_new(&settings, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Error when not a power of two") {
+        Holder holder;
+        settings.page_size = 1 + (1 << 20);
+        tiro_errc_t errc = TIRO_OK;
+        holder.vm = tiro_vm_new(&settings, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+}
+
 TEST_CASE("Virtual machine supports userdata", "[api]") {
     tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);
@@ -55,6 +114,13 @@ TEST_CASE("Virtual machine supports userdata", "[api]") {
         tiro_vm_t vm = nullptr;
         ~Holder() { tiro_vm_free(vm); }
     };
+
+    SECTION("Null when null settings") {
+        Holder holder;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(nullptr, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_userdata(vm) == nullptr);
+    }
 
     SECTION("Null when not set") {
         Holder holder;
