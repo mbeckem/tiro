@@ -142,7 +142,7 @@ tiro::compiled_module compile(std::string_view content, const Options& options) 
     settings.enable_dump_bytecode = options.dump_bytecode;
     settings.message_callback = [](tiro::severity sev, uint32_t line, uint32_t column,
                                     std::string_view message) {
-        fmt::print("{} {}:{}:{}\n", to_string(sev), line, column, message);
+        fmt::print("{} {}:{}: {}\n", to_string(sev), line, column, message);
     };
 
     std::exception_ptr error;
