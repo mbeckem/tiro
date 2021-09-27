@@ -1128,7 +1128,7 @@ again:
         return flags;
     };
 
-    auto missing_args = [&](u32 actual, u32 required) {
+    auto missing_args = [&](u32 required, u32 actual) {
         return unwind(coro, TIRO_FORMAT_EXCEPTION(ctx(),
                                 "insufficient number of function arguments (need {}, but have {})",
                                 required, actual));
