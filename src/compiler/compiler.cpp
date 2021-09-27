@@ -16,40 +16,55 @@
 
 namespace tiro {
 
-Compiler::Compiler(std::string file_name, std::string file_content, const CompilerOptions& options)
-    : options_(options)
-    , file_name_(std::move(file_name))
-    , file_content_(std::move(file_content))
-    , file_name_intern_(strings_.insert(file_name_))
-    , source_map_(file_content_) {}
+Compiler::Compiler(const CompilerOptions& options)
+    : options_(options) {}
+
+void Compiler::add_file(std::string filename, std::string content) {
+    if (started_)
+        TIRO_ERROR("compiler already ran on this module");
+
+    sources_.insert(std::move(filename), std::move(content));
+}
 
 CompilerResult Compiler::run() {
-    CompilerResult result;
+    if (started_)
+        TIRO_ERROR("compiler already ran on this module");
+    started_ = true;
 
+    CompilerResult result;
     if (!options_.parse) {
         result.success = true;
         return result;
     }
 
     auto ir_module = [&]() -> std::optional<ir::Module> {
-        std::vector<SyntaxTree> files;
-        {
-            // TODO: Many files
-            files.push_back(parse_file(file_content_));
-        }
+        struct SyntaxTreeEntry {
+            SourceId id;
+            SyntaxTree tree;
+        };
+
+        std::vector<SyntaxTreeEntry> files;
+        files.reserve(sources_.size());
+        for (auto file_id : sources_.ids())
+            files.emplace_back(file_id, parse_file(sources_.content(file_id)));
 
         if (options_.keep_cst) {
             std::string buffer;
-            for (const auto& file : files) {
-                buffer += "# Filename\n"; // TODO
-                buffer += dump(file, source_map_);
+            for (const auto& entry : files) {
+                buffer += fmt::format("# Filename: {}", sources_.filename(entry.id));
+                buffer += dump(entry.tree, sources_.source_lines(entry.id));
             }
             result.cst = std::move(buffer);
         }
 
-        auto ast = construct_ast(files.at(0)); // TODO many files
-        if (options_.keep_ast)
-            result.ast = dump(ast.get(), strings_, source_map_);
+        auto ast = build_module_ast(files, strings_, diag_);
+        if (!ast || !is_instance<AstModule>(ast))
+            TIRO_ERROR("failed to build a module ast");
+
+        if (options_.keep_ast) {
+            TIRO_NOT_IMPLEMENTED(); // FIXME
+            // result.ast = dump(ast.get(), strings_, source_map_);
+        }
 
         if (!options_.analyze) {
             result.success = true;
@@ -134,13 +149,7 @@ SyntaxTree Compiler::parse_file(std::string_view source) {
     return parse(tokens);
 }
 
-AstPtr<AstFile> Compiler::construct_ast(const SyntaxTree& tree) {
-    auto ast = build_file_ast(tree, strings_, diag_);
-    TIRO_CHECK(ast, "Failed to construct the file's ast.");
-    return ast;
-}
-
-std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {
+std::optional<SemanticAst> Compiler::analyze(NotNull<AstModule*> root) {
     if (has_errors())
         return {};
 

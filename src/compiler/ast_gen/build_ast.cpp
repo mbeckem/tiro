@@ -7,6 +7,7 @@
 #include "compiler/ast_gen/operators.hpp"
 #include "compiler/ast_gen/typed_nodes.hpp"
 #include "compiler/diagnostics.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/syntax/grammar/literals.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
 #include "compiler/syntax/syntax_type.hpp"
@@ -54,8 +55,9 @@ private:
 /// Implements the syntax tree -> abstract syntax tree transformation.
 class AstBuilder {
 public:
-    explicit AstBuilder(const SyntaxTree& tree, BuilderState& state)
-        : tree_(tree)
+    explicit AstBuilder(SourceId source_id, const SyntaxTree& tree, BuilderState& state)
+        : source_id_(source_id)
+        , tree_(tree)
         , state_(state) {}
 
     template<typename Node, typename Func>
@@ -179,52 +181,58 @@ private:
     template<typename T, typename... Args>
     NotNull<AstPtr<T>> make_node(SyntaxNodeId syntax_id, Args&&... args) {
         const auto& syntax_data = tree_[syntax_id];
-        return make_node<T>(syntax_data.range(), std::forward<Args>(args)...);
+        AbsoluteSourceRange range(source_id_, syntax_data.range());
+        return make_node<T>(range, std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args>
-    NotNull<AstPtr<T>> make_node(const SourceRange& range, Args&&... args) {
+    NotNull<AstPtr<T>> make_node(const AbsoluteSourceRange& range, Args&&... args) {
         auto node = std::make_unique<T>(std::forward<Args>(args)...);
         node->id(state_.next_node_id());
-        node->range(range);
+        node->range(range.range()); // FIXME absolute
         return TIRO_NN(std::move(node));
     }
 
 private:
+    SourceId source_id_;
     const SyntaxTree& tree_;
     BuilderState& state_;
 };
 
 } // namespace
 
-static AstPtr<AstFile> build_file_ast(const SyntaxTree& file_tree, BuilderState& state) {
-    AstBuilder builder(file_tree, state);
+static AstPtr<AstFile>
+build_file_ast(SourceId source_id, const SyntaxTree& file_tree, BuilderState& state) {
+    AstBuilder builder(source_id, file_tree, state);
     return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
 }
 
-static AstPtr<AstStmt> build_item_ast(const SyntaxTree& item_tree, BuilderState& state) {
-    AstBuilder builder(item_tree, state);
+static AstPtr<AstStmt>
+build_item_ast(SourceId source_id, const SyntaxTree& item_tree, BuilderState& state) {
+    AstBuilder builder(source_id, item_tree, state);
     return builder.build<AstStmt>([&](auto node_id) { return builder.build_item(node_id); });
 }
 
-static AstPtr<AstStmt> build_stmt_ast(const SyntaxTree& stmt_tree, BuilderState& state) {
-    AstBuilder builder(stmt_tree, state);
+static AstPtr<AstStmt>
+build_stmt_ast(SourceId source_id, const SyntaxTree& stmt_tree, BuilderState& state) {
+    AstBuilder builder(source_id, stmt_tree, state);
     return builder.build<AstStmt>([&](auto node_id) { return builder.build_stmt(node_id); });
 }
 
-static AstPtr<AstExpr> build_expr_ast(const SyntaxTree& expr_tree, BuilderState& state) {
-    AstBuilder builder(expr_tree, state);
+static AstPtr<AstExpr>
+build_expr_ast(SourceId source_id, const SyntaxTree& expr_tree, BuilderState& state) {
+    AstBuilder builder(source_id, expr_tree, state);
     return builder.build<AstExpr>([&](auto node_id) { return builder.build_expr(node_id); });
 }
 
 AstPtr<AstModule>
-build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag) {
+build_module_ast(Span<const SyntaxTreeEntry> files, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
     AstPtr<AstModule> mod = std::make_unique<AstModule>();
     mod->id(state.next_node_id());
 
-    for (auto& file_tree : files) {
-        auto file = build_file_ast(file_tree, state);
+    for (auto& entry : files) {
+        auto file = build_file_ast(entry.id, entry.tree, state);
         mod->files().append(std::move(file));
     }
     return mod;
@@ -233,25 +241,25 @@ build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_file_ast(file_tree, state);
+    return build_file_ast(SourceId(), file_tree, state);
 }
 
 AstPtr<AstStmt>
 build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_item_ast(item_tree, state);
+    return build_item_ast(SourceId(), item_tree, state);
 }
 
 AstPtr<AstStmt>
 build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_stmt_ast(stmt_tree, state);
+    return build_stmt_ast(SourceId(), stmt_tree, state);
 }
 
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_expr_ast(expr_tree, state);
+    return build_expr_ast(SourceId(), expr_tree, state);
 }
 
 template<typename Node, typename Func>

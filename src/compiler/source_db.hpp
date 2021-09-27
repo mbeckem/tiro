@@ -57,6 +57,12 @@ public:
     SourceDb(const SourceDb&) = delete;
     SourceDb& operator=(const SourceDb&) = delete;
 
+    /// Returns a range over the available source file ids in this db.
+    auto ids() const { return files_.keys(); }
+
+    /// Returns the number of files in this db.
+    size_t size() const { return files_.size(); }
+
     /// Inserts a new source file with the given name and content.
     /// Returns the file's unique id.
     SourceId insert(std::string filename, std::string content);
@@ -70,6 +76,11 @@ public:
     /// Note: the string view is stable in memory.
     /// \pre `id` must be valid.
     std::string_view content(SourceId id) const;
+
+    /// Returns the source line mappings for the given file.
+    /// Note: the reference is stable in memory.
+    /// \pre `id` must be valid.
+    const SourceMap& source_lines(SourceId id) const;
 
     /// Returns the cursor position for the given offset in the file with the provided id.
     /// \pre `id` must be valid.

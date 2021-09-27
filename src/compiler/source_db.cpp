@@ -46,6 +46,10 @@ std::string_view SourceDb::content(SourceId id) const {
     return files_[id]->content;
 }
 
+const SourceMap& SourceDb::source_lines(SourceId id) const {
+    return files_[id]->map;
+}
+
 CursorPosition SourceDb::cursor_pos(SourceId id, u32 offset) const {
     return files_[id]->map.cursor_pos(offset);
 }
