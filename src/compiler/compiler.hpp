@@ -63,7 +63,7 @@ public:
 
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source range.
-    CursorPosition cursor_pos(const SourceRange& range) const;
+    CursorPosition cursor_pos(const AbsoluteSourceRange& range) const;
 
 private:
     SyntaxTree parse_file(std::string_view source);

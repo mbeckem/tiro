@@ -38,11 +38,6 @@ CompilerResult Compiler::run() {
     }
 
     auto ir_module = [&]() -> std::optional<ir::Module> {
-        struct SyntaxTreeEntry {
-            SourceId id;
-            SyntaxTree tree;
-        };
-
         std::vector<SyntaxTreeEntry> files;
         files.reserve(sources_.size());
         for (auto file_id : sources_.ids())
@@ -109,8 +104,8 @@ CompilerResult Compiler::run() {
     return result;
 }
 
-CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
-    return source_map_.cursor_pos(range.begin());
+CursorPosition Compiler::cursor_pos(const AbsoluteSourceRange& range) const {
+    return sources_.cursor_pos(range.id(), range.range().begin());
 }
 
 SyntaxTree Compiler::parse_file(std::string_view source) {

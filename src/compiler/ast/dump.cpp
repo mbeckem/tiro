@@ -2,6 +2,7 @@
 
 #include "compiler/ast/ast.hpp"
 #include "compiler/output/json.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/utils.hpp"
 
 #include <nlohmann/json.hpp>
@@ -9,15 +10,15 @@
 namespace tiro {
 
 static ordered_json
-map_node(const AstNode* raw_node, const StringTable& strings, const SourceMap& map);
+map_node(const AstNode* raw_node, const StringTable& strings, const SourceDb& sources);
 
 namespace {
 
 class NodeMapper final {
 public:
-    explicit NodeMapper(const StringTable& strings, const SourceMap& map)
+    explicit NodeMapper(const StringTable& strings, const SourceDb& sources)
         : strings_(strings)
-        , map_(map) {}
+        , sources_(sources) {}
 
     ordered_json map(const AstNode* node);
 
@@ -33,7 +34,7 @@ private:
         return ordered_json(strings_.value(str));
     }
 
-    ordered_json format_value(const AstNode* node) { return map_node(node, strings_, map_); }
+    ordered_json format_value(const AstNode* node) { return map_node(node, strings_, sources_); }
 
     template<typename T>
     ordered_json format_value(const AstNodeList<T>& list) {
@@ -76,15 +77,15 @@ private:
 
 private:
     const StringTable& strings_;
-    const SourceMap& map_;
+    const SourceDb& sources_;
     ordered_json result_;
 };
 
 }; // namespace
 
 static ordered_json
-map_node(const AstNode* raw_node, const StringTable& strings, const SourceMap& map) {
-    NodeMapper mapper(strings, map);
+map_node(const AstNode* raw_node, const StringTable& strings, const SourceDb& sources) {
+    NodeMapper mapper(strings, sources);
     return mapper.map(raw_node);
 }
 
@@ -95,7 +96,7 @@ ordered_json NodeMapper::map(const AstNode* raw_node) {
     result_ = ordered_json::object();
 
     auto node = TIRO_NN(raw_node);
-    auto [start, end] = map_.cursor_pos(node->range());
+    auto [start, end] = sources_.cursor_pos(node->range());
 
     visit_field("type", node->type());
     visit_field("id", node->id());
@@ -400,8 +401,8 @@ void NodeMapper::visit_field(std::string_view name, T&& data) {
     result_.emplace(std::string(name), format_value(std::forward<T>(data)));
 }
 
-std::string dump(const AstNode* node, const StringTable& strings, const SourceMap& map) {
-    ordered_json simplified = map_node(node, strings, map);
+std::string dump(const AstNode* node, const StringTable& strings, const SourceDb& sources) {
+    ordered_json simplified = map_node(node, strings, sources);
     return simplified.dump(4);
 }
 

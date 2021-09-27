@@ -26,7 +26,7 @@ public:
 
     InstId compile(const Value& value);
 
-    SourceRange range() const {
+    AbsoluteSourceRange range() const {
         return {}; // TODO: Needed for diagnostics
     }
 

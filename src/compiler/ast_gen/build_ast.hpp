@@ -5,7 +5,9 @@
 #include "common/fwd.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/fwd.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/syntax/fwd.hpp"
+#include "compiler/syntax/syntax_tree.hpp"
 
 namespace tiro {
 
