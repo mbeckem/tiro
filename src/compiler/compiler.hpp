@@ -48,7 +48,7 @@ struct CompilerResult {
 
 class Compiler final {
 public:
-    explicit Compiler(const CompilerOptions& options = {});
+    explicit Compiler(std::string module_name, const CompilerOptions& options = {});
 
     void add_file(std::string filename, std::string content);
 
@@ -77,6 +77,7 @@ private:
 private:
     CompilerOptions options_;
     StringTable strings_;
+    std::string module_name_;
     SourceDb sources_;
     Diagnostics diag_;
     bool started_ = false;

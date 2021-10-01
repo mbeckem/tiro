@@ -9,7 +9,8 @@ test_compile_impl(std::string_view module_name, std::string_view source, bool de
     opts.keep_bytecode = details;
     opts.keep_ir = details;
 
-    Compiler compiler(std::string(module_name), std::string(source), opts);
+    Compiler compiler(std::string(module_name), opts);
+    compiler.add_file("test", std::string(source));
 
     auto report = [&]() {
         fmt::memory_buffer buf;

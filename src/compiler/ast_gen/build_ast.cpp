@@ -18,8 +18,6 @@
 
 namespace tiro {
 
-static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
-
 namespace {
 
 struct BuilderState {
@@ -134,9 +132,15 @@ private:
         return substring(tree_.source(), token.range());
     }
 
+    void emit_errors() {
+        for (const auto& error : tree_.errors()) {
+            diag().report(Diagnostics::Error, make_absolute(error.range()), error.message());
+        }
+    }
+
     auto diag_sink(const SourceRange& range) const {
-        return [&diag = this->diag(), range](std::string_view error_message) {
-            diag.report(Diagnostics::Error, range, std::string(error_message));
+        return [this, range](std::string_view error_message) {
+            diag().report(Diagnostics::Error, make_absolute(range), std::string(error_message));
         };
     }
 
@@ -181,16 +185,19 @@ private:
     template<typename T, typename... Args>
     NotNull<AstPtr<T>> make_node(SyntaxNodeId syntax_id, Args&&... args) {
         const auto& syntax_data = tree_[syntax_id];
-        AbsoluteSourceRange range(source_id_, syntax_data.range());
-        return make_node<T>(range, std::forward<Args>(args)...);
+        return make_node<T>(syntax_data.range(), std::forward<Args>(args)...);
     }
 
     template<typename T, typename... Args>
-    NotNull<AstPtr<T>> make_node(const AbsoluteSourceRange& range, Args&&... args) {
+    NotNull<AstPtr<T>> make_node(const SourceRange& range, Args&&... args) {
         auto node = std::make_unique<T>(std::forward<Args>(args)...);
         node->id(state_.next_node_id());
-        node->range(range.range()); // FIXME absolute
+        node->range(make_absolute(range));
         return TIRO_NN(std::move(node));
+    }
+
+    AbsoluteSourceRange make_absolute(const SourceRange& range) const {
+        return AbsoluteSourceRange(source_id_, range);
     }
 
 private:
@@ -264,7 +271,7 @@ build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& d
 
 template<typename Node, typename Func>
 AstPtr<Node> AstBuilder::build(Func&& fn) {
-    emit_errors(tree_, diag());
+    emit_errors();
 
     SyntaxNodeId node_id = get_syntax_node();
     if (node_id) {
@@ -424,8 +431,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(SyntaxNodeId node_id) {
         return make_node<AstFloatLiteral>(node_id, *value);
     }
     default:
-        diag().reportf(Diagnostics::Error, token.range(), "unexpected {} in literal expression",
-            to_description(token.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(token.range()),
+            "unexpected {} in literal expression", to_description(token.type()));
         return error_expr(node_id);
     }
 }
@@ -509,8 +516,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_binary_expr(SyntaxNodeId node_id) {
     auto lhs = build_expr(node->lhs);
     auto op = to_binary_operator(node->op.type());
     if (!op) {
-        diag().reportf(Diagnostics::Error, node->op.range(), "unexpected binary operator {}",
-            to_description(node->op.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(node->op.range()),
+            "unexpected binary operator {}", to_description(node->op.type()));
         return error_expr(node_id);
     }
     auto rhs = build_expr(node->rhs);
@@ -528,8 +535,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_unary_expr(SyntaxNodeId node_id) {
 
     auto op = to_unary_operator(node->op.type());
     if (!op) {
-        diag().reportf(Diagnostics::Error, node->op.range(), "unexpected unary operator {}",
-            to_description(node->op.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(node->op.range()),
+            "unexpected unary operator {}", to_description(node->op.type()));
         return error_expr(node_id);
     }
     auto inner = build_expr(node->expr);
@@ -762,12 +769,13 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(SyntaxNodeId node_id) {
 
     auto& [access_type, args] = *arglist;
     if (access_type != AccessType::Normal) {
-        diag().report(
-            Diagnostics::Error, range(node_id), "assert only supports normal call syntax");
+        diag().report(Diagnostics::Error, make_absolute(range(node_id)),
+            "assert only supports normal call syntax");
         return error_stmt(node_id);
     }
     if (!(args.size() == 1 || args.size() == 2)) {
-        diag().report(Diagnostics::Error, range(node_id), "assert requires 1 or 2 arguments");
+        diag().report(
+            Diagnostics::Error, make_absolute(range(node_id)), "assert requires 1 or 2 arguments");
         return error_stmt(node_id);
     }
 
@@ -1162,7 +1170,8 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNod
         switch (modifier.type()) {
         case TokenType::KwExport:
             if (has_export)
-                diag().report(Diagnostics::Error, modifier.range(), "redundant export modifier");
+                diag().report(Diagnostics::Error, make_absolute(modifier.range()),
+                    "redundant export modifier");
             has_export = true;
             modifiers.append(make_node<AstExportModifier>(modifier.range()));
             break;
@@ -1192,12 +1201,6 @@ NotNull<AstPtr<AstExpr>> AstBuilder::error_expr(SyntaxNodeId node_id) {
 
 NotNull<AstPtr<AstStmt>> AstBuilder::error_stmt(SyntaxNodeId node_id) {
     return make_node<AstErrorStmt>(node_id);
-}
-
-void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
-    for (const auto& error : tree.errors()) {
-        diag.report(Diagnostics::Error, error.range(), error.message());
-    }
 }
 
 } // namespace tiro

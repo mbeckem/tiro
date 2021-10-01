@@ -14,6 +14,10 @@ namespace tiro {
 struct SyntaxTreeEntry {
     SourceId id;
     SyntaxTree tree;
+
+    SyntaxTreeEntry(SourceId id_, SyntaxTree tree_)
+        : id(id_)
+        , tree(std::move(tree_)) {}
 };
 
 AstPtr<AstModule>

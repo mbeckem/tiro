@@ -16,8 +16,9 @@
 
 namespace tiro {
 
-Compiler::Compiler(const CompilerOptions& options)
-    : options_(options) {}
+Compiler::Compiler(std::string module_name, const CompilerOptions& options)
+    : options_(options)
+    , module_name_(std::move(module_name)) {}
 
 void Compiler::add_file(std::string filename, std::string content) {
     if (started_)
