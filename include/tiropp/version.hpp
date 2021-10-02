@@ -9,13 +9,29 @@ namespace tiro {
 
 /// Represents a library version.
 struct version {
+    /// The full version number (see TIRO_MAKE_VERSION).
     uint32_t version_number = 0;
+
+    /// The major version extracted from the version number.
     uint32_t major = 0;
+
+    /// The minor version extracted from the version number.
     uint32_t minor = 0;
+
+    /// The patch version extracted from the version number.
     uint32_t patch = 0;
-    const char* version_string = "";
+
+    /// The library's version as a string.
+    /// Points into static storage if this object was returned by this libray.
+    const char* version = "";
+
+    /// The library's source id (build system identifier).
+    /// Points into static storage if this object was returned by this libray.
     const char* source_id = "";
-    const char* full_version_string = "";
+
+    /// The library's full version as a string.
+    /// Points into static storage if this object was returned by this libray.
+    const char* full_version = "";
 };
 
 /// Returns the compile time version of the tiro library, i.e. the version
@@ -26,9 +42,9 @@ inline constexpr version compile_time_version() {
     v.major = v.version_number / 1000000;
     v.minor = (v.version_number % 1000000) / 1000;
     v.patch = (v.version_number % 1000);
-    v.version_string = TIRO_VERSION;
+    v.version = TIRO_VERSION;
     v.source_id = TIRO_SOURCE_ID;
-    v.full_version_string = TIRO_FULL_VERSION;
+    v.full_version = TIRO_FULL_VERSION;
     return v;
 }
 
@@ -40,9 +56,9 @@ inline version runtime_version() {
     v.major = v.version_number / 1000000;
     v.minor = (v.version_number % 1000000) / 1000;
     v.patch = (v.version_number % 1000);
-    v.version_string = tiro_version();
+    v.version = tiro_version();
     v.source_id = tiro_source_id();
-    v.full_version_string = tiro_full_version();
+    v.full_version = tiro_full_version();
     return v;
 }
 

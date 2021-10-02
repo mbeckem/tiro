@@ -21,25 +21,60 @@ namespace tiro {
 
 /// Represents the kind of a value.
 enum class value_kind : int {
+    /// Value is null
     null = TIRO_KIND_NULL,
+
+    /// Value is true or false
     boolean = TIRO_KIND_BOOLEAN,
+
+    /// Value is an integer
     integer = TIRO_KIND_INTEGER,
+
+    /// Value is a floating point number
     float_ = TIRO_KIND_FLOAT,
+
+    /// Value is a string
     string = TIRO_KIND_STRING,
+
+    /// Value is a function
     function = TIRO_KIND_FUNCTION,
+
+    /// Value is a tuple
     tuple = TIRO_KIND_TUPLE,
+
+    /// Value is a record
     record = TIRO_KIND_RECORD,
+
+    /// Value is an array
     array = TIRO_KIND_ARRAY,
+
+    /// Value is a result
     result = TIRO_KIND_RESULT,
+
+    /// Value is an exception
     exception = TIRO_KIND_EXCEPTION,
+
+    /// Value is a coroutine
     coroutine = TIRO_KIND_COROUTINE,
+
+    /// Value is a module
     module = TIRO_KIND_MODULE,
+
+    /// Value is a type
     type = TIRO_KIND_TYPE,
+
+    /// Value is a native object
     native = TIRO_KIND_NATIVE,
+
+    /// Value is some other, internal type
     internal = TIRO_KIND_INTERNAL,
+
+    /// Invalid value (e.g. null handle)
     invalid = TIRO_KIND_INVALID,
 };
 
+/// Returns the string representation of the given value kind.
+/// The returned string is allocated in static storage.
 inline const char* to_string(value_kind k) {
     return tiro_kind_str(static_cast<tiro_kind>(k));
 }
@@ -125,6 +160,7 @@ public:
     }
 
     /// Converts this value to the target type.
+    /// @{
     template<typename T>
     T as() const& {
         static_assert(std::is_base_of_v<handle, T>, "target type must be derived from handle.");
@@ -136,6 +172,7 @@ public:
         static_assert(std::is_base_of_v<handle, T>, "target type must be derived from handle.");
         return T(std::move(*this));
     }
+    /// @}
 
     /// Returns the type of the value currently held by this handle.
     inline type type_of() const;
@@ -226,6 +263,7 @@ inline bool same(vm& v, const handle& a, const handle& b) {
     return tiro_value_same(v.raw_vm(), a.raw_handle(), b.raw_handle());
 }
 
+/// Refers to a null value.
 class null final : public handle {
 public:
     explicit null(handle h)
@@ -246,6 +284,7 @@ inline null make_null(vm& v) {
     return null(std::move(result));
 }
 
+/// Refers to a boolean value (true or false).
 class boolean final : public handle {
 public:
     explicit boolean(handle h)
@@ -257,6 +296,7 @@ public:
     boolean& operator=(const boolean&) = default;
     boolean& operator=(boolean&&) noexcept = default;
 
+    /// Returns the value of this boolean.
     bool value() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_boolean_value(raw_vm(), raw_handle());
@@ -271,6 +311,7 @@ inline boolean make_boolean(vm& v, bool value) {
     return boolean(std::move(result));
 }
 
+/// Refers to an integer value.
 class integer final : public handle {
 public:
     explicit integer(handle h)
@@ -282,6 +323,7 @@ public:
     integer& operator=(const integer&) = default;
     integer& operator=(integer&&) noexcept = default;
 
+    /// Returns the value of this integer.
     int64_t value() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_integer_value(raw_vm(), raw_handle());
@@ -296,6 +338,7 @@ inline integer make_integer(vm& v, int64_t value) {
     return integer(std::move(result));
 }
 
+/// Refers to a float value.
 class float_ final : public handle {
 public:
     explicit float_(handle h)
@@ -307,6 +350,7 @@ public:
     float_& operator=(const float_&) = default;
     float_& operator=(float_&&) noexcept = default;
 
+    /// Returns the value of this float.
     double value() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_float_value(raw_vm(), raw_handle());
@@ -321,6 +365,7 @@ inline float_ make_float(vm& v, double value) {
     return float_(std::move(result));
 }
 
+/// Refers to a string value.
 class string final : public handle {
 public:
     explicit string(handle h)
@@ -358,6 +403,7 @@ inline string make_string(vm& v, std::string_view value) {
     return string(std::move(result));
 }
 
+/// Refers to a function value.
 class function final : public handle {
 public:
     explicit function(handle h)
@@ -370,6 +416,8 @@ public:
     function& operator=(function&&) noexcept = default;
 };
 
+/// Represents the call frame of a synchronous function call.
+/// References to sync_frames are only valid from within the surrounding function call.
 class sync_frame final {
 public:
     sync_frame(tiro_vm_t raw_vm, tiro_sync_frame_t raw_frame)
@@ -382,8 +430,10 @@ public:
     sync_frame(const sync_frame&) = delete;
     sync_frame& operator=(const sync_frame&) = delete;
 
+    /// Returns the number of arguments passed to this function call.
     size_t argc() const { return tiro_sync_frame_argc(raw_frame_); }
 
+    /// Returns the argument at the given index (`0 <= index < argc`).
     handle arg(size_t index) const {
         handle result(raw_vm_);
         detail::check_handles(raw_vm_, result);
@@ -391,6 +441,7 @@ public:
         return result;
     }
 
+    /// Returns the closure value referenced by this function (if any).
     handle closure() const {
         handle result(raw_vm_);
         detail::check_handles(raw_vm_, result);
@@ -408,6 +459,19 @@ private:
     tiro_sync_frame_t raw_frame_;
 };
 
+/// Constructs a new function object with the given name that will invoke the native function when called.
+/// `argc` is the number of arguments required for calling `Function`.
+/// `closure` may be an arbitrary value that will be passed to the function on every invocation.
+///
+/// Synchronous functions are appropriate for simple, nonblocking operations.
+/// Use asynchronous functions for long running operations (such as network I/O) instead.
+///
+/// `Function` will receive two arguments when invoked:
+///     - A reference to the vm (`vm&`).
+///     - A reference to the call frame (`sync_frame&`).
+///       Use this reference to access call arguments.
+/// Both references may only be used during the function call.
+/// The function should return its return value as a handle.
 template<auto Function>
 function make_sync_function(vm& v, const string& name, size_t argc, const handle& closure) {
     constexpr tiro_sync_function_t func = [](tiro_vm_t raw_vm, tiro_sync_frame_t raw_frame) {
@@ -429,6 +493,12 @@ function make_sync_function(vm& v, const string& name, size_t argc, const handle
     return function(std::move(result));
 }
 
+/// Represents the call frame of a asynchronous function call.
+/// The lifetime of async_frames is dynamic.
+/// They usually outlive their surrounding native function call, which causes the calling tiro coroutine to sleep.
+/// The coroutine resumes when the frame's return value has been set.
+///
+/// Frames must not outlive their associated vm.
 class async_frame final {
 public:
     async_frame(tiro_vm_t raw_vm, tiro_async_frame_t raw_frame)
@@ -441,8 +511,10 @@ public:
     async_frame(async_frame&&) noexcept = default;
     async_frame& operator=(async_frame&&) noexcept = default;
 
+    /// Returns the number of arguments passed to this function call.
     size_t argc() const { return tiro_async_frame_argc(raw_frame_); }
 
+    /// Returns the argument at the given index (`0 <= index < argc`).
     handle arg(size_t index) const {
         handle result(raw_vm_);
         detail::check_handles(raw_vm_, result);
@@ -450,6 +522,7 @@ public:
         return result;
     }
 
+    /// Returns the closure value referenced by this function (if any).
     handle closure() const {
         handle result(raw_vm_);
         detail::check_handles(raw_vm_, result);
@@ -457,6 +530,7 @@ public:
         return result;
     }
 
+    /// Sets the return value for the given function call frame to the given `value`.
     void return_value(const handle& value) {
         detail::check_handles(raw_vm_, value);
         tiro_async_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
@@ -471,6 +545,14 @@ private:
     detail::resource_holder<tiro_async_frame_t, tiro_async_frame_free> raw_frame_;
 };
 
+/// Constructs a new function object with the given name that will invoke the native function when called.
+/// `argc` is the number of arguments required for calling `Function`.
+/// `closure` may be an arbitrary value that will be passed to the function on every invocation.
+///
+/// `Function` will receive two arguments when invoked:
+///     - A reference to the vm (`vm&`).
+///     - A call frame value (`async_frame`).
+///       Use this value to access call arguments and to set the return value.
 template<auto Function>
 function make_async_function(vm& v, const string& name, size_t argc, const handle& closure) {
     constexpr tiro_async_function_t func = [](tiro_vm_t raw_vm, tiro_async_frame_t raw_frame) {
@@ -490,6 +572,7 @@ function make_async_function(vm& v, const string& name, size_t argc, const handl
     return function(std::move(result));
 }
 
+/// Refers to a tuple value.
 class tuple final : public handle {
 public:
     explicit tuple(handle h)
@@ -501,11 +584,13 @@ public:
     tuple& operator=(const tuple&) = default;
     tuple& operator=(tuple&&) noexcept = default;
 
+    /// Returns the tuple's size.
     size_t size() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_tuple_size(raw_vm(), raw_handle());
     }
 
+    /// Returns the tuple element at the given index (`0 <= index < size`).
     handle get(size_t index) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
@@ -513,6 +598,7 @@ public:
         return result;
     }
 
+    /// Sets the tuple element at the given index (`0 <= index < size`) to `value`.
     void set(size_t index, const handle& value) {
         detail::check_handles(raw_vm(), *this, value);
         tiro_tuple_set(raw_vm(), raw_handle(), index, value.raw_handle(), error_adapter());
@@ -528,6 +614,7 @@ inline tuple make_tuple(vm& v, size_t size) {
     return tuple(std::move(result));
 }
 
+/// Refers to a record value.
 class record final : public handle {
 public:
     explicit record(handle h)
@@ -539,8 +626,10 @@ public:
     record& operator=(const record&) = default;
     record& operator=(record&&) noexcept = default;
 
+    /// Returns the keys of this record, as an array.
     inline array keys() const;
 
+    /// Returns the value associated with the given key.
     handle get(const string& key) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, key, result);
@@ -549,6 +638,7 @@ public:
         return result;
     }
 
+    /// Sets the value associated with the given key.
     void set(const string& key, const handle& value) {
         detail::check_handles(raw_vm(), *this, key, value);
         tiro_record_set(
@@ -560,6 +650,7 @@ public:
 /// All values of the record will be initialized to null.
 inline record make_record(vm& v, const array& keys);
 
+/// Refers to an array value.
 class array final : public handle {
 public:
     explicit array(handle h)
@@ -571,11 +662,13 @@ public:
     array& operator=(const array&) = default;
     array& operator=(array&&) noexcept = default;
 
+    /// Returns the number of elements in this array.
     size_t size() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_array_size(raw_vm(), raw_handle());
     }
 
+    /// Returns the value at the given index (`0 <= index < size`).
     handle get(size_t index) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
@@ -583,21 +676,25 @@ public:
         return result;
     }
 
+    /// Sets the value at the given index (`0 <= index < size`) to `value`.
     void set(size_t index, const handle& value) {
         detail::check_handles(raw_vm(), *this, value);
         tiro_array_set(raw_vm(), raw_handle(), index, value.raw_handle(), error_adapter());
     }
 
+    /// Appends `value` at the end of the array.
     void push(const handle& value) {
         detail::check_handles(raw_vm(), *this, value);
         tiro_array_push(raw_vm(), raw_handle(), value.raw_handle(), error_adapter());
     }
 
+    /// Removes the last element from the array.
     void pop() {
         detail::check_handles(raw_vm(), *this);
         tiro_array_pop(raw_vm(), raw_handle(), error_adapter());
     }
 
+    /// Removes all elements from the array.
     void clear() {
         detail::check_handles(raw_vm(), *this);
         tiro_array_clear(raw_vm(), raw_handle(), error_adapter());
@@ -612,6 +709,7 @@ inline array make_array(vm& v, size_t initial_capacity = 0) {
     return array(std::move(result));
 }
 
+/// Refers to a result value.
 class result final : public handle {
 public:
     explicit result(handle h)
@@ -623,16 +721,19 @@ public:
     result& operator=(const result&) = default;
     result& operator=(result&&) noexcept = default;
 
+    /// Returns true if this value represents success.
     bool is_success() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_result_is_success(raw_vm(), raw_handle());
     }
 
+    /// Returns true if this value represents an error.
     bool is_error() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_result_is_error(raw_vm(), raw_handle());
     }
 
+    /// Returns the value held by this result (which must represent success).
     handle value() const {
         handle value(raw_vm());
         detail::check_handles(raw_vm(), *this, value);
@@ -640,6 +741,7 @@ public:
         return value;
     }
 
+    /// Returns the error held by this result (which must represent an error).
     handle error() const {
         handle reason(raw_vm());
         detail::check_handles(raw_vm(), *this, reason);
@@ -648,6 +750,7 @@ public:
     }
 };
 
+/// Creates a new successful result with the given value.
 inline result make_success(vm& v, const handle& value) {
     handle out(v.raw_vm());
     detail::check_handles(v.raw_vm(), value, out);
@@ -655,6 +758,7 @@ inline result make_success(vm& v, const handle& value) {
     return result(std::move(out));
 }
 
+/// Creates a new error result with the given error value.
 inline result make_error(vm& v, const handle& err) {
     handle out(v.raw_vm());
     detail::check_handles(v.raw_vm(), err, out);
@@ -662,6 +766,7 @@ inline result make_error(vm& v, const handle& err) {
     return result(std::move(out));
 }
 
+/// Refers to an exception.
 class exception final : public handle {
 public:
     explicit exception(handle h)
@@ -673,6 +778,7 @@ public:
     exception& operator=(const exception&) = default;
     exception& operator=(exception&&) noexcept = default;
 
+    /// The message string associated with this exception.
     string message() const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
@@ -681,6 +787,7 @@ public:
     }
 };
 
+/// Refers to a coroutine.
 class coroutine final : public handle {
 public:
     explicit coroutine(handle h)
@@ -692,16 +799,20 @@ public:
     coroutine& operator=(const coroutine&) = default;
     coroutine& operator=(coroutine&&) noexcept = default;
 
+    /// Returns true if the coroutine started execution.
     bool started() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_coroutine_started(raw_vm(), raw_handle());
     }
 
+    /// Returns true if the coroutine completed execution (implies `started`).
     bool completed() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_coroutine_completed(raw_vm(), raw_handle());
     }
 
+    /// Returns the coroutine's result (which must have completed).
+    /// If the coroutine terminated with an uncaught panic, the result will hold an error.
     tiro::result result() const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
@@ -709,6 +820,15 @@ public:
         return tiro::result(std::move(result));
     }
 
+    /// Schedules the given callback to be invoked once the coroutine completes.
+    /// There can only be one callback associated with a coroutine.
+    ///
+    /// `on_complete` will be invoked when the coroutine completes its execution.
+    /// A coroutine completes when the outermost function returns normally or if an uncaught panic is thrown from that function.
+    /// The callback receives a handle to the completed coroutine, which can be inspected in order to retrieve the coroutine's result.
+    /// It will *not* be invoked if the virtual machine shuts down before the coroutine has completed.
+    ///
+    /// Note: all callback invocations happen from within one of the `vm.run*` method.
     template<typename Callback>
     void set_callback(Callback&& on_complete) {
         using wrapper_type = callback_wrapper<std::decay_t<Callback>>;
@@ -720,6 +840,8 @@ public:
             &wrapper_type::cleanup, wrapper.release(), error_adapter());
     }
 
+    /// Starts this coroutine's execution.
+    /// The coroutine's function will be invoked from within a call to a `vm.run*` method.
     void start() {
         detail::check_handles(raw_vm(), *this);
         tiro_coroutine_start(raw_vm(), raw_handle(), error_adapter());
@@ -775,6 +897,7 @@ inline coroutine make_coroutine(vm& v, const function& func) {
     return coroutine(std::move(result));
 }
 
+/// Refers to a module.
 class module final : public handle {
 public:
     explicit module(handle h)
@@ -786,6 +909,7 @@ public:
     module& operator=(const module&) = default;
     module& operator=(module&&) noexcept = default;
 
+    /// Retrieves the exported module member with the given name from this module.
     handle get_export(std::string_view export_name) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
@@ -795,6 +919,7 @@ public:
     }
 };
 
+/// Creates a new module with the given name and exports.
 // TODO: API not good enough (vector, strings)
 inline module make_module(
     vm& v, std::string_view name, const std::vector<std::pair<std::string, handle>>& exports) {
@@ -812,6 +937,7 @@ inline module make_module(
     return module(std::move(result));
 }
 
+/// Refers to a native object.
 class native final : public handle {
 public:
     explicit native(handle h)
@@ -823,6 +949,7 @@ public:
     native& operator=(const native&) = default;
     native& operator=(native&&) noexcept = default;
 
+    /// Returns the native point descriptor.
     const tiro_native_type_t* type_descriptor() const {
         detail::check_handles(raw_vm(), *this);
         const tiro_native_type_t* result = tiro_native_type_descriptor(raw_vm(), raw_handle());
@@ -831,6 +958,14 @@ public:
         return result;
     }
 
+    /// Returns a pointer to this object's internal storage.
+    ///
+    /// \warning
+    ///     The pointer returned by this function points into the object's current storage.
+    ///     Because objects may move on the heap (e.g. because of garbage collection), this data may be invalidated.
+    ///     The data may only be used immediately after calling this function in native code that is guaranteed to NOT allocate on the tiro heap.
+    ///     It MUST NOT be used as input tiro an allocating function (which includes most functions of this API),
+    ///     or after such a function has been called.
     void* data() const {
         detail::check_handles(raw_vm(), *this);
         void* result = tiro_native_data(raw_vm(), raw_handle());
@@ -839,12 +974,14 @@ public:
         return result;
     }
 
+    /// Returns the size (in bytes) of the storage pointed to by data().
     size_t size() const {
         detail::check_handles(raw_vm(), *this);
         return tiro_native_size(raw_vm(), raw_handle());
     }
 };
 
+/// Refers to a type.
 class type final : public handle {
 public:
     explicit type(handle h)
@@ -856,6 +993,7 @@ public:
     type& operator=(const type&) = default;
     type& operator=(type&&) noexcept = default;
 
+    /// Returns the name of this type.
     string name() const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);

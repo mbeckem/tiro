@@ -14,35 +14,62 @@
 
 namespace tiro {
 
+/// Defines the possible values for the severity of diagnostic compiler messages.
 enum class severity : int {
     warning = TIRO_SEVERITY_WARNING,
     error = TIRO_SEVERITY_ERROR,
 };
 
+/// Returns the string representation of the given severity value.
+/// The returned string is allocated in static storage.
 inline const char* to_string(severity s) {
     return tiro_severity_str(static_cast<tiro_severity>(s));
 }
 
+/// Represents a diagnostic message emitted by the compiler.
+/// All fields are only valid for the duration of the `message_callback` function call.
 struct compiler_message {
+    /// The severity of this message.
     tiro::severity severity = severity::error;
+
+    /// The relevant source file. May be empty if there is no source file associated with this message.
     std::string_view file;
+
+    /// Source line (1 based). Zero if unavailable.
     uint32_t line = 0;
+
+    /// Source column (1 based). Zero if unavailable.
     uint32_t column = 0;
+
+    /// The message text.
     std::string_view text;
 };
 
+/// An instance of this type can be passed to the compiler to configure it.
+/// The default constructor fills an instance with default values.
 struct compiler_settings {
     using message_callback_type = std::function<void(const compiler_message& message)>;
 
+    /// Enables the compiler's dump_cst() method.
     bool enable_dump_cst = false;
+
+    /// Enables the compiler's dump_ast() method.
     bool enable_dump_ast = false;
+
+    /// Enables the compiler's dump_ir() method.
     bool enable_dump_ir = false;
+
+    /// Enables the compiler's dump_bytecode() method.
     bool enable_dump_bytecode = false;
 
+    /// Callback for diagnostic messages (may be empty).
+    /// The compiler will print to the process output stream if this is not set.
     // TODO: MUST NOT throw an exception
     message_callback_type message_callback;
 };
 
+/// Represents a compiled bytecode module.
+/// Modules are produced by the compiler.
 class compiled_module final {
 public:
     explicit compiled_module(tiro_module_t raw_module)
@@ -56,12 +83,14 @@ private:
     detail::resource_holder<tiro_module_t, tiro_module_free> raw_module_;
 };
 
-// TODO docs
+/// Translates a set of source files into a module.
 class compiler final {
 public:
+    /// Constructs a new compiler instance for a module with the given name.
     compiler(std::string_view module_name)
         : raw_compiler_(construct_compiler(module_name, nullptr)) {}
 
+    /// Constructs a new compiler instance for a module with the given name and the given settings.
     explicit compiler(std::string_view module_name, compiler_settings settings)
         : settings_(std::make_unique<compiler_settings>(std::move(settings)))
         , raw_compiler_(construct_compiler(module_name, settings_.get())) {}
@@ -71,39 +100,57 @@ public:
         TIRO_ASSERT(raw_compiler);
     }
 
+    /// Add a source file to the compiler's source set.
+    /// Can only be called before compilation started.
+    ///
+    /// `file_name` should be unique in the current source set.
     void add_file(std::string_view file_name, std::string_view file_content) {
         tiro_compiler_add_file(raw_compiler_, detail::to_raw(file_name),
             detail::to_raw(file_content), error_adapter());
     }
 
+    /// Run the compiler on the set of source files provided via `add_file`.
+    /// Requires at least one source file.
+    /// This function can only be called once for every compiler instance.
     void run() { tiro_compiler_run(raw_compiler_, error_adapter()); }
 
+    /// Returns true if the compiler has successfully compiled a bytecode module.
     bool has_module() const { return tiro_compiler_has_module(raw_compiler_); }
 
+    /// Extracts the compiled module from the compiler and returns it.
+    /// For this to work, run() must have completed successfully.
     compiled_module take_module() {
         tiro_module_t result = nullptr;
         tiro_compiler_take_module(raw_compiler_, &result, error_adapter());
         return compiled_module(result);
     }
 
+    /// Returns a dump of the compiler's concrete syntax tree.
+    /// Can only be called after a call to run(), and only if the `enable_dump_cst` option was set to true.
     std::string dump_cst() const {
         detail::resource_holder<char*, std::free> result;
         tiro_compiler_dump_cst(raw_compiler_, result.out(), error_adapter());
         return std::string(result.get());
     }
 
+    /// Returns a dump of the compiler's abstract syntax tree.
+    /// Can only be called after a call to run(), and only if the `enable_dump_ast` option was set to true.
     std::string dump_ast() const {
         detail::resource_holder<char*, std::free> result;
         tiro_compiler_dump_ast(raw_compiler_, result.out(), error_adapter());
         return std::string(result.get());
     }
 
+    /// Returns a dump of the compiler's internal representation.
+    /// Can only be called after a call to run(), and only if the `enable_dump_ir` option was set to true.
     std::string dump_ir() const {
         detail::resource_holder<char*, std::free> result;
         tiro_compiler_dump_ir(raw_compiler_, result.out(), error_adapter());
         return std::string(result.get());
     }
 
+    /// Returns a dump of the disassembled bytecode.
+    /// Can only be called after a call to run(), and only if the `enable_bytecode` option was set to true.
     std::string dump_bytecode() const {
         detail::resource_holder<char*, std::free> result;
         tiro_compiler_dump_bytecode(raw_compiler_, result.out(), error_adapter());

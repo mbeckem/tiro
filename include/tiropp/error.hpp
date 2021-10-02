@@ -14,27 +14,53 @@
 
 namespace tiro {
 
+/// Defines all possible error codes.
 enum class api_errc : int {
+    /// Success
     ok = TIRO_OK,
+
+    /// Instance is not in the correct state
     bad_state = TIRO_ERROR_BAD_STATE,
+
+    /// Invalid argument
     bad_arg = TIRO_ERROR_BAD_ARG,
+
+    /// Invalid source code
     bad_source = TIRO_ERROR_BAD_SOURCE,
+
+    /// Operation not supported on type
     bad_type = TIRO_ERROR_BAD_TYPE,
+
+    /// Key does not exist on object
     bad_key = TIRO_ERROR_BAD_KEY,
+
+    /// Module name defined more than once
     module_exists = TIRO_ERROR_MODULE_EXISTS,
+
+    /// Requested module does not exist
     module_not_found = TIRO_ERROR_MODULE_NOT_FOUND,
+
+    /// Requested export does not exist
     export_not_found = TIRO_ERROR_EXPORT_NOT_FOUND,
+
+    /// Argument was out of bounds
     out_of_bounds = TIRO_ERROR_OUT_OF_BOUNDS,
+
+    /// Allocation failure
     alloc = TIRO_ERROR_ALLOC,
+
+    /// Internal error
     internal = TIRO_ERROR_INTERNAL,
 };
 
 /// Returns the name of the given error code.
+/// The returned string is allocated in static storage.
 inline const char* name(api_errc e) {
     return tiro_errc_name(static_cast<tiro_errc_t>(e));
 }
 
 /// Returns the human readable message associated with the error code.
+/// The returned string is allocated in static storage.
 inline const char* message(api_errc e) {
     return tiro_errc_message(static_cast<tiro_errc_t>(e));
 }
@@ -124,11 +150,11 @@ private:
     std::string what_message_;
 };
 
-// Error adapter class for the tiro_error_t* argument expected by most tiro_* functions.
-// This class implicitly converts to a tiro_error_t* and will throw any error from its destructor.
-//
-// Thanks to Stefanus Du Toit (https://www.slideshare.net/StefanusDuToit/cpp-con-2014-hourglass-interfaces-for-c-apis)
-// for showing this technique.
+/// Error adapter class for the tiro_error_t* argument expected by most tiro_* functions.
+/// This class implicitly converts to a tiro_error_t* and will throw any error from its destructor.
+///
+/// Thanks to Stefanus Du Toit (https://www.slideshare.net/StefanusDuToit/cpp-con-2014-hourglass-interfaces-for-c-apis)
+/// for showing this technique.
 class error_adapter final {
 public:
     error_adapter() = default;

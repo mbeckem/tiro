@@ -34,7 +34,7 @@ TIRO_API const char* tiro_severity_str(tiro_severity_t severity);
  * All fields are only valid for the duration of the `message_callback` function call.
  */
 typedef struct tiro_compiler_message {
-    /** Severity of this message */
+    /** The severity of this message */
     tiro_severity_t severity;
 
     /** The relevant source file. May be empty if there is no source file associated with this message. */
@@ -112,7 +112,7 @@ TIRO_API TIRO_WARN_UNUSED tiro_compiler_t tiro_compiler_new(
 TIRO_API void tiro_compiler_free(tiro_compiler_t compiler);
 
 /**
- * Add a source file to the compiler.
+ * Add a source file to the compiler's source set.
  * Can only be called before compilation started.
  *
  * Filenames should be unique within a single module.
@@ -122,7 +122,7 @@ TIRO_API void tiro_compiler_add_file(tiro_compiler_t compiler, tiro_string_t fil
 
 /**
  * Run the compiler on the set of source files provided via `tiro_compiler_add_file`.
- * Requires at least once source file.
+ * Requires at least one source file.
  * This function can only be called once for every compiler instance.
  *
  * Returns an error if the compilation fails.
@@ -133,7 +133,7 @@ TIRO_API void tiro_compiler_run(tiro_compiler_t compiler, tiro_error_t* err);
  * Returns true if this compiler has successfully compiled a set of source files
  * and produced a bytecode module. In order for this function to return true,
  * a previous call to `tiro_compiler_run` must have returned `TIRO_OK` and
- * the compiler must have beeen configured to actually produce a module.
+ * the compiler must have been configured to actually produce a module.
  */
 TIRO_API
 bool tiro_compiler_has_module(tiro_compiler_t compiler);

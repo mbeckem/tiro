@@ -297,8 +297,9 @@ TIRO_API bool tiro_coroutine_started(tiro_vm_t vm, tiro_handle_t coroutine);
 TIRO_API bool tiro_coroutine_completed(tiro_vm_t vm, tiro_handle_t coroutine);
 
 /**
- * Returns the coroutine's result by assigning it to `result`. The coroutine must have completed execution, i.e.
- * `tiro_coroutine_completed()` must return true (for example, when invoked from a coroutine's completion callback).
+ * Returns the coroutine's result by assigning it to `result`.
+ * The coroutine must have completed execution, i.e. `tiro_coroutine_completed()` must return true (for example, when invoked from a coroutine's completion callback).
+ * If the coroutine terminated with an uncaught panic, the result will hold an error.
  */
 TIRO_API void tiro_coroutine_result(
     tiro_vm_t vm, tiro_handle_t coroutine, tiro_handle_t result, tiro_error_t* err);
@@ -333,9 +334,10 @@ typedef void (*tiro_coroutine_cleanup)(void* userdata);
  *
  * `coroutine` must be a handle to a coroutine, otherwise `TIRO_ERROR_BAD_TYPE` is returned.
  *
- * `callback` will be invoked when the coroutine completes its execution. A coroutine completes when the outermost function
- * returns normally or if an uncaught exception is thrown from that function. The callback receives a handle to the completed coroutine,
- * which can be inspected in order to retrieve the coroutine's result, and the original `userdata` argument.
+ * `callback` will be invoked when the coroutine completes its execution.
+ * A coroutine completes when the outermost function returns normally or if an uncaught panic is thrown from that function.
+ * The callback receives a handle to the completed coroutine, which can be inspected in order to retrieve the coroutine's result,
+ * and the original `userdata` argument.
  * It will *not* be invoked if the virtual machine shuts down before the coroutine has completed.
  * The callback must not be NULL, otherwise `TIRO_ERROR_BAD_ARG` will be returned.
  *
@@ -444,6 +446,12 @@ TIRO_API const tiro_native_type_t* tiro_native_type_descriptor(tiro_vm_t vm, tir
 /**
  * Returns the address of the allocated user storage of the given native object.
  * Returns NULL on error.
+ *
+ * \warning
+ *  The pointer returned by this function points into the object's current storage.
+ *  Because objects may move on the heap (e.g. because of garbage collection), this data may be invalidated.
+ *  The data may only be used immediately after calling this function in native code that is guaranteed to NOT allocate on the tiro heap.
+ *  It MUST NOT be used as input tiro an allocating function (which includes most functions of this API), or after such a function has been called.
  */
 TIRO_API void* tiro_native_data(tiro_vm_t vm, tiro_handle_t object);
 
@@ -455,8 +463,8 @@ TIRO_API size_t tiro_native_size(tiro_vm_t vm, tiro_handle_t object);
 
 /**
  * The prototype of a native function callback that provides a synchronous tiro function.
- * This type of native function is appropriate for simple, nonblocking operations. Use the more complex asynchronous API
- * instead if the operation has the potential of blocking the process.
+ * This type of native function is appropriate for simple, nonblocking operations.
+ * Use the more complex asynchronous API instead if the operation has the potential of blocking the process.
  *
  * Note that this API does not allow for custom native userdata. Use native objects instead and pass them in the closure.
  *

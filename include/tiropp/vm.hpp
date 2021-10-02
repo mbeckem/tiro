@@ -34,9 +34,11 @@ struct vm_settings {
 
 class vm final {
 public:
+    /// Constructs a new vm with default settings.
     vm()
         : vm(vm_settings()) {}
 
+    /// Constructs a new vm with the given settings.
     explicit vm(vm_settings settings)
         : settings_(std::move(settings))
         , raw_vm_(construct_vm()) {}
@@ -47,8 +49,11 @@ public:
     /// Returns the vm's page size, in bytes.
     size_t page_size() const { return tiro_vm_page_size(raw_vm_); }
 
+    /// Userdata associated with this virtual machine.
+    /// @{
     const std::any& userdata() const { return userdata_; }
     std::any& userdata() { return userdata_; }
+    /// @}
 
     /// Loads the "std" module.
     void load_std() { tiro_vm_load_std(raw_vm_, error_adapter()); }
