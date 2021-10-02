@@ -1,13 +1,14 @@
 #include "compiler/ast/dump.hpp"
 
 #include "compiler/ast/ast.hpp"
-#include "compiler/output/json.hpp"
 #include "compiler/source_db.hpp"
 #include "compiler/utils.hpp"
 
 #include <nlohmann/json.hpp>
 
 namespace tiro {
+
+using nlohmann::ordered_json;
 
 static ordered_json
 map_node(const AstNode* raw_node, const StringTable& strings, const SourceDb& sources);
@@ -54,7 +55,12 @@ private:
         return jv;
     }
 
-    ordered_json format_value(const CursorPosition& pos) { return to_json(pos); }
+    ordered_json format_value(const CursorPosition& pos) {
+        auto jv = ordered_json::object();
+        jv.emplace("line", pos.line());
+        jv.emplace("column", pos.column());
+        return jv;
+    }
 
     ordered_json format_value(ordered_json jv) { return jv; }
 

@@ -2,7 +2,6 @@
 
 #include "common/error.hpp"
 #include "common/text/string_utils.hpp"
-#include "compiler/output/json.hpp"
 #include "compiler/source_map.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
 #include "compiler/syntax/syntax_type.hpp"

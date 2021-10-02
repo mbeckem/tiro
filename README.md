@@ -138,9 +138,9 @@ src
 │   ├── ast             -- Defines all AST types and associated helpers (e.g. tree traversal)
 │   ├── ast_gen         -- Implements the syntax tree -> abstract syntax tree transformation
 │   ├── bytecode_gen    -- Transforms the internal representation into executable bytecode
-│   ├── ir              -- Defines the internal representations.
-│   ├── ir_gen          -- Transforms the AST into the internal representation.
-│   ├── ir_passes       -- Optimization and analysis of the internal implementation.
+│   ├── ir              -- Defines the internal representations
+│   ├── ir_gen          -- Transforms the AST into the internal representation
+│   ├── ir_passes       -- Optimization and analysis of the internal representation
 │   ├── semantics       -- Semantic analysis passes during compilation
 │   └── syntax          -- Source code parser and grammar implementation
 ├── run                 -- Implementation of cli tools
