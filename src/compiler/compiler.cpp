@@ -51,7 +51,7 @@ CompilerResult Compiler::run() {
         if (options_.keep_cst) {
             std::string buffer;
             for (const auto& entry : files) {
-                buffer += fmt::format("# Filename: {}", sources_.filename(entry.id));
+                buffer += fmt::format("# Filename: {}\n", sources_.filename(entry.id));
                 buffer += dump(entry.tree, sources_.source_lines(entry.id));
             }
             result.cst = std::move(buffer);
