@@ -56,7 +56,7 @@ public:
     // Entry point. Visits the concrete type of the node (if it is valid).
     void dispatch(AstNode* node);
 
-    void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_module(NotNull<AstModule*> module) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_import_decl(NotNull<AstImportDecl*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -149,7 +149,7 @@ public:
 
     void visit_decl(NotNull<AstDecl*> decl) TIRO_NODE_VISITOR_OVERRIDE;
 
-    void visit_file(NotNull<AstFile*> file) TIRO_NODE_VISITOR_OVERRIDE;
+    void visit_module(NotNull<AstModule*> module) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) TIRO_NODE_VISITOR_OVERRIDE;
 
@@ -232,10 +232,10 @@ void ScopeBuilder::dispatch(AstNode* node) {
         visit(TIRO_NN(node), *this);
 }
 
-void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
-    auto scope_id = register_scope(ScopeType::File, file);
+void ScopeBuilder::visit_module(NotNull<AstModule*> module) {
+    auto scope_id = register_scope(ScopeType::Module, module);
     auto exit = enter_scope(scope_id);
-    dispatch_children(file);
+    dispatch_children(module);
 }
 
 void ScopeBuilder::visit_import_decl(NotNull<AstImportDecl*> imp) {
@@ -345,9 +345,9 @@ void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
     for (auto modifier : decl->modifiers()) {
         if (is_instance<AstExportModifier>(modifier)) {
             const auto& scope = symbols_[current_scope_];
-            if (scope.type() != ScopeType::File) {
+            if (scope.type() != ScopeType::Module) {
                 diag_.reportf(
-                    Diagnostics::Error, decl->range(), "Exports are only allowed at file scope.");
+                    Diagnostics::Error, decl->range(), "Exports are only allowed at module scope.");
                 return;
             }
 
@@ -391,7 +391,8 @@ SymbolId ScopeBuilder::register_decl(
     [[maybe_unused]] const auto scope_type = symbols_[current_scope_].type();
     switch (data.type()) {
     case SymbolType::Import:
-        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File, "Imports are only allowed at file scope.");
+        TIRO_DEBUG_ASSERT(
+            scope_type == ScopeType::Module, "Imports are only allowed at module scope.");
         break;
     case SymbolType::TypeSymbol:
         TIRO_DEBUG_ASSERT(false, "Types are not implemented yet.");
@@ -403,7 +404,7 @@ SymbolId ScopeBuilder::register_decl(
             scope_type == ScopeType::Function, "Parameters are only allowed at function scope.");
         break;
     case SymbolType::Variable:
-        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File || scope_type == ScopeType::ForStatement
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::Module || scope_type == ScopeType::ForStatement
                               || scope_type == ScopeType::Block,
             "Variables are not allowed in this context.");
         break;
@@ -530,9 +531,9 @@ void SymbolResolver::visit_var_decl(NotNull<AstVarDecl*> var) {
     TIRO_UNREACHABLE("Failed to overwrite decl type.");
 }
 
-void SymbolResolver::visit_file(NotNull<AstFile*> file) {
-    // Function declarations in file scope are always active.
-    const auto& scope = table_[table_.get_scope(file->id())];
+void SymbolResolver::visit_module(NotNull<AstModule*> module) {
+    // Function declarations in module scope are always active.
+    const auto& scope = table_[table_.get_scope(module->id())];
     for (auto symbol_id : scope.entries()) {
         auto& symbol = table_[symbol_id];
 
@@ -542,7 +543,7 @@ void SymbolResolver::visit_file(NotNull<AstFile*> file) {
         }
     }
 
-    dispatch_children(file);
+    dispatch_children(module);
 }
 
 void SymbolResolver::visit_for_each_stmt(NotNull<AstForEachStmt*> stmt) {
@@ -582,7 +583,7 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
     // Mark symbols as captured if they are being referenced from a nested function.
     // Variables and constants at module scope are not captured.
     if (!decl_symbol->captured()) {
-        const bool can_capture = decl_scope->type() != ScopeType::File
+        const bool can_capture = decl_scope->type() != ScopeType::Module
                                  && decl_scope->type() != ScopeType::Global;
         if (can_capture && decl_scope->function() != expr_scope->function()
             && table_.is_strict_ancestor(decl_scope_id, expr_scope_id)) {

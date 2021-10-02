@@ -13,7 +13,7 @@ ModuleIRGen::ModuleIRGen(ModuleContext ctx, Module& result)
     start();
 }
 
-NotNull<AstFile*> ModuleIRGen::module() const {
+NotNull<AstModule*> ModuleIRGen::module() const {
     return ctx_.ast.root();
 }
 

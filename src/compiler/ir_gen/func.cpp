@@ -89,8 +89,8 @@ FunctionIRGen::FunctionIRGen(FunctionContext ctx, Function& result)
     , outer_env_(ctx.closure_env)
     , result_(result) {}
 
-std::string_view FunctionIRGen::source_file() const {
-    return module_gen_.source_file();
+const SourceDb& FunctionIRGen::sources() const {
+    return module_gen_.sources();
 }
 
 ModuleIRGen& FunctionIRGen::module_gen() const {
@@ -199,28 +199,32 @@ void FunctionIRGen::compile_function(NotNull<AstFuncDecl*> func) {
     });
 }
 
-void FunctionIRGen::compile_initializer(NotNull<AstFile*> module) {
+void FunctionIRGen::compile_initializer(NotNull<AstModule*> module) {
     return enter_compilation([&](CurrentBlock& bb) {
         auto module_scope = symbols().get_scope(module->id());
         enter_env(module_scope, bb);
 
+        // TODO: Bad approach, walk module scope instead.
         bool reachable = true;
-        for (auto stmt : module->items()) {
-            auto decl_stmt = try_cast<AstDeclStmt>(stmt);
-            if (!decl_stmt)
-                continue;
+        for (auto file : module->files()) {
+            for (auto stmt : file->items()) {
+                auto decl_stmt = try_cast<AstDeclStmt>(stmt);
+                if (!decl_stmt)
+                    continue;
 
-            auto var_decl = try_cast<AstVarDecl>(decl_stmt->decl());
-            if (!var_decl)
-                continue;
+                auto var_decl = try_cast<AstVarDecl>(decl_stmt->decl());
+                if (!var_decl)
+                    continue;
 
-            auto result = compile_var_decl(TIRO_NN(var_decl), bb);
-            if (!result) {
-                reachable = false;
-                break;
+                auto result = compile_var_decl(TIRO_NN(var_decl), bb);
+                if (!result) {
+                    reachable = false;
+                    goto end;
+                }
             }
         }
 
+    end:
         if (reachable) {
             auto inst_id = bb.compile_value(Constant::make_null());
             bb.end(Terminator::make_return(inst_id, result_.exit()));
@@ -678,7 +682,7 @@ bool FunctionIRGen::can_open_closure_env(ScopeId scope_id) const {
     const auto& scope = symbols()[scope_id];
 
     switch (scope.type()) {
-    case ScopeType::File: // For module initializers (TODO: Module scope)
+    case ScopeType::Module:
     case ScopeType::Function:
         return true;
 
@@ -704,7 +708,7 @@ std::optional<LValue> FunctionIRGen::find_lvalue(SymbolId symbol_id) {
     const auto& symbol = symbols()[symbol_id];
     const auto& scope = symbols()[symbol.parent()];
 
-    if (scope.type() == ScopeType::File) { // TODO module
+    if (scope.type() == ScopeType::Module) {
         auto member = module_gen_.find_symbol(symbol_id);
         TIRO_DEBUG_ASSERT(member, "Failed to find member in module.");
         return LValue::make_module(member);

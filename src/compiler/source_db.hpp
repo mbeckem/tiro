@@ -77,6 +77,11 @@ public:
     /// \pre `id` must be valid.
     std::string_view content(SourceId id) const;
 
+    /// Returns the substring of referenced by the range.
+    /// Note: the string view is stable in memory.
+    /// \pre `range` must be valid.
+    std::string_view substring(const AbsoluteSourceRange& range) const;
+
     /// Returns the source line mappings for the given file.
     /// Note: the reference is stable in memory.
     /// \pre `id` must be valid.

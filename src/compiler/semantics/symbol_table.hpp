@@ -180,8 +180,9 @@ enum class ScopeType : u8 {
     /// add additional items to that scope.
     Global,
 
-    /// Contains file-level symbols such as imports, functions or variables.
-    File,
+    /// Contains module-level symbols such as imports, functions or variables.
+    /// TODO: Module <--> File scope?
+    Module,
 
     /// Contains function parameters.
     Function,

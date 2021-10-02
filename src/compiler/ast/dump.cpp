@@ -96,15 +96,15 @@ ordered_json NodeMapper::map(const AstNode* raw_node) {
     result_ = ordered_json::object();
 
     auto node = TIRO_NN(raw_node);
-    auto [start, end] = sources_.cursor_pos(node->range());
-
     visit_field("type", node->type());
     visit_field("id", node->id());
-    visit_field("start", start);
-    visit_field("end", end);
+    if (auto range = node->range()) {
+        auto [start, end] = sources_.cursor_pos(node->range());
+        visit_field("start", start);
+        visit_field("end", end);
+    }
     visit_field("has_error", node->has_error());
     visit_fields(node);
-
     return std::move(result_);
 }
 

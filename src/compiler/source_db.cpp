@@ -46,6 +46,11 @@ std::string_view SourceDb::content(SourceId id) const {
     return files_[id]->content;
 }
 
+std::string_view SourceDb::substring(const AbsoluteSourceRange& range) const {
+    TIRO_DEBUG_ASSERT(range, "invalid range");
+    return tiro::substring(content(range.id()), range.range());
+}
+
 const SourceMap& SourceDb::source_lines(SourceId id) const {
     return files_[id]->map;
 }

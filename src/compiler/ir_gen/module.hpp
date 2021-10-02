@@ -18,7 +18,7 @@
 namespace tiro::ir {
 
 struct ModuleContext {
-    std::string_view source_file; // TODO: This will have to be multiple files soon
+    const SourceDb& sources;
     const SemanticAst& ast;
     Diagnostics& diag;
 };
@@ -28,8 +28,8 @@ public:
     /// TODO module ast node?
     explicit ModuleIRGen(ModuleContext ctx, Module& result);
 
-    std::string_view source_file() const { return ctx_.source_file; }
-    NotNull<AstFile*> module() const;
+    const SourceDb& sources() const { return ctx_.sources; }
+    NotNull<AstModule*> module() const;
     const AstNodeMap& nodes() const;
     const TypeTable& types() const;
     const SymbolTable& symbols() const;

@@ -16,9 +16,11 @@
 
 namespace tiro {
 
-Compiler::Compiler(std::string module_name, const CompilerOptions& options)
-    : options_(options)
-    , module_name_(std::move(module_name)) {}
+Compiler::Compiler(std::string_view module_name, const CompilerOptions& options)
+    : options_(options) {
+    TIRO_CHECK(!module_name.empty(), "module name must not be empty");
+    module_name_ = strings_.insert(module_name);
+}
 
 void Compiler::add_file(std::string filename, std::string content) {
     if (started_)
@@ -58,8 +60,7 @@ CompilerResult Compiler::run() {
             TIRO_ERROR("failed to build a module ast");
 
         if (options_.keep_ast) {
-            TIRO_NOT_IMPLEMENTED(); // FIXME
-            // result.ast = dump(ast.get(), strings_, source_map_);
+            result.ast = dump(ast.get(), strings_, sources_);
         }
 
         if (!options_.analyze) {
@@ -159,8 +160,8 @@ std::optional<SemanticAst> Compiler::analyze(NotNull<AstModule*> root) {
 std::optional<ir::Module> Compiler::generate_ir(const SemanticAst& ast) {
     TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
-    ir::Module mod(file_name_intern_, strings_);
-    ir::ModuleContext ctx{file_content_, ast, diag_};
+    ir::Module mod(module_name_, strings_);
+    ir::ModuleContext ctx{sources_, ast, diag_};
     ir::ModuleIRGen gen(ctx, mod);
     gen.compile_module();
     if (has_errors())
