@@ -3,22 +3,21 @@
 
 namespace tiro {
 
-enum class api_errc : int;
+// tiropp/compiler.hpp
 enum class severity : int;
-enum class value_kind : int;
-
-struct version;
 struct compiler_settings;
-struct vm_settings;
-
-class error;
-class bad_handle_cast;
-class api_error;
-
+struct compiler_message;
 class compiler;
 class compiled_module;
-class vm;
 
+// tiropp/error.hpp
+enum class api_errc : int;
+class error;
+class api_error;
+
+// tiropp/objects.hpp
+enum class value_kind : int;
+class bad_handle_cast;
 class handle;
 class null;
 class boolean;
@@ -37,8 +36,16 @@ class type;
 class sync_frame;
 class async_frame;
 
+// tiropp/native_type.hpp
 template<typename T>
 class native_type;
+
+// tiropp/version.hpp
+struct version;
+
+// tiropp/vm.hpp
+struct vm_settings;
+class vm;
 
 } // namespace tiro
 
