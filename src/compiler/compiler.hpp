@@ -50,16 +50,23 @@ class Compiler final {
 public:
     explicit Compiler(std::string_view module_name, const CompilerOptions& options = {});
 
+    /// Returns true if run() has been called already.
+    bool started() const { return started_; }
+
+    /// Adds a new source file to the compiler.
     void add_file(std::string filename, std::string content);
 
+    /// Starts compilation and returns the result.
+    /// Can only be called once per instance.
+    CompilerResult run();
+
+    const SourceDb& sources() const { return sources_; }
     StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }
 
     Diagnostics& diag() { return diag_; }
     const Diagnostics& diag() const { return diag_; }
     bool has_errors() const { return diag_.has_errors(); }
-
-    CompilerResult run();
 
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source range.

@@ -7,11 +7,14 @@ namespace tiro::eval_tests {
 
 static const std::string_view test_module_name = "test";
 
-eval_test::eval_test(std::string_view source, int flags)
-    : source_(source)
+eval_test::eval_test(std::string source, int flags)
+    : eval_test(std::vector{std::move(source)}, flags) {}
+
+eval_test::eval_test(std::vector<std::string> sources, int flags)
+    : sources_(std::move(sources))
     , flags_(flags)
     , vm_()
-    , result_(compile_source(source_.c_str(), flags)) {
+    , result_(compile_sources(sources_, flags)) {
     vm_.load_std();
     vm_.load(result_.mod);
 }
@@ -24,7 +27,8 @@ handle eval_test::get_export(std::string_view name) {
     return tiro::get_export(vm_, module_name(), name);
 }
 
-eval_test::compile_result eval_test::compile_source(std::string_view source, int flags) {
+eval_test::compile_result
+eval_test::compile_sources(const std::vector<std::string>& sources, int flags) {
     std::string cst, ast, ir, bytecode;
     std::string output;
 
@@ -33,17 +37,20 @@ eval_test::compile_result eval_test::compile_source(std::string_view source, int
     settings.enable_dump_ast = flags & enable_ast;
     settings.enable_dump_ir = flags & enable_ir;
     settings.enable_dump_bytecode = flags & enable_bytecode;
-    settings.message_callback = [&](severity sev, uint32_t line, uint32_t column,
-                                    std::string_view message) {
+    settings.message_callback = [&](const compiler_message& message) {
         // TODO: Must not throw.
         if (!output.empty())
             output += "\n";
 
-        output += fmt::format("{} {}:{}: {}", to_string(sev), line, column, message);
+        output += fmt::format("{} {}:{}:{}: {}", to_string(message.severity), message.file,
+            message.line, message.column, message.text);
     };
 
-    compiler comp(settings);
-    comp.add_file(test_module_name, source);
+    compiler comp(test_module_name, settings);
+
+    for (size_t i = 0, n = sources.size(); i < n; ++i) {
+        comp.add_file(fmt::format("input-{}", i), sources[i]);
+    }
 
     try {
         comp.run();

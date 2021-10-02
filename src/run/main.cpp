@@ -31,11 +31,12 @@ struct Options {
 using OptionsResult = std::variant<Options, ShowHelp, OptionsError>;
 
 OptionsResult parse_options(int argc, char** argv);
-tiro::compiled_module compile(std::string_view content, const Options& options);
+tiro::compiled_module
+compile(std::string_view filename, std::string_view content, const Options& options);
 int run(const tiro::compiled_module& module, std::string_view function_name);
 std::string read_file_contents(const char* path);
 
-static const std::string_view test_module_name = "test";
+static const std::string_view test_module_name = "main";
 
 } // namespace
 
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]) {
 
         std::optional<tiro::compiled_module> compiled;
         try {
-            compiled = compile(content, options);
+            compiled = compile(options.input, content, options);
         } catch (const std::exception& e) {
             fmt::print(stderr, "Compilation failed: {}\n", e.what());
             return 1;
@@ -134,15 +135,20 @@ OptionsResult parse_options(int argc, char** argv) {
     return parsed_options;
 }
 
-tiro::compiled_module compile(std::string_view content, const Options& options) {
+tiro::compiled_module
+compile(std::string_view filename, std::string_view content, const Options& options) {
     tiro::compiler_settings settings;
     settings.enable_dump_cst = options.dump_cst;
     settings.enable_dump_ast = options.dump_ast;
     settings.enable_dump_ir = options.dump_ir;
     settings.enable_dump_bytecode = options.dump_bytecode;
-    settings.message_callback = [](tiro::severity sev, uint32_t line, uint32_t column,
-                                    std::string_view message) {
-        fmt::print("{} {}:{}: {}\n", to_string(sev), line, column, message);
+    settings.message_callback = [](const tiro::compiler_message& msg) {
+        std::string_view file = msg.file;
+        if (file.empty())
+            file = "<UNAVAILABLE>";
+
+        fmt::print(
+            "{} {}:{}:{}: {}\n", to_string(msg.severity), file, msg.line, msg.column, msg.text);
     };
 
     std::exception_ptr error;
@@ -155,8 +161,8 @@ tiro::compiled_module compile(std::string_view content, const Options& options) 
         }
     };
 
-    tiro::compiler compiler(settings);
-    compiler.add_file(test_module_name, content);
+    tiro::compiler compiler(test_module_name, settings);
+    compiler.add_file(filename, content);
     try {
         compiler.run();
     } catch (...) {

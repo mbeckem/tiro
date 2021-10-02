@@ -10,7 +10,7 @@ TEST_CASE("tiropp::severity should wrap tiro_severity_t", "[api]") {
 }
 
 TEST_CASE("tiro::compiler should return compiled modules", "[api]") {
-    tiro::compiler comp;
+    tiro::compiler comp("test");
     REQUIRE(!comp.has_module());
 
     comp.add_file("foo", "export func bar() {}");
@@ -18,10 +18,51 @@ TEST_CASE("tiro::compiler should return compiled modules", "[api]") {
 
     REQUIRE(comp.has_module());
     tiro::compiled_module module = comp.take_module();
+    REQUIRE(module.raw_module() != nullptr);
+}
+
+TEST_CASE("tiro::compiler should throw if run is called more than once", "[api]") {
+    tiro::compiler comp("test");
+    REQUIRE(!comp.has_module());
+
+    comp.add_file("foo", "export func bar() {}");
+    comp.run();
+
+    REQUIRE_THROWS_MATCHES(comp.run(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
+}
+
+TEST_CASE("tiro::compiler should support multiple files in a module", "[api]") {
+    tiro::compiler comp("test");
+    comp.add_file("foo", "export func foo() {}");
+    comp.add_file("bar", "export func bar() {}");
+    comp.run();
+
+    REQUIRE(comp.has_module());
+    tiro::compiled_module module = comp.take_module();
+    REQUIRE(module.raw_module() != nullptr);
+}
+
+TEST_CASE("tiro::compiler should throw if file names are not unique", "[api]") {
+    tiro::compiler comp("test");
+    comp.add_file("foo", "export func foo() {}");
+
+    REQUIRE_THROWS_MATCHES(comp.add_file("foo", "export func bar() {}"), tiro::api_error,
+        throws_code(tiro::api_errc::bad_arg));
+}
+
+TEST_CASE("tiro::compiler should throw if files are added after run", "[api]") {
+    tiro::compiler comp("test");
+    REQUIRE(!comp.has_module());
+
+    comp.add_file("foo", "export func bar() {}");
+    comp.run();
+
+    REQUIRE_THROWS_MATCHES(comp.add_file("foo", "export func bar() {}"), tiro::api_error,
+        throws_code(tiro::api_errc::bad_state));
 }
 
 TEST_CASE("tiro::compiler throws on dump_* when not configured", "[api]") {
-    tiro::compiler comp;
+    tiro::compiler comp("test");
     comp.add_file("foo", "export func bar() {}");
     comp.run();
 
@@ -39,7 +80,7 @@ TEST_CASE("tiro::compiler supports dump_* when configured", "[api]") {
     settings.enable_dump_bytecode = true;
     settings.enable_dump_ir = true;
 
-    tiro::compiler comp(settings);
+    tiro::compiler comp("test", settings);
     comp.add_file("foo", "export func bar() {}");
     comp.run();
 
@@ -50,7 +91,7 @@ TEST_CASE("tiro::compiler supports dump_* when configured", "[api]") {
 }
 
 TEST_CASE("tiro::compiler supports move construction", "[api]") {
-    tiro::compiler source;
+    tiro::compiler source("test");
     tiro_compiler_t raw_source = source.raw_compiler();
 
     tiro::compiler target = std::move(source);
@@ -59,10 +100,10 @@ TEST_CASE("tiro::compiler supports move construction", "[api]") {
 }
 
 TEST_CASE("tiro::compiler supports move assignment", "[api]") {
-    tiro::compiler source;
+    tiro::compiler source("test");
     tiro_compiler_t raw_source = source.raw_compiler();
 
-    tiro::compiler target;
+    tiro::compiler target("test");
     target = std::move(source);
     REQUIRE(source.raw_compiler() == nullptr);
     REQUIRE(target.raw_compiler() == raw_source);

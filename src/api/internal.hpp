@@ -13,6 +13,7 @@
 #include "compiler/compiler.hpp"
 #include "vm/context.hpp"
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -178,15 +179,34 @@ inline tiro::vm::NativeAsyncFunctionFrame* to_internal(tiro_async_frame_t frame)
 }
 
 struct tiro_compiler {
-    tiro_compiler_settings_t settings;
-    std::optional<tiro::Compiler> compiler;
+    using InternalMessageCallback = std::function<void(const tiro_compiler_message_t&)>;
+
+    tiro::Compiler compiler;
+    InternalMessageCallback message_callback; // optional
     std::optional<tiro::CompilerResult> result;
 
-    explicit tiro_compiler(const tiro_compiler_settings_t& settings_)
-        : settings(settings_) {}
+    explicit tiro_compiler(std::string_view module_name, const tiro_compiler_settings& settings)
+        : compiler(module_name, map_settings(settings)) {
+        if (settings.message_callback) {
+            auto cb = settings.message_callback;
+            auto data = settings.message_callback_data;
+            message_callback = [cb, data](const auto& message) { cb(&message, data); };
+        }
+    }
 
     tiro_compiler(const tiro_compiler&) = delete;
     tiro_compiler& operator=(const tiro_compiler&) = delete;
+
+private:
+    static tiro::CompilerOptions map_settings(const tiro_compiler_settings& settings) {
+        tiro::CompilerOptions options;
+        options.analyze = options.parse = options.compile = true;
+        options.keep_cst = settings.enable_dump_cst;
+        options.keep_ast = settings.enable_dump_ast;
+        options.keep_ir = settings.enable_dump_ir;
+        options.keep_bytecode = settings.enable_dump_bytecode;
+        return options;
+    }
 };
 
 struct tiro_module {

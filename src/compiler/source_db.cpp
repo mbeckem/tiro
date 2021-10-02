@@ -33,9 +33,18 @@ SourceDb::SourceDb() {}
 
 SourceDb::~SourceDb() {}
 
-SourceId SourceDb::insert(std::string filename, std::string content) {
+bool SourceDb::contains(std::string_view filename) const {
+    return seen_.contains(filename);
+}
+
+SourceId SourceDb::insert_new(std::string filename, std::string content) {
+    if (contains(filename))
+        return {};
+
     auto entry = std::make_unique<SourceFile>(std::move(filename), std::move(content));
-    return files_.push_back(std::move(entry));
+    auto id = files_.push_back(std::move(entry));
+    seen_.insert(files_[id]->filename);
+    return id;
 }
 
 std::string_view SourceDb::filename(SourceId id) const {

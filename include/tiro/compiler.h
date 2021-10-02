@@ -4,7 +4,7 @@
 /**
  * \file
  * \brief Contains functions and type definitions for compiling tiro source code to modules.
- * 
+ *
  */
 
 #include "tiro/def.h"
@@ -28,6 +28,27 @@ typedef enum tiro_severity {
  * be freed.
  */
 TIRO_API const char* tiro_severity_str(tiro_severity_t severity);
+
+/**
+ * Represents a diagnostic message emitted by the compiler.
+ * All fields are only valid for the duration of the `message_callback` function call.
+ */
+typedef struct tiro_compiler_message {
+    /** Severity of this message */
+    tiro_severity_t severity;
+
+    /** The relevant source file. May be empty if there is no source file associated with this message. */
+    tiro_string_t file;
+
+    /** Source line (1 based). Zero if unavailable. */
+    uint32_t line;
+
+    /** Source column (1 based). Zero if unavailable. */
+    uint32_t column;
+
+    /** The message text. */
+    tiro_string_t text;
+} tiro_compiler_message_t;
 
 /**
  * An instance of this type can be passed to the compiler to configure it.
@@ -54,8 +75,7 @@ typedef struct tiro_compiler_settings {
 
     /* Will be invoked for every diagnostic message emitted by the compiler.
      * The default function prints messages to stdout. */
-    void (*message_callback)(tiro_severity_t severity, uint32_t line, uint32_t column,
-        tiro_string_t message, void* userdata);
+    void (*message_callback)(const tiro_compiler_message_t* message, void* userdata);
 } tiro_compiler_settings_t;
 
 /**
@@ -73,13 +93,16 @@ struct tiro_compiler;
  * a set of source files into a module. Warnings or errors emitted during
  * compilation can be observed through the `settings->message_callback` function.
  *
- * \param settings The compiler settings (optional). Default values will be used if
- * this parameter is NULL.
+ * \param module_name
+ *      The name of the compiled module. Must be a valid, non-empty string.
+ *      Does not have to remain valid for after the completion of this function, a copy is made internally.
  *
- * FIXME: Currently only works for a single source files, implement _add api.
+ * \param settings
+ *      The compiler settings (optional). Default values will be used if this parameter is NULL.
+ *      Does not have to remain valid after the completion of this function.
  */
 TIRO_API TIRO_WARN_UNUSED tiro_compiler_t tiro_compiler_new(
-    const tiro_compiler_settings_t* settings, tiro_error_t* err);
+    tiro_string_t module_name, const tiro_compiler_settings_t* settings, tiro_error_t* err);
 
 /**
  * Destroys and frees the given compiler instance. Must be called exactly once
@@ -89,9 +112,10 @@ TIRO_API TIRO_WARN_UNUSED tiro_compiler_t tiro_compiler_new(
 TIRO_API void tiro_compiler_free(tiro_compiler_t compiler);
 
 /**
- * Add a source file to the compiler. Can only be called before compilation started.
+ * Add a source file to the compiler.
+ * Can only be called before compilation started.
  *
- * FIXME: Can only be called for a single source file as of now.
+ * Filenames should be unique within a single module.
  */
 TIRO_API void tiro_compiler_add_file(tiro_compiler_t compiler, tiro_string_t file_name,
     tiro_string_t file_content, tiro_error_t* err);

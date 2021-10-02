@@ -7,6 +7,8 @@
 #include "compiler/source_map.hpp"
 #include "compiler/source_range.hpp"
 
+#include "absl/container/flat_hash_set.h"
+
 namespace tiro {
 
 TIRO_DEFINE_ENTITY_ID(SourceId, u32)
@@ -63,9 +65,12 @@ public:
     /// Returns the number of files in this db.
     size_t size() const { return files_.size(); }
 
+    /// Returns true if there is already a file with the given name.
+    bool contains(std::string_view filename) const;
+
     /// Inserts a new source file with the given name and content.
-    /// Returns the file's unique id.
-    SourceId insert(std::string filename, std::string content);
+    /// Returns the file's unique id, or an invalid id if a file with such a name already exists.
+    SourceId insert_new(std::string filename, std::string content);
 
     /// Returns the filename of the given file.
     /// Note: the string view is stable in memory.
@@ -108,6 +113,9 @@ private:
 
     // unique ptr -> stable string views
     EntityStorage<std::unique_ptr<SourceFile>, SourceId> files_;
+
+    // keys point into file_ entries.
+    absl::flat_hash_set<std::string_view> seen_;
 };
 
 } // namespace tiro

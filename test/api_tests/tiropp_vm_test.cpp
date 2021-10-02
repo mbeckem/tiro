@@ -5,8 +5,8 @@
 #include "./helpers.hpp"
 
 static tiro::compiled_module test_compile(const char* module_name, const char* source) {
-    tiro::compiler compiler;
-    compiler.add_file(module_name, source);
+    tiro::compiler compiler(module_name);
+    compiler.add_file("main", source);
     compiler.run();
     return compiler.take_module();
 }

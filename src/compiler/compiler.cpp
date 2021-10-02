@@ -26,7 +26,9 @@ void Compiler::add_file(std::string filename, std::string content) {
     if (started_)
         TIRO_ERROR("compiler already ran on this module");
 
-    sources_.insert(std::move(filename), std::move(content));
+    auto id = sources_.insert_new(std::move(filename), std::move(content));
+    if (!id)
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_BAD_ARG, "filename is not unique");
 }
 
 CompilerResult Compiler::run() {
