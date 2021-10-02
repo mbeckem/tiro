@@ -204,7 +204,7 @@ std::string_view to_string(ScopeType type) {
         return #T;
 
         TIRO_CASE(Global)
-        TIRO_CASE(File)
+        TIRO_CASE(Module)
         TIRO_CASE(Function)
         TIRO_CASE(ForStatement)
         TIRO_CASE(Block)

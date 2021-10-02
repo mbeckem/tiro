@@ -9,8 +9,8 @@
 #include <variant>
 
 static void load_test_code(tiro::vm& vm) {
-    tiro::compiler compiler;
-    compiler.add_file("test", "export func test(a, b) { return a + b; }");
+    tiro::compiler compiler("test");
+    compiler.add_file("main", "export func test(a, b) { return a + b; }");
     compiler.run();
     vm.load_std();
     vm.load(compiler.take_module());

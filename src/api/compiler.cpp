@@ -8,12 +8,18 @@ using namespace tiro::api;
 
 static constexpr tiro_compiler_settings_t default_compiler_settings = []() {
     tiro_compiler_settings_t settings{};
-    settings.message_callback = [](tiro_severity_t severity, uint32_t line, uint32_t column,
-                                    tiro_string_t message, void*) {
+    settings.message_callback = [](const tiro_compiler_message_t* msg, void*) {
         try {
             FILE* out = stdout;
-            fmt::print(out, "{} [{}:{}]: {}\n", tiro_severity_str(severity), line, column,
-                to_internal(message));
+
+            std::string_view filename = to_internal(msg->file);
+            if (filename.empty())
+                filename = "<N/A>";
+
+            std::string_view text = to_internal(msg->text);
+
+            fmt::print(out, "{} {}:{}:{}: {}\n", tiro_severity_str(msg->severity), filename,
+                msg->line, msg->column, text);
             std::fflush(out);
         } catch (...) {
         }
@@ -22,14 +28,11 @@ static constexpr tiro_compiler_settings_t default_compiler_settings = []() {
 }();
 
 static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
-    const auto& settings = comp->settings;
-    const auto& compiler = comp->compiler;
-
-    if (!settings.message_callback || !compiler)
+    if (!comp || !comp->message_callback)
         return;
 
-    const tiro_severity_t severity = [&]() {
-        switch (message.level) {
+    auto get_severity = [](Diagnostics::Level level) {
+        switch (level) {
         case Diagnostics::Error:
             return TIRO_SEVERITY_ERROR;
         case Diagnostics::Warning:
@@ -38,11 +41,24 @@ static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
 
         TIRO_UNREACHABLE("Invalid diagnostic level.");
         return TIRO_SEVERITY_ERROR;
-    }();
+    };
 
-    CursorPosition pos = compiler->cursor_pos(message.range);
-    settings.message_callback(severity, pos.line(), pos.column(), to_external(message.text),
-        settings.message_callback_data);
+    auto& compiler = comp->compiler;
+
+    tiro_compiler_message_t msg{};
+    msg.severity = get_severity(message.level);
+    if (message.range) {
+        auto pos = compiler.cursor_pos(message.range);
+        msg.file = to_external(compiler.sources().filename(message.range.id()));
+        msg.line = pos.line();
+        msg.column = pos.column();
+    } else {
+        msg.file = to_external("");
+        msg.line = 0;
+        msg.column = 0;
+    }
+    msg.text = to_external(message.text);
+    comp->message_callback(msg);
 }
 
 const char* tiro_severity_str(tiro_severity_t severity) {
@@ -62,10 +78,14 @@ void tiro_compiler_settings_init(tiro_compiler_settings_t* settings) {
     *settings = default_compiler_settings;
 }
 
-tiro_compiler_t tiro_compiler_new(const tiro_compiler_settings_t* settings, tiro_error_t* err) {
-    return entry_point(err, nullptr, [&] {
+tiro_compiler_t tiro_compiler_new(
+    tiro_string_t module_name, const tiro_compiler_settings_t* settings, tiro_error_t* err) {
+    return entry_point(err, nullptr, [&]() -> tiro_compiler_t {
+        if (!valid_string(module_name) || module_name.length == 0)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG), nullptr;
+
         const auto& actual_settings = settings ? *settings : default_compiler_settings;
-        return new tiro_compiler(actual_settings);
+        return new tiro_compiler(to_internal(module_name), actual_settings);
     });
 }
 
@@ -79,22 +99,15 @@ void tiro_compiler_add_file(
         if (!comp || !valid_string(file_name) || !valid_string(file_content))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
+        if (comp->compiler.started())
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
         std::string_view file_name_view = to_internal(file_name);
         std::string_view file_content_view = to_internal(file_content);
         if (file_name_view.empty())
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-        if (comp->compiler) // TODO: Only for as long as constructor requires file name and content
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
-
-        CompilerOptions options;
-        options.analyze = options.parse = options.compile = true;
-        options.keep_cst = comp->settings.enable_dump_cst;
-        options.keep_ast = comp->settings.enable_dump_ast;
-        options.keep_ir = comp->settings.enable_dump_ir;
-        options.keep_bytecode = comp->settings.enable_dump_bytecode;
-        comp->compiler.emplace(
-            std::string(file_name_view), std::string(file_content_view), options);
+        comp->compiler.add_file(std::string(file_name_view), std::string(file_content_view));
     });
 }
 
@@ -103,10 +116,10 @@ void tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
         if (!comp)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-        if (!comp->compiler || comp->result)
+        if (comp->compiler.started() || comp->result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
-        Compiler& compiler = *comp->compiler;
+        Compiler& compiler = comp->compiler;
 
         comp->result = compiler.run();
         for (const auto& message : compiler.diag().messages()) {

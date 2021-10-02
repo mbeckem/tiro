@@ -7,6 +7,8 @@
 #include "compiler/source_map.hpp"
 #include "compiler/source_range.hpp"
 
+#include "absl/container/flat_hash_set.h"
+
 namespace tiro {
 
 TIRO_DEFINE_ENTITY_ID(SourceId, u32)
@@ -57,9 +59,18 @@ public:
     SourceDb(const SourceDb&) = delete;
     SourceDb& operator=(const SourceDb&) = delete;
 
+    /// Returns a range over the available source file ids in this db.
+    auto ids() const { return files_.keys(); }
+
+    /// Returns the number of files in this db.
+    size_t size() const { return files_.size(); }
+
+    /// Returns true if there is already a file with the given name.
+    bool contains(std::string_view filename) const;
+
     /// Inserts a new source file with the given name and content.
-    /// Returns the file's unique id.
-    SourceId insert(std::string filename, std::string content);
+    /// Returns the file's unique id, or an invalid id if a file with such a name already exists.
+    SourceId insert_new(std::string filename, std::string content);
 
     /// Returns the filename of the given file.
     /// Note: the string view is stable in memory.
@@ -70,6 +81,16 @@ public:
     /// Note: the string view is stable in memory.
     /// \pre `id` must be valid.
     std::string_view content(SourceId id) const;
+
+    /// Returns the substring of referenced by the range.
+    /// Note: the string view is stable in memory.
+    /// \pre `range` must be valid.
+    std::string_view substring(const AbsoluteSourceRange& range) const;
+
+    /// Returns the source line mappings for the given file.
+    /// Note: the reference is stable in memory.
+    /// \pre `id` must be valid.
+    const SourceMap& source_lines(SourceId id) const;
 
     /// Returns the cursor position for the given offset in the file with the provided id.
     /// \pre `id` must be valid.
@@ -92,6 +113,9 @@ private:
 
     // unique ptr -> stable string views
     EntityStorage<std::unique_ptr<SourceFile>, SourceId> files_;
+
+    // keys point into file_ entries.
+    absl::flat_hash_set<std::string_view> seen_;
 };
 
 } // namespace tiro

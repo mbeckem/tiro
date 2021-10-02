@@ -7,6 +7,7 @@
 #include "compiler/ast_gen/operators.hpp"
 #include "compiler/ast_gen/typed_nodes.hpp"
 #include "compiler/diagnostics.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/syntax/grammar/literals.hpp"
 #include "compiler/syntax/syntax_tree.hpp"
 #include "compiler/syntax/syntax_type.hpp"
@@ -16,8 +17,6 @@
 #include <string_view>
 
 namespace tiro {
-
-static void emit_errors(const SyntaxTree& tree, Diagnostics& diag);
 
 namespace {
 
@@ -54,8 +53,9 @@ private:
 /// Implements the syntax tree -> abstract syntax tree transformation.
 class AstBuilder {
 public:
-    explicit AstBuilder(const SyntaxTree& tree, BuilderState& state)
-        : tree_(tree)
+    explicit AstBuilder(SourceId source_id, const SyntaxTree& tree, BuilderState& state)
+        : source_id_(source_id)
+        , tree_(tree)
         , state_(state) {}
 
     template<typename Node, typename Func>
@@ -132,9 +132,15 @@ private:
         return substring(tree_.source(), token.range());
     }
 
+    void emit_errors() {
+        for (const auto& error : tree_.errors()) {
+            diag().report(Diagnostics::Error, make_absolute(error.range()), error.message());
+        }
+    }
+
     auto diag_sink(const SourceRange& range) const {
-        return [&diag = this->diag(), range](std::string_view error_message) {
-            diag.report(Diagnostics::Error, range, std::string(error_message));
+        return [this, range](std::string_view error_message) {
+            diag().report(Diagnostics::Error, make_absolute(range), std::string(error_message));
         };
     }
 
@@ -186,45 +192,54 @@ private:
     NotNull<AstPtr<T>> make_node(const SourceRange& range, Args&&... args) {
         auto node = std::make_unique<T>(std::forward<Args>(args)...);
         node->id(state_.next_node_id());
-        node->range(range);
+        node->range(make_absolute(range));
         return TIRO_NN(std::move(node));
     }
 
+    AbsoluteSourceRange make_absolute(const SourceRange& range) const {
+        return AbsoluteSourceRange(source_id_, range);
+    }
+
 private:
+    SourceId source_id_;
     const SyntaxTree& tree_;
     BuilderState& state_;
 };
 
 } // namespace
 
-static AstPtr<AstFile> build_file_ast(const SyntaxTree& file_tree, BuilderState& state) {
-    AstBuilder builder(file_tree, state);
+static AstPtr<AstFile>
+build_file_ast(SourceId source_id, const SyntaxTree& file_tree, BuilderState& state) {
+    AstBuilder builder(source_id, file_tree, state);
     return builder.build<AstFile>([&](auto node_id) { return builder.build_file(node_id); });
 }
 
-static AstPtr<AstStmt> build_item_ast(const SyntaxTree& item_tree, BuilderState& state) {
-    AstBuilder builder(item_tree, state);
+static AstPtr<AstStmt>
+build_item_ast(SourceId source_id, const SyntaxTree& item_tree, BuilderState& state) {
+    AstBuilder builder(source_id, item_tree, state);
     return builder.build<AstStmt>([&](auto node_id) { return builder.build_item(node_id); });
 }
 
-static AstPtr<AstStmt> build_stmt_ast(const SyntaxTree& stmt_tree, BuilderState& state) {
-    AstBuilder builder(stmt_tree, state);
+static AstPtr<AstStmt>
+build_stmt_ast(SourceId source_id, const SyntaxTree& stmt_tree, BuilderState& state) {
+    AstBuilder builder(source_id, stmt_tree, state);
     return builder.build<AstStmt>([&](auto node_id) { return builder.build_stmt(node_id); });
 }
 
-static AstPtr<AstExpr> build_expr_ast(const SyntaxTree& expr_tree, BuilderState& state) {
-    AstBuilder builder(expr_tree, state);
+static AstPtr<AstExpr>
+build_expr_ast(SourceId source_id, const SyntaxTree& expr_tree, BuilderState& state) {
+    AstBuilder builder(source_id, expr_tree, state);
     return builder.build<AstExpr>([&](auto node_id) { return builder.build_expr(node_id); });
 }
 
 AstPtr<AstModule>
-build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag) {
+build_module_ast(Span<const SyntaxTreeEntry> files, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
     AstPtr<AstModule> mod = std::make_unique<AstModule>();
     mod->id(state.next_node_id());
 
-    for (auto& file_tree : files) {
-        auto file = build_file_ast(file_tree, state);
+    for (auto& entry : files) {
+        auto file = build_file_ast(entry.id, entry.tree, state);
         mod->files().append(std::move(file));
     }
     return mod;
@@ -233,30 +248,30 @@ build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_file_ast(file_tree, state);
+    return build_file_ast(SourceId(), file_tree, state);
 }
 
 AstPtr<AstStmt>
 build_item_ast(const SyntaxTree& item_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_item_ast(item_tree, state);
+    return build_item_ast(SourceId(), item_tree, state);
 }
 
 AstPtr<AstStmt>
 build_stmt_ast(const SyntaxTree& stmt_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_stmt_ast(stmt_tree, state);
+    return build_stmt_ast(SourceId(), stmt_tree, state);
 }
 
 AstPtr<AstExpr>
 build_expr_ast(const SyntaxTree& expr_tree, StringTable& strings, Diagnostics& diag) {
     BuilderState state(diag, strings);
-    return build_expr_ast(expr_tree, state);
+    return build_expr_ast(SourceId(), expr_tree, state);
 }
 
 template<typename Node, typename Func>
 AstPtr<Node> AstBuilder::build(Func&& fn) {
-    emit_errors(tree_, diag());
+    emit_errors();
 
     SyntaxNodeId node_id = get_syntax_node();
     if (node_id) {
@@ -416,8 +431,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_literal_expr(SyntaxNodeId node_id) {
         return make_node<AstFloatLiteral>(node_id, *value);
     }
     default:
-        diag().reportf(Diagnostics::Error, token.range(), "unexpected {} in literal expression",
-            to_description(token.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(token.range()),
+            "unexpected {} in literal expression", to_description(token.type()));
         return error_expr(node_id);
     }
 }
@@ -501,8 +516,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_binary_expr(SyntaxNodeId node_id) {
     auto lhs = build_expr(node->lhs);
     auto op = to_binary_operator(node->op.type());
     if (!op) {
-        diag().reportf(Diagnostics::Error, node->op.range(), "unexpected binary operator {}",
-            to_description(node->op.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(node->op.range()),
+            "unexpected binary operator {}", to_description(node->op.type()));
         return error_expr(node_id);
     }
     auto rhs = build_expr(node->rhs);
@@ -520,8 +535,8 @@ NotNull<AstPtr<AstExpr>> AstBuilder::build_unary_expr(SyntaxNodeId node_id) {
 
     auto op = to_unary_operator(node->op.type());
     if (!op) {
-        diag().reportf(Diagnostics::Error, node->op.range(), "unexpected unary operator {}",
-            to_description(node->op.type()));
+        diag().reportf(Diagnostics::Error, make_absolute(node->op.range()),
+            "unexpected unary operator {}", to_description(node->op.type()));
         return error_expr(node_id);
     }
     auto inner = build_expr(node->expr);
@@ -754,12 +769,13 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_assert_stmt(SyntaxNodeId node_id) {
 
     auto& [access_type, args] = *arglist;
     if (access_type != AccessType::Normal) {
-        diag().report(
-            Diagnostics::Error, range(node_id), "assert only supports normal call syntax");
+        diag().report(Diagnostics::Error, make_absolute(range(node_id)),
+            "assert only supports normal call syntax");
         return error_stmt(node_id);
     }
     if (!(args.size() == 1 || args.size() == 2)) {
-        diag().report(Diagnostics::Error, range(node_id), "assert requires 1 or 2 arguments");
+        diag().report(
+            Diagnostics::Error, make_absolute(range(node_id)), "assert requires 1 or 2 arguments");
         return error_stmt(node_id);
     }
 
@@ -1154,7 +1170,8 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNod
         switch (modifier.type()) {
         case TokenType::KwExport:
             if (has_export)
-                diag().report(Diagnostics::Error, modifier.range(), "redundant export modifier");
+                diag().report(Diagnostics::Error, make_absolute(modifier.range()),
+                    "redundant export modifier");
             has_export = true;
             modifiers.append(make_node<AstExportModifier>(modifier.range()));
             break;
@@ -1184,12 +1201,6 @@ NotNull<AstPtr<AstExpr>> AstBuilder::error_expr(SyntaxNodeId node_id) {
 
 NotNull<AstPtr<AstStmt>> AstBuilder::error_stmt(SyntaxNodeId node_id) {
     return make_node<AstErrorStmt>(node_id);
-}
-
-void emit_errors(const SyntaxTree& tree, Diagnostics& diag) {
-    for (const auto& error : tree.errors()) {
-        diag.report(Diagnostics::Error, error.range(), error.message());
-    }
 }
 
 } // namespace tiro

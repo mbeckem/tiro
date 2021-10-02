@@ -10,13 +10,12 @@ extern const char* EXAMPLE_SOURCE;
 
 tiro::compiled_module compile(std::string_view source) {
     tiro::compiler_settings settings;
-    settings.message_callback = [&](tiro::severity, uint32_t line, uint32_t column,
-                                    std::string_view message) {
-        std::cout << line << ":" << column << ": " << message << "\n";
+    settings.message_callback = [&](auto& message) {
+        std::cout << message.line << ":" << message.column << ": " << message.text << "\n";
     };
 
-    tiro::compiler compiler(settings);
-    compiler.add_file("example", EXAMPLE_SOURCE);
+    tiro::compiler compiler("perf", settings);
+    compiler.add_file("main", EXAMPLE_SOURCE);
     compiler.run();
 
     return compiler.take_module();

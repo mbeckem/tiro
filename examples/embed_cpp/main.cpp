@@ -53,13 +53,13 @@ tiro::compiled_module create_example_module() {
     // For advanced uses, provide custom settings to the compiler to override
     // default error logging (which goes to stdout/stderr by default)
     // or to obtain diagnostic output like the AST, IR or tiro bytecode.
-    tiro::compiler compiler;
+    tiro::compiler compiler("example");
 
     // Add files to the compiler.
     // Currently, the filename given here is used for the name of the
     // final compiled module, and the number of files is limited to 1.
     // This is about to change.
-    compiler.add_file("example", EXAMPLE_SOURCE);
+    compiler.add_file("main", EXAMPLE_SOURCE);
 
     // Actually perform the compilation. This will throw on error.
     compiler.run();

@@ -24,12 +24,15 @@ public:
         enable_bytecode = 1 << 3,
     };
 
-    explicit eval_test(std::string_view source, int flags = 0);
+    explicit eval_test(std::string_view source, int flags = 0)
+        : eval_test(std::string(source), flags) {}
+
+    explicit eval_test(std::string source, int flags = 0);
+    explicit eval_test(std::vector<std::string> sources, int flags = 0);
 
     eval_test(const eval_test&) = delete;
     eval_test& operator=(const eval_test&) = delete;
 
-    const std::string& source() { return source_; }
     int flags() { return flags_; }
     vm& get_vm() { return vm_; }
 
@@ -53,7 +56,7 @@ private:
         std::string bytecode;
     };
 
-    static compile_result compile_source(std::string_view source, int flags);
+    static compile_result compile_sources(const std::vector<std::string>& sources, int flags);
 
 private:
     friend eval_call;
@@ -76,7 +79,7 @@ private:
     result exec(std::string_view function, const std::vector<handle>& args);
 
 private:
-    std::string source_;
+    std::vector<std::string> sources_;
     int flags_ = 0;
     vm vm_;
     compile_result result_;
@@ -100,7 +103,7 @@ public:
 private:
     friend eval_test;
 
-    explicit eval_call(eval_test& test, std::string_view function, std::vector<handle> args);
+    explicit eval_call(eval_test & test, std::string_view function, std::vector<handle> args);
 
 private:
     eval_test& test_;

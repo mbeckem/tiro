@@ -8,13 +8,15 @@
 
 namespace tiro {
 
-SemanticAst::SemanticAst(NotNull<AstFile*> root, StringTable& strings)
+SemanticAst::SemanticAst(NotNull<AstModule*> root, StringTable& strings)
     : root_(root)
     , strings_(&strings) {
     nodes_.register_tree(root_);
 }
 
-SemanticAst analyze_ast(NotNull<AstFile*> root, StringTable& strings, Diagnostics& diag) {
+SemanticAst::~SemanticAst() {}
+
+SemanticAst analyze_ast(NotNull<AstModule*> root, StringTable& strings, Diagnostics& diag) {
     TIRO_DEBUG_ASSERT(!diag.has_errors(), "Must not be in error state.");
 
     SemanticAst ast(root, strings);

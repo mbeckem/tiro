@@ -84,9 +84,13 @@ SimpleAst<AstFile> parse_file_ast(std::string_view source) {
 }
 
 SimpleAst<AstModule> parse_module_ast(const std::vector<std::string_view>& sources) {
-    std::vector<SyntaxTree> files;
+    std::vector<SyntaxTreeEntry> files;
+
+    u32 index = 0;
     for (const auto& source : sources) {
-        files.push_back(get_syntax_tree(source, [&](Parser& p) { parse_file(p); }));
+        SourceId id(index++);
+        SyntaxTree tree = get_syntax_tree(source, [&](Parser& p) { parse_file(p); });
+        files.emplace_back(id, std::move(tree));
     }
     return build_ast<AstModule>([&](StringTable& strings, Diagnostics& diag) {
         return build_module_ast(files, strings, diag);

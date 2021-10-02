@@ -11,7 +11,8 @@ namespace tiro {
 
 class SemanticAst final {
 public:
-    SemanticAst(NotNull<AstFile*> root, StringTable& strings);
+    SemanticAst(NotNull<AstModule*> root, StringTable& strings);
+    ~SemanticAst();
 
     SemanticAst(SemanticAst&&) noexcept = default;
     SemanticAst& operator=(SemanticAst&&) noexcept = default;
@@ -19,7 +20,7 @@ public:
     SemanticAst(const SemanticAst&) = delete;
     SemanticAst& operator=(const SemanticAst&) = delete;
 
-    NotNull<AstFile*> root() const { return root_; }
+    NotNull<AstModule*> root() const { return root_; }
 
     const AstNodeMap& nodes() const { return nodes_; }
     AstNodeMap& nodes() { return nodes_; }
@@ -33,14 +34,14 @@ public:
     StringTable& strings() const { return *strings_; }
 
 private:
-    NotNull<AstFile*> root_;
+    NotNull<AstModule*> root_;
     AstNodeMap nodes_;
     SymbolTable symbols_;
     TypeTable types_;
     StringTable* strings_;
 };
 
-SemanticAst analyze_ast(NotNull<AstFile*> root, StringTable& strings, Diagnostics& diag);
+SemanticAst analyze_ast(NotNull<AstModule*> root, StringTable& strings, Diagnostics& diag);
 
 }; // namespace tiro
 

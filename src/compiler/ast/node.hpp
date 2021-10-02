@@ -10,7 +10,7 @@
 #include "common/ranges/iter_tools.hpp"
 #include "common/text/string_table.hpp"
 #include "compiler/ast/fwd.hpp"
-#include "compiler/source_range.hpp"
+#include "compiler/source_db.hpp"
 
 #include "absl/container/flat_hash_map.h"
 
@@ -110,8 +110,8 @@ public:
     void id(AstId new_id) { id_ = new_id; }
 
     /// The node's source range.
-    SourceRange range() const { return range_; }
-    void range(const SourceRange& new_range) { range_ = new_range; }
+    AbsoluteSourceRange range() const { return range_; }
+    void range(const AbsoluteSourceRange& new_range) { range_ = new_range; }
 
     /// True if this node has an error (syntactic or semantic).
     bool has_error() const { return flags_.test(HasError); }
@@ -143,7 +143,7 @@ private:
 private:
     const AstNodeType type_;
     AstId id_;
-    SourceRange range_;
+    AbsoluteSourceRange range_;
     Flags<Props> flags_;
 };
 

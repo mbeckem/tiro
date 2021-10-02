@@ -31,7 +31,7 @@ struct PrintRange {
 
 class TreeWriter final {
 public:
-    explicit TreeWriter(const SyntaxTree& tree, SourceMap& map, FormatStream& stream)
+    explicit TreeWriter(const SyntaxTree& tree, const SourceMap& map, FormatStream& stream)
         : tree_(tree)
         , map_(map)
         , stream_(stream) {}
@@ -56,14 +56,14 @@ private:
 
 private:
     const SyntaxTree& tree_;
-    SourceMap& map_;
+    const SourceMap& map_;
     FormatStream& stream_;
     int depth_ = 0;
 };
 
 } // namespace
 
-std::string dump(const SyntaxTree& tree, SourceMap& map) {
+std::string dump(const SyntaxTree& tree, const SourceMap& map) {
     StringFormatStream stream;
     TreeWriter dumper(tree, map, stream);
     dumper.dump();

@@ -4,6 +4,7 @@
 #include "tiropp/def.hpp"
 #include "tiropp/detail/handle_check.hpp"
 #include "tiropp/detail/resource_holder.hpp"
+#include "tiropp/detail/translate.hpp"
 #include "tiropp/error.hpp"
 #include "tiropp/fwd.hpp"
 #include "tiropp/vm.hpp"
@@ -342,7 +343,7 @@ public:
 
         tiro_string_t value;
         tiro_string_value(raw_vm(), raw_handle(), &value, error_adapter());
-        return std::string_view(value.data, value.length);
+        return detail::from_raw(value);
     }
 
     /// Returns a copy of the string's content, converted to a std::string.
@@ -353,8 +354,7 @@ public:
 inline string make_string(vm& v, std::string_view value) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_make_string(
-        v.raw_vm(), {value.data(), value.size()}, result.raw_handle(), error_adapter());
+    tiro_make_string(v.raw_vm(), detail::to_raw(value), result.raw_handle(), error_adapter());
     return string(std::move(result));
 }
 
@@ -789,7 +789,7 @@ public:
     handle get_export(std::string_view export_name) const {
         handle result(raw_vm());
         detail::check_handles(raw_vm(), *this, result);
-        tiro_module_get_export(raw_vm(), raw_handle(), {export_name.data(), export_name.length()},
+        tiro_module_get_export(raw_vm(), raw_handle(), detail::to_raw(export_name),
             result.raw_handle(), error_adapter());
         return result;
     }
@@ -801,13 +801,13 @@ inline module make_module(
     const size_t exports_size = exports.size();
     std::vector<tiro_module_member_t> raw_exports(exports_size);
     for (size_t i = 0; i < exports_size; ++i) {
-        raw_exports[i].name = {exports[i].first.data(), exports[i].first.length()};
+        raw_exports[i].name = detail::to_raw(exports[i].first);
         raw_exports[i].value = exports[i].second.raw_handle();
     }
 
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_make_module(v.raw_vm(), {name.data(), name.length()}, raw_exports.data(), exports_size,
+    tiro_make_module(v.raw_vm(), detail::to_raw(name), raw_exports.data(), exports_size,
         result.raw_handle(), error_adapter());
     return module(std::move(result));
 }
@@ -896,8 +896,8 @@ inline record make_record(vm& v, const array& keys) {
 inline handle get_export(const vm& v, std::string_view module_name, std::string_view export_name) {
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), result);
-    tiro_vm_get_export(v.raw_vm(), {module_name.data(), module_name.length()},
-        {export_name.data(), export_name.length()}, result.raw_handle(), error_adapter());
+    tiro_vm_get_export(v.raw_vm(), detail::to_raw(module_name), detail::to_raw(export_name),
+        result.raw_handle(), error_adapter());
     return result;
 }
 

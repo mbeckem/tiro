@@ -3,7 +3,7 @@
 
 #include "common/format.hpp"
 #include "common/ranges/iter_tools.hpp"
-#include "compiler/source_range.hpp"
+#include "compiler/source_db.hpp"
 
 #include <string>
 #include <vector>
@@ -17,12 +17,12 @@ public:
 
     struct Message {
         Level level = Error;
-        SourceRange range;
+        AbsoluteSourceRange range;
         std::string text;
 
         Message() = default;
 
-        Message(Level level_, const SourceRange& range_, std::string text_)
+        Message(Level level_, const AbsoluteSourceRange& range_, std::string text_)
             : level(level_)
             , range(range_)
             , text(std::move(text_)) {}
@@ -45,14 +45,14 @@ public:
     auto messages() const { return IterRange(messages_.cbegin(), messages_.cend()); }
 
     /// Report a message at the given source text location.
-    void report(Level level, const SourceRange& range, std::string text);
+    void report(Level level, const AbsoluteSourceRange& range, std::string text);
 
-    void vreport(Level level, const SourceRange& range, std::string_view format_string,
+    void vreport(Level level, const AbsoluteSourceRange& range, std::string_view format_string,
         fmt::format_args format_args);
 
     /// Report a message at the given source text location, with fmt::format syntax.
     template<typename... Args>
-    void reportf(Level level, const SourceRange& range, std::string_view format_string,
+    void reportf(Level level, const AbsoluteSourceRange& range, std::string_view format_string,
         const Args&... format_args) {
         vreport(level, range, format_string, fmt::make_format_args(format_args...));
     }

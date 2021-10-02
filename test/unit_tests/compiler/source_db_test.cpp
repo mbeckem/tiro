@@ -30,15 +30,17 @@ TEST_CASE("absolute source ranges should represent file and position", "[source-
 TEST_CASE("source db should store file contents", "[source-db]") {
     SourceDb db;
 
-    auto id = db.insert("foo", "bar");
-    REQUIRE(id.valid());
+    auto id = db.insert_new("foo", "bar");
+    REQUIRE(id);
+    REQUIRE(db.contains("foo"));
     REQUIRE(db.filename(id) == "foo");
     REQUIRE(db.content(id) == "bar");
 }
 
 TEST_CASE("source db should be able to compute cursor positions", "[source-db]") {
     SourceDb db;
-    auto id = db.insert("foo", "hello\nworld\n");
+    auto id = db.insert_new("foo", "hello\nworld\n");
+    REQUIRE(id);
 
     auto pos1 = db.cursor_pos(id, 6);
     REQUIRE(pos1.line() == 2);

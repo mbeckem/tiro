@@ -5,12 +5,23 @@
 #include "common/fwd.hpp"
 #include "compiler/ast/fwd.hpp"
 #include "compiler/fwd.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/syntax/fwd.hpp"
+#include "compiler/syntax/syntax_tree.hpp"
 
 namespace tiro {
 
+struct SyntaxTreeEntry {
+    SourceId id;
+    SyntaxTree tree;
+
+    SyntaxTreeEntry(SourceId id_, SyntaxTree tree_)
+        : id(id_)
+        , tree(std::move(tree_)) {}
+};
+
 AstPtr<AstModule>
-build_module_ast(Span<const SyntaxTree> files, StringTable& strings, Diagnostics& diag);
+build_module_ast(Span<const SyntaxTreeEntry> files, StringTable& strings, Diagnostics& diag);
 
 AstPtr<AstFile>
 build_file_ast(const SyntaxTree& file_tree, StringTable& strings, Diagnostics& diag);

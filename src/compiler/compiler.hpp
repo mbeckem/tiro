@@ -7,6 +7,7 @@
 #include "compiler/diagnostics.hpp"
 #include "compiler/ir/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
+#include "compiler/source_db.hpp"
 #include "compiler/source_map.hpp"
 #include "compiler/syntax/fwd.hpp"
 
@@ -47,9 +48,19 @@ struct CompilerResult {
 
 class Compiler final {
 public:
-    explicit Compiler(
-        std::string file_name, std::string file_content, const CompilerOptions& options = {});
+    explicit Compiler(std::string_view module_name, const CompilerOptions& options = {});
 
+    /// Returns true if run() has been called already.
+    bool started() const { return started_; }
+
+    /// Adds a new source file to the compiler.
+    void add_file(std::string filename, std::string content);
+
+    /// Starts compilation and returns the result.
+    /// Can only be called once per instance.
+    CompilerResult run();
+
+    const SourceDb& sources() const { return sources_; }
     StringTable& strings() { return strings_; }
     const StringTable& strings() const { return strings_; }
 
@@ -57,18 +68,14 @@ public:
     const Diagnostics& diag() const { return diag_; }
     bool has_errors() const { return diag_.has_errors(); }
 
-    CompilerResult run();
-
     // Compute the concrete cursor position (i.e. line and column) for the given
     // source range.
-    CursorPosition cursor_pos(const SourceRange& range) const;
+    CursorPosition cursor_pos(const AbsoluteSourceRange& range) const;
 
 private:
     SyntaxTree parse_file(std::string_view source);
 
-    AstPtr<AstFile> construct_ast(const SyntaxTree& tree);
-
-    std::optional<SemanticAst> analyze(NotNull<AstFile*> root);
+    std::optional<SemanticAst> analyze(NotNull<AstModule*> root);
 
     std::optional<ir::Module> generate_ir(const SemanticAst& ast);
 
@@ -77,12 +84,10 @@ private:
 private:
     CompilerOptions options_;
     StringTable strings_;
-
-    std::string file_name_;
-    std::string file_content_;
-    InternedString file_name_intern_;
-    SourceMap source_map_;
+    InternedString module_name_;
+    SourceDb sources_;
     Diagnostics diag_;
+    bool started_ = false;
 };
 
 } // namespace tiro

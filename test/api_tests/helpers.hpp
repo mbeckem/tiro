@@ -31,8 +31,8 @@ private:
 
 // Helper to load a test module (name: "test") into a fresh vm.
 inline void load_test(tiro::vm& vm, const char* source) {
-    tiro::compiler compiler;
-    compiler.add_file("test", source);
+    tiro::compiler compiler("test");
+    compiler.add_file("main", source);
     compiler.run();
     REQUIRE(compiler.has_module());
 

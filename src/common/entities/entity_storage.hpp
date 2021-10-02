@@ -59,7 +59,7 @@ public:
     auto end() const { return storage_.end(); }
 
     /// An iterable range over the entity ids in this instance.
-    auto keys() const { return TransformView(CountingRange<size_t>(0, size()), to_id); }
+    auto keys() const { return TransformView(CountingRange<size_t>(0, size()), IndexToId()); }
 
     /// Returns true if this instance is empty.
     bool empty() const { return size() == 0; }
@@ -201,6 +201,10 @@ public:
 private:
     static_assert(std::numeric_limits<IndexType>::max() <= std::numeric_limits<size_t>::max(),
         "Index type must not allow larger values than size_t.");
+
+    struct IndexToId {
+        IdType operator()(size_t index) const { return to_id(index); }
+    };
 
     static size_t to_index(const IdType& id) {
         IndexType index = detail::entity_id_to_index(id);

@@ -6,8 +6,8 @@
 #include "./helpers.hpp"
 
 static void load_program(tiro_vm_t vm, std::string_view module, std::string_view source) {
-    tiro::compiler compiler;
-    compiler.add_file(module, source);
+    tiro::compiler compiler(module);
+    compiler.add_file("main", source);
     compiler.run();
     tiro::compiled_module compiled = compiler.take_module();
 

@@ -10,7 +10,7 @@ TEST_CASE("Constants at module scope should be supported", "[modules]") {
         const y = "world";
         const z = "Hello $y!";
 
-        export func get_x() { return x; }    
+        export func get_x() { return x; }
         export func get_y() { return y; }
         export func get_z() { return z; }
     )";
@@ -39,10 +39,10 @@ TEST_CASE("Variables on module scope should be supported", "[modules]") {
 TEST_CASE("Complex init logic at module scope should be possible", "[modules]") {
     std::string_view source = R"(
         const data = [1, 2, 3, "end"];
-        
+
         export const next = {
             var index = 0;
-            
+
             func next() {
                 var result = data[index];
                 index += 1;
@@ -56,6 +56,26 @@ TEST_CASE("Complex init logic at module scope should be possible", "[modules]") 
     test.call("next").returns_int(2);
     test.call("next").returns_int(3);
     test.call("next").returns_string("end");
+}
+
+TEST_CASE("Functions and variables in the same module can see each other", "[modules]") {
+    std::string file_1 = R"(
+        const data = [1, 2, 3];
+    )";
+
+    std::string file_2 = R"(
+        export func get_1() = data[1];
+    )";
+
+    std::string file_3 = R"(
+        export func get_2() {
+            return get_1() + data[2];
+        }
+    )";
+
+    eval_test test({file_1, file_2, file_3});
+    test.call("get_1").returns_int(2);
+    test.call("get_2").returns_int(5);
 }
 
 } // namespace tiro::eval_tests

@@ -16,40 +16,54 @@
 
 namespace tiro {
 
-Compiler::Compiler(std::string file_name, std::string file_content, const CompilerOptions& options)
-    : options_(options)
-    , file_name_(std::move(file_name))
-    , file_content_(std::move(file_content))
-    , file_name_intern_(strings_.insert(file_name_))
-    , source_map_(file_content_) {}
+Compiler::Compiler(std::string_view module_name, const CompilerOptions& options)
+    : options_(options) {
+    TIRO_CHECK(!module_name.empty(), "module name must not be empty");
+    module_name_ = strings_.insert(module_name);
+}
+
+void Compiler::add_file(std::string filename, std::string content) {
+    if (started_)
+        TIRO_ERROR("compiler already ran on this module");
+
+    auto id = sources_.insert_new(std::move(filename), std::move(content));
+    if (!id)
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_BAD_ARG, "filename is not unique");
+}
 
 CompilerResult Compiler::run() {
-    CompilerResult result;
+    if (started_)
+        TIRO_ERROR("compiler already ran on this module");
+    started_ = true;
 
+    CompilerResult result;
     if (!options_.parse) {
         result.success = true;
         return result;
     }
 
     auto ir_module = [&]() -> std::optional<ir::Module> {
-        std::vector<SyntaxTree> files;
-        {
-            // TODO: Many files
-            files.push_back(parse_file(file_content_));
-        }
+        std::vector<SyntaxTreeEntry> files;
+        files.reserve(sources_.size());
+        for (auto file_id : sources_.ids())
+            files.emplace_back(file_id, parse_file(sources_.content(file_id)));
 
         if (options_.keep_cst) {
             std::string buffer;
-            for (const auto& file : files) {
-                buffer += "# Filename\n"; // TODO
-                buffer += dump(file, source_map_);
+            for (const auto& entry : files) {
+                buffer += fmt::format("# Filename: {}", sources_.filename(entry.id));
+                buffer += dump(entry.tree, sources_.source_lines(entry.id));
             }
             result.cst = std::move(buffer);
         }
 
-        auto ast = construct_ast(files.at(0)); // TODO many files
-        if (options_.keep_ast)
-            result.ast = dump(ast.get(), strings_, source_map_);
+        auto ast = build_module_ast(files, strings_, diag_);
+        if (!ast || !is_instance<AstModule>(ast))
+            TIRO_ERROR("failed to build a module ast");
+
+        if (options_.keep_ast) {
+            result.ast = dump(ast.get(), strings_, sources_);
+        }
 
         if (!options_.analyze) {
             result.success = true;
@@ -94,8 +108,8 @@ CompilerResult Compiler::run() {
     return result;
 }
 
-CursorPosition Compiler::cursor_pos(const SourceRange& range) const {
-    return source_map_.cursor_pos(range.begin());
+CursorPosition Compiler::cursor_pos(const AbsoluteSourceRange& range) const {
+    return sources_.cursor_pos(range.id(), range.range().begin());
 }
 
 SyntaxTree Compiler::parse_file(std::string_view source) {
@@ -134,13 +148,7 @@ SyntaxTree Compiler::parse_file(std::string_view source) {
     return parse(tokens);
 }
 
-AstPtr<AstFile> Compiler::construct_ast(const SyntaxTree& tree) {
-    auto ast = build_file_ast(tree, strings_, diag_);
-    TIRO_CHECK(ast, "Failed to construct the file's ast.");
-    return ast;
-}
-
-std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {
+std::optional<SemanticAst> Compiler::analyze(NotNull<AstModule*> root) {
     if (has_errors())
         return {};
 
@@ -154,8 +162,8 @@ std::optional<SemanticAst> Compiler::analyze(NotNull<AstFile*> root) {
 std::optional<ir::Module> Compiler::generate_ir(const SemanticAst& ast) {
     TIRO_DEBUG_ASSERT(!has_errors(), "Must not generate mir when the program already has errors.");
 
-    ir::Module mod(file_name_intern_, strings_);
-    ir::ModuleContext ctx{file_content_, ast, diag_};
+    ir::Module mod(module_name_, strings_);
+    ir::ModuleContext ctx{sources_, ast, diag_};
     ir::ModuleIRGen gen(ctx, mod);
     gen.compile_module();
     if (has_errors())

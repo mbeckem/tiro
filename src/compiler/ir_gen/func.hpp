@@ -199,7 +199,7 @@ public:
     FunctionIRGen(const FunctionIRGen&) = delete;
     FunctionIRGen& operator=(const FunctionIRGen&) = delete;
 
-    std::string_view source_file() const;
+    const SourceDb& sources() const;
     ModuleIRGen& module_gen() const;
     const AstNodeMap& nodes() const;
     const TypeTable& types() const;
@@ -215,7 +215,7 @@ public:
     void compile_function(NotNull<AstFuncDecl*> func);
 
     /// Compilation entry point. Starts compilation of the decls' initializers (as a function).
-    void compile_initializer(NotNull<AstFile*> module);
+    void compile_initializer(NotNull<AstModule*> module);
 
     /// Returns a new CurrentBlock instance that references this context.
     CurrentBlock make_current(BlockId block_id) { return {*this, block_id}; }

@@ -6,7 +6,7 @@
 
 namespace tiro {
 
-void Diagnostics::report(Level level, const SourceRange& range, std::string text) {
+void Diagnostics::report(Level level, const AbsoluteSourceRange& range, std::string text) {
     messages_.emplace_back(level, range, std::move(text));
     if (level == Error) {
         errors_++;
@@ -15,8 +15,8 @@ void Diagnostics::report(Level level, const SourceRange& range, std::string text
     }
 }
 
-void Diagnostics::vreport(Level level, const SourceRange& range, std::string_view format_string,
-    fmt::format_args format_args) {
+void Diagnostics::vreport(Level level, const AbsoluteSourceRange& range,
+    std::string_view format_string, fmt::format_args format_args) {
     report(level, range, fmt::vformat(format_string, format_args));
 }
 

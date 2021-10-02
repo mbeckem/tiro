@@ -8,7 +8,7 @@
 
 namespace tiro {
 
-std::string dump(const AstNode* node, const StringTable& strings, const SourceMap& map);
+std::string dump(const AstNode* node, const StringTable& strings, const SourceDb& sources);
 
 } // namespace tiro
 
