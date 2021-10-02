@@ -55,10 +55,7 @@ tiro::compiled_module create_example_module() {
     // or to obtain diagnostic output like the AST, IR or tiro bytecode.
     tiro::compiler compiler("example");
 
-    // Add files to the compiler.
-    // Currently, the filename given here is used for the name of the
-    // final compiled module, and the number of files is limited to 1.
-    // This is about to change.
+    // Add files to the module.
     compiler.add_file("main", EXAMPLE_SOURCE);
 
     // Actually perform the compilation. This will throw on error.
