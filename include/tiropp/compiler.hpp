@@ -3,6 +3,7 @@
 
 #include "tiropp/def.hpp"
 #include "tiropp/detail/resource_holder.hpp"
+#include "tiropp/detail/translate.hpp"
 #include "tiropp/error.hpp"
 #include "tiropp/fwd.hpp"
 
@@ -71,8 +72,8 @@ public:
     }
 
     void add_file(std::string_view file_name, std::string_view file_content) {
-        tiro_compiler_add_file(raw_compiler_, {file_name.data(), file_name.size()},
-            {file_content.data(), file_content.size()}, error_adapter());
+        tiro_compiler_add_file(raw_compiler_, detail::to_raw(file_name),
+            detail::to_raw(file_content), error_adapter());
     }
 
     void run() { tiro_compiler_run(raw_compiler_, error_adapter()); }
@@ -134,10 +135,10 @@ private:
 
                         compiler_message message;
                         message.severity = static_cast<severity>(m->severity);
-                        message.file = std::string_view(m->file.data, m->file.length);
+                        message.file = detail::from_raw(m->file);
                         message.line = m->line;
                         message.column = m->column;
-                        message.text = std::string_view(m->text.data, m->text.length);
+                        message.text = detail::from_raw(m->text);
 
                         auto& func = *static_cast<callback_type*>(userdata);
                         func(message);
@@ -150,7 +151,7 @@ private:
         }
 
         tiro_compiler_t compiler = tiro_compiler_new(
-            {module_name.data(), module_name.size()}, &raw_settings, error_adapter());
+            detail::to_raw(module_name), &raw_settings, error_adapter());
         TIRO_ASSERT(compiler); // tiro_compiler_new returns error
         return compiler;
     }
