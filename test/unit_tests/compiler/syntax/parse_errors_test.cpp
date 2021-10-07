@@ -42,6 +42,25 @@ TEST_CASE("Parser should report error on unclosed nested function", "[syntax]") 
         test_support::exception_contains_string("expected ')'"));
 }
 
+TEST_CASE("Parser should report error on unexpected block in an invalid position", "[syntax]") {
+    std::string_view source = R"(
+        {
+
+        }
+    )";
+    REQUIRE_THROWS_MATCHES(parse_file_syntax(source), BadSyntax,
+        test_support::exception_contains_string("unexpected block"));
+}
+
+TEST_CASE("Parser should report error on unexpected and unterminated block in an invalid position",
+    "[syntax]") {
+    std::string_view source = R"(
+        {
+    )";
+    REQUIRE_THROWS_MATCHES(parse_file_syntax(source), BadSyntax,
+        test_support::exception_contains_string("unexpected block"));
+}
+
 TEST_CASE("Parser should report error on uppercase code", "[syntax]") {
     // Totally invalid but, parser should not throw an internal error
     std::string_view source = R"(

@@ -21,6 +21,20 @@ const TokenSet NESTING_END = {
     TokenType::StringEnd,
 };
 
+static std::string_view unexpected_message(TokenType type) {
+    TIRO_DEBUG_ASSERT(NESTING_START.contains(type), "invalid nesting token");
+    switch (type) {
+    case TokenType::LeftBrace:
+    case TokenType::StringBlockStart:
+        return "unexpected block"sv;
+    case TokenType::StringStart:
+        return "unexpected string"sv;
+    default:
+        break;
+    }
+    TIRO_UNREACHABLE("invalid nesting token");
+}
+
 static void discard_block_impl(Parser& p) {
     auto closing_token = [&](TokenType t) {
         switch (t) {
@@ -56,6 +70,7 @@ void discard_nested(Parser& p) {
     TIRO_DEBUG_ASSERT(p.at_any(NESTING_START), "Not at the start of a nested block.");
 
     auto m = p.start();
+    p.error(std::string(unexpected_message(p.current())));
     discard_block_impl(p);
     m.complete(SyntaxType::Error);
 }
