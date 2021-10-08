@@ -136,4 +136,15 @@ TEST_CASE("Redeclaring a symbol at module scope produces an error", "[modules]")
         eval_test({file_1, file_2}), compile_error, throws_compile_error(api_errc::bad_source));
 }
 
+TEST_CASE("Modules can be imported using an alias", "[modules]") {
+    std::string_view source = R"(
+        import std as foo;
+
+        export func test(x) = foo.ceil(x);
+    )";
+
+    eval_test test(source);
+    test.call("test", 4.5).returns_float(5);
+}
+
 } // namespace tiro::eval_tests

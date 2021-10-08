@@ -901,8 +901,8 @@ private:
 /// True if the instruction defines a new phi node.
 bool is_phi_define(const Function& func, InstId inst);
 
-/// True if the instruction defines a new observe assign node.
-bool is_observe_assign(const Function& func, InstId inst);
+/// Follows alias instructions until a non-alias instruction is found.
+InstId resolve(const Function& func, InstId inst);
 
 /* [[[cog
     from cog import outl

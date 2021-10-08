@@ -16,8 +16,7 @@ namespace tiro {
 static LinkFunction
 compile_function(const ir::Module& module, ir::Function& func, LinkObject& object);
 
-static BytecodeMemberId
-compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object);
+static void compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object);
 
 static BytecodeLabel as_label(ir::BlockId block_id);
 
@@ -54,6 +53,9 @@ private:
     void compile_phi_operands(ir::BlockId predecessor, const ir::Terminator& terminator);
 
     void emit_copy(const BytecodeLocation& source, const BytecodeLocation& target);
+
+    // Generate a usage of the given module member and returns a bytecode id to reference its value.
+    BytecodeMemberId use_module_member(ir::ModuleMemberId id);
 
     // Returns the location of that instruction. Follows aliases.
     BytecodeLocation location(ir::InstId id) const;
@@ -286,7 +288,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
         }
 
         void visit_make_closure(const ir::Value::MakeClosure& c) {
-            auto tmpl_value = self.object().use_member(c.func);
+            auto tmpl_value = self.use_module_member(c.func);
             auto env_value = self.value(c.env);
             auto target_value = self.value(target);
             self.writer().closure(tmpl_value, env_value, target_value);
@@ -398,7 +400,7 @@ void FunctionCompiler::compile_lvalue_read(const ir::LValue& source, ir::InstId 
         }
 
         void visit_module(const ir::LValue::Module& m) {
-            auto source = self.object().use_member(m.member);
+            auto source = self.use_module_member(m.member);
             auto target_value = self.value(target);
             self.writer().load_module(source, target_value);
         }
@@ -442,7 +444,7 @@ void FunctionCompiler::compile_lvalue_write(ir::InstId source, const ir::LValue&
         }
 
         void visit_module(const ir::LValue::Module& m) {
-            auto target = self.object().use_member(m.member);
+            auto target = self.use_module_member(m.member);
             self.writer().store_module(source_value, target);
         }
 
@@ -611,6 +613,21 @@ void FunctionCompiler::emit_copy(const BytecodeLocation& source, const BytecodeL
     }
 }
 
+BytecodeMemberId FunctionCompiler::use_module_member(ir::ModuleMemberId id) {
+    const auto& member = module()[id];
+    switch (member.type()) {
+    case ir::ModuleMemberType::Function:
+    case ir::ModuleMemberType::Variable:
+        return object().use_definition(id);
+    case ir::ModuleMemberType::Import: {
+        const auto& name = member.data().as_import().name;
+        return object().use_import(name);
+    }
+    }
+
+    TIRO_UNREACHABLE("invalid module member type");
+}
+
 BytecodeLocation FunctionCompiler::location(ir::InstId id) const {
     return storage_location(id, locs_, func_);
 }
@@ -639,20 +656,12 @@ FunctionCompiler::member_value(ir::InstId aggregate_id, ir::AggregateMember memb
 }
 
 bool FunctionCompiler::is_constant_null(ir::InstId id) {
-    auto current = id;
-    while (1) {
-        TIRO_DEBUG_ASSERT(current, "Invalid instruction id.");
-
-        const auto& inst = func_[current];
-        switch (inst.value().type()) {
-        case ir::ValueType::Alias:
-            current = inst.value().as_alias().target;
-            break;
-        case ir::ValueType::Constant:
-            return inst.value().as_constant().type() == ir::ConstantType::Null;
-        default:
-            return false;
-        }
+    const auto& inst = func_[resolve(func_, id)];
+    switch (inst.value().type()) {
+    case ir::ValueType::Constant:
+        return inst.value().as_constant().type() == ir::ConstantType::Null;
+    default:
+        return false;
     }
 }
 
@@ -688,16 +697,16 @@ compile_function(const ir::Module& module, ir::Function& func, LinkObject& objec
     return lf;
 }
 
-static BytecodeMemberId
-compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object) {
+static void compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& object) {
     struct MemberVisitor {
         ir::Module& module;
         LinkObject& object;
         ir::ModuleMemberId member_id;
 
-        BytecodeMemberId visit_import(const ir::ModuleMemberData::Import& i) {
-            auto name = object.use_string(i.name);
-            return object.define_import(member_id, BytecodeMember::Import(name));
+        BytecodeMemberId visit_import(const ir::ModuleMemberData::Import&) {
+            // Imports are defined when actually used.
+            // TODO: It this a problem w.r.t. side effects?
+            return {};
         }
 
         BytecodeMemberId visit_variable(const ir::ModuleMemberData::Variable& v) {
@@ -715,10 +724,10 @@ compile_member(ir::ModuleMemberId member_id, ir::Module& module, LinkObject& obj
     auto member = module.ptr_to(member_id);
     auto compiled_member_id = member->data().visit(MemberVisitor{module, object, member_id});
     if (member->exported()) {
+        TIRO_DEBUG_ASSERT(compiled_member_id, "invalid bytecode module id for exported member");
         auto name = exported_member_name(*member, module);
         object.define_export(name, compiled_member_id);
     }
-    return compiled_member_id;
 }
 
 // Note: block ids may be invalid (e.g. "no handler")

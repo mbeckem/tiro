@@ -116,10 +116,10 @@ public:
     BytecodeMemberId use_float(f64 value);
     BytecodeMemberId use_string(InternedString str);
     BytecodeMemberId use_symbol(InternedString sym);
-    BytecodeMemberId use_member(ir::ModuleMemberId ir_id);
+    BytecodeMemberId use_definition(ir::ModuleMemberId ir_id);
     BytecodeMemberId use_record(Span<const BytecodeMemberId> keys);
+    BytecodeMemberId use_import(InternedString name);
 
-    BytecodeMemberId define_import(ir::ModuleMemberId ir_id, const BytecodeMember::Import& import);
     BytecodeMemberId define_variable(ir::ModuleMemberId ir_id, const BytecodeMember::Variable& var);
     BytecodeMemberId define_function(ir::ModuleMemberId ir_id, LinkFunction&& func);
 

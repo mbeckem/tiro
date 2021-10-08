@@ -1501,4 +1501,16 @@ bool is_phi_define(const Function& func, InstId inst_id) {
     return inst.value().type() == ValueType::Phi;
 }
 
+InstId resolve(const Function& func, InstId inst_id) {
+    TIRO_DEBUG_ASSERT(inst_id, "invalid instruction");
+
+    while (1) {
+        const auto& inst = func[inst_id];
+        if (inst.value().type() != ValueType::Alias)
+            return inst_id;
+
+        inst_id = inst.value().as_alias().target;
+    }
+}
+
 } // namespace tiro::ir

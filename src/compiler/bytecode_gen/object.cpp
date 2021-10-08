@@ -125,7 +125,7 @@ BytecodeMemberId LinkObject::use_symbol(InternedString sym) {
     return add_member(LinkItem::make_definition({}, BytecodeMember::make_symbol(str)));
 }
 
-BytecodeMemberId LinkObject::use_member(ir::ModuleMemberId ir_id) {
+BytecodeMemberId LinkObject::use_definition(ir::ModuleMemberId ir_id) {
     return add_member(LinkItem::make_use(ir_id));
 }
 
@@ -148,9 +148,9 @@ BytecodeMemberId LinkObject::use_record(Span<const BytecodeMemberId> keys) {
         LinkItem::make_definition({}, BytecodeMember::make_record_template(record_id)));
 }
 
-BytecodeMemberId
-LinkObject::define_import(ir::ModuleMemberId ir_id, const BytecodeMember::Import& import) {
-    return add_member(LinkItem::make_definition(ir_id, import));
+BytecodeMemberId LinkObject::use_import(InternedString name) {
+    const auto str = use_string(name);
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_import(str)));
 }
 
 BytecodeMemberId

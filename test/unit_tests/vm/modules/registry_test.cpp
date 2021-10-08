@@ -72,6 +72,10 @@ TEST_CASE(
     auto foo_compiled = compile_result(
         R"(
             import bar;
+
+            export func foo() {
+                bar.bar();
+            }
         )",
         "foo");
     Local foo_module = sc.local(load_module(ctx, *foo_compiled.module));
@@ -80,6 +84,10 @@ TEST_CASE(
     auto bar_compiled = compile_result(
         R"(
             import baz;
+
+            export func bar() {
+                baz.baz();
+            }
         )",
         "bar");
     Local bar_module = sc.local(load_module(ctx, *bar_compiled.module));
@@ -88,6 +96,10 @@ TEST_CASE(
     auto baz_compiled = compile_result(
         R"(
             import foo;
+
+            export func baz() {
+                foo.foo();
+            }
         )",
         "baz");
     Local baz_module = sc.local(load_module(ctx, *baz_compiled.module));
