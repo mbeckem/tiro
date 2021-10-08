@@ -29,6 +29,7 @@ static const TokenSet CLOSING_BRACES = {
 
 static std::optional<CompletedMarker> try_parse_modifiers(Parser& p);
 static void parse_import(Parser& p);
+static void parse_import_path(Parser& p, const TokenSet& recovery);
 
 void parse_item(Parser& p, const TokenSet& recovery) {
     if (p.at(TokenType::KwImport)) {
@@ -101,17 +102,30 @@ std::optional<CompletedMarker> try_parse_modifiers(Parser& p) {
 
 void parse_import(Parser& p) {
     TIRO_DEBUG_ASSERT(p.at(TokenType::KwImport), "Not at the start of an import item.");
+
+    auto m = p.start();
+    p.advance();
+
+    parse_import_path(p, ITEM_FIRST.union_with({TokenType::KwAs, TokenType::Semicolon}));
+    if (p.accept(TokenType::KwAs))
+        p.expect(TokenType::Identifier);
+
+    p.expect(TokenType::Semicolon);
+    m.complete(SyntaxType::ImportItem);
+}
+
+void parse_import_path(Parser& p, const TokenSet& recovery) {
     auto m = p.start();
 
-    p.advance();
     while (!p.at(TokenType::Eof)) {
-        p.expect(TokenType::Identifier);
+        if (!p.accept(TokenType::Identifier))
+            p.error_recover("expected an import path segment", recovery.union_with(TokenType::Dot));
 
         if (!p.accept(TokenType::Dot))
             break;
     }
-    p.expect(TokenType::Semicolon);
-    m.complete(SyntaxType::ImportItem);
+
+    m.complete(SyntaxType::ImportPath);
 }
 
 } // namespace tiro

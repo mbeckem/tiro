@@ -10,11 +10,36 @@ TEST_CASE("Parser handles import items", "[syntax])") {
         node(SyntaxType::ImportItem, //
             {
                 token_type(TokenType::KwImport),
-                token(TokenType::Identifier, "foo"),
-                token_type(TokenType::Dot),
-                token(TokenType::Identifier, "bar"),
-                token_type(TokenType::Dot),
-                token(TokenType::Identifier, "baz"),
+                node(SyntaxType::ImportPath,
+                    {
+
+                        token(TokenType::Identifier, "foo"),
+                        token_type(TokenType::Dot),
+                        token(TokenType::Identifier, "bar"),
+                        token_type(TokenType::Dot),
+                        token(TokenType::Identifier, "baz"),
+                    }),
+                token_type(TokenType::Semicolon),
+            }));
+}
+
+TEST_CASE("Parser handles import items with alias", "[syntax])") {
+    auto tree = parse_item_syntax("import foo.bar.baz as qux;");
+    assert_parse_tree(tree,          //
+        node(SyntaxType::ImportItem, //
+            {
+                token_type(TokenType::KwImport),
+                node(SyntaxType::ImportPath,
+                    {
+
+                        token(TokenType::Identifier, "foo"),
+                        token_type(TokenType::Dot),
+                        token(TokenType::Identifier, "bar"),
+                        token_type(TokenType::Dot),
+                        token(TokenType::Identifier, "baz"),
+                    }),
+                token_type(TokenType::KwAs),
+                token(TokenType::Identifier, "qux"),
                 token_type(TokenType::Semicolon),
             }));
 }

@@ -56,6 +56,17 @@ struct Condition {
     static std::optional<Condition> read(SyntaxNodeId node_id, const SyntaxTree& tree);
 };
 
+struct ImportPath : Seq {
+    using Seq::Seq;
+
+    // Items are identifiers separated by "."
+    auto path() {
+        return iterate([&](auto& scanner) { return scanner.search_token(TokenType::Identifier); });
+    }
+
+    static std::optional<ImportPath> read(SyntaxNodeId node_id, const SyntaxTree& tree);
+};
+
 struct Modifiers : Seq {
     using Seq::Seq;
 
@@ -413,13 +424,9 @@ struct VarItem {
     static std::optional<VarItem> read(SyntaxNodeId node_id, const SyntaxTree& tree);
 };
 
-struct ImportItem : Seq {
-    using Seq::Seq;
-
-    // Items are identifier tokens
-    auto path() {
-        return iterate([&](auto& scanner) { return scanner.search_token(TokenType::Identifier); });
-    }
+struct ImportItem {
+    SyntaxNodeId path; // import path
+    std::optional<Token> alias;
 
     static std::optional<ImportItem> read(SyntaxNodeId node_id, const SyntaxTree& tree);
 };
@@ -439,6 +446,7 @@ TIRO_REGISTER_NODE(Root)
 TIRO_REGISTER_NODE(File)
 TIRO_REGISTER_NODE(Name)
 TIRO_REGISTER_NODE(Condition)
+TIRO_REGISTER_NODE(ImportPath)
 TIRO_REGISTER_NODE(Modifiers)
 TIRO_REGISTER_NODE(RecordItem)
 TIRO_REGISTER_NODE(MapItem)

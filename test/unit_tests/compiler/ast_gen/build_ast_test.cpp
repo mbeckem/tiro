@@ -709,6 +709,19 @@ TEST_CASE("ast should support import items", "[ast-gen]") {
     REQUIRE(ast.strings.value(path[2]) == "c");
 }
 
+TEST_CASE("ast should support import items with alias", "[ast-gen]") {
+    auto ast = parse_item_ast("import a.b as x;");
+    auto stmt = check<AstDeclStmt>(ast.root.get());
+
+    auto decl = check<AstImportDecl>(stmt->decl());
+    REQUIRE(ast.strings.value(decl->name()) == "x");
+
+    auto& path = decl->path();
+    REQUIRE(path.size() == 2);
+    REQUIRE(ast.strings.value(path[0]) == "a");
+    REQUIRE(ast.strings.value(path[1]) == "b");
+}
+
 TEST_CASE("ast should support var items", "[ast-gen]") {
     auto ast = parse_item_ast("export const x = 123;");
     auto stmt = check<AstDeclStmt>(ast.root.get());

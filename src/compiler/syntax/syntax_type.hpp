@@ -15,6 +15,7 @@ enum class SyntaxType : u8 {
     File,       // Contains a series of items
     Name,       // Name node for functions and types
     Condition,  // Condition in if/for/while nodes
+    ImportPath, // Identifiers (at least one) separated by "."
     Modifiers,  // List of modifiers before an item, e.g. "export"
     RecordItem, // Name : Expr
     MapItem,    // Expr : Expr
@@ -42,7 +43,7 @@ enum class SyntaxType : u8 {
     CallExpr,          // expr arglist
     GroupedExpr,       // "(" expr ")"
     TupleExpr,         // "(" expr,... ")"
-    RecordExpr,        // "(" name: expr,... ")" TODO: Probably needs more structure
+    RecordExpr,        // "(" RecordItem,... ")" TODO: Probably needs more structure
     ArrayExpr,         // [a, b]
     SetExpr,           // "set" { expr... }
     MapExpr,           // "map" { mapitem... }
@@ -66,7 +67,7 @@ enum class SyntaxType : u8 {
     ForEachStmtHeader, // (BindingName | BindingTuple in Expr)
 
     // Items (at top level)
-    ImportItem, // import a.b.c;
+    ImportItem, // import ImportPath [as Identifier];
     VarItem,    // like var stmt, but with modifiers
     FuncItem,   // func at top level, with modifiers
 

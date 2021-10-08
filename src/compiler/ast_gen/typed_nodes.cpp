@@ -40,6 +40,10 @@ std::optional<Condition> Condition::read(SyntaxNodeId node_id, const SyntaxTree&
     return Condition{expr};
 }
 
+std::optional<ImportPath> ImportPath::read(SyntaxNodeId node_id, const SyntaxTree& tree) {
+    return ImportPath{scan(node_id, tree)};
+}
+
 std::optional<Modifiers> Modifiers::read(SyntaxNodeId node_id, const SyntaxTree& tree) {
     return Modifiers{scan(node_id, tree)};
 }
@@ -344,7 +348,10 @@ std::optional<VarItem> VarItem::read(SyntaxNodeId node_id, const SyntaxTree& tre
 }
 
 std::optional<ImportItem> ImportItem::read(SyntaxNodeId node_id, const SyntaxTree& tree) {
-    return ImportItem{scan(node_id, tree)};
+    auto scanner = scan(node_id, tree);
+    TIRO_TRY(path, scanner.search_node(SyntaxType::ImportPath));
+    auto alias = scanner.search_token(TokenType::Identifier);
+    return ImportItem{path, alias};
 }
 
 } // namespace typed_syntax

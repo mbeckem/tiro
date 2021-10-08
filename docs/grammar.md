@@ -20,7 +20,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _Item_ := `"export"`<sup>?</sup> (_ImportDecl_ `";"` | _VarDecl_ `";"` | _FuncDecl_)
 
-> _ImportDecl_ := `"import"` _ImportPath_  
+> _ImportDecl_ := `"import"` _ImportPath_ (`"as"` _Identifier_)<sup>?</sup>  
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
 
 > _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>\*</sup>  
@@ -59,7 +59,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > &nbsp;&nbsp;&nbsp;&nbsp; | _ReturnExpr_ | _GroupedExpr_ | _IfExpr_  
 > &nbsp;&nbsp;&nbsp;&nbsp; | _FuncExpr_ | _BlockExpr_
 
-> _FieldExpr_ := _Expr_ (`"."`| `"?."`)  _Identifier_ 
+> _FieldExpr_ := _Expr_ (`"."`| `"?."`) _Identifier_
 
 > _TupleFieldExpr_ := _Expr_ (`"."` | `"?."`) _NonNegativeInt_
 
@@ -67,7 +67,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 
 > _CallExpr_ := _Expr_ (`"("` | `"?("`) _CallArguments_<sup>?</sup> `")"`  
 > _CallArguments_ := _Expr_ (`","` _Expr_)<sup>\*</sup>
- 
+
 > _UnaryExpr_ := _UnaryOp_ _Expr_  
 > _UnaryOp_ := `"+"` | `"-"` | `"!"` `"~"`
 
@@ -153,6 +153,6 @@ TODO: Document format mini language. E.g. `"hello ${name}"` or `"hello $name"`.
 
 ## Comments
 
-> _LineComment_ := `"//"` ~(`"\n"`)<sup>*</sup> (`"\n"` | EOF)
+> _LineComment_ := `"//"` ~(`"\n"`)<sup>\*</sup> (`"\n"` | EOF)
 
-> _BlockComment_ := `"/*"` (_BlockComment_ | ~`"*/"`)* `"*/"`
+> _BlockComment_ := `"/*"` (_BlockComment_ | ~`"*/"`)_ `"_/"`

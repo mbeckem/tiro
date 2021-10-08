@@ -17,6 +17,7 @@ std::string_view to_string(SyntaxType type) {
         TIRO_CASE(File)
         TIRO_CASE(Name)
         TIRO_CASE(Condition)
+        TIRO_CASE(ImportPath)
         TIRO_CASE(Modifiers)
         TIRO_CASE(RecordItem)
         TIRO_CASE(MapItem)

@@ -116,6 +116,7 @@ private:
     void gather_string_contents(AstNodeList<AstExpr>& items, SyntaxNodeId node_id);
     void gather_params(AstNodeList<AstParamDecl>& params, SyntaxNodeId node_id);
     void gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNodeId node_id);
+    void gather_import_path(std::vector<InternedString>& path, SyntaxNodeId node_id);
 
 private:
     Diagnostics& diag() const { return state_.diag(); }
@@ -925,16 +926,23 @@ NotNull<AstPtr<AstStmt>> AstBuilder::build_import_item(SyntaxNodeId node_id) {
         return error_stmt(node_id);
 
     std::vector<InternedString> path;
-    for (const auto& ident : node->path()) {
-        TIRO_DEBUG_ASSERT(ident.type() == TokenType::Identifier, "expected identifier");
-        path.push_back(strings().insert(source(ident)));
+    gather_import_path(path, node->path);
+    if (path.empty()) {
+        diag().report(Diagnostics::Error, make_absolute(range(node->path)), "invalid import path");
+        return error_stmt(node_id);
     }
 
-    if (path.empty())
-        unexpected(node_id, "empty import path");
+    InternedString name;
+    if (node->alias) {
+        const auto& alias = *node->alias;
+        TIRO_DEBUG_ASSERT(alias.type() == TokenType::Identifier, "expected identifier");
+        name = strings().insert(source(alias));
+    } else {
+        name = path.back();
+    }
 
     auto decl = make_node<AstImportDecl>(node_id);
-    decl->name(path.back());
+    decl->name(name);
     decl->path(std::move(path));
 
     auto stmt = make_node<AstDeclStmt>(node_id);
@@ -1179,6 +1187,17 @@ void AstBuilder::gather_modifiers(AstNodeList<AstModifier>& modifiers, SyntaxNod
         default:
             unexpected(node_id, "invalid modifier");
         }
+    }
+}
+
+void AstBuilder::gather_import_path(std::vector<InternedString>& path, SyntaxNodeId node_id) {
+    auto node = read_checked<SyntaxType::ImportPath>(node_id);
+    if (!node)
+        return;
+
+    for (const auto& id : node->path()) {
+        TIRO_DEBUG_ASSERT(id.type() == TokenType::Identifier, "expected identifier");
+        path.push_back(strings().insert(source(id)));
     }
 }
 
