@@ -12,6 +12,37 @@ namespace tiro::eval_tests {
 class eval_test;
 class eval_call;
 
+struct eval_spec {
+    std::vector<std::string> sources;
+
+    eval_spec(std::string_view source)
+        : eval_spec(std::string(source)) {}
+
+    eval_spec(std::string source)
+        : eval_spec(std::vector<std::string>{std::move(source)}) {}
+
+    eval_spec(std::initializer_list<std::string> sources_)
+        : eval_spec(std::vector<std::string>(sources_.begin(), sources_.end())) {}
+
+    eval_spec(std::vector<std::string> sources_)
+        : sources(std::move(sources_)) {}
+};
+
+class compile_error : std::exception {
+public:
+    explicit compile_error(api_errc code, std::string message)
+        : code_(code)
+        , message_(std::move(message)) {}
+
+    api_errc code() const noexcept { return code_; }
+    std::string_view message() const noexcept { return message_; }
+    const char* what() const noexcept override { return message_.c_str(); }
+
+private:
+    api_errc code_;
+    std::string message_;
+};
+
 class eval_test final {
 public:
     // OR these together in the `flags` constructor paramater to enable
@@ -24,11 +55,7 @@ public:
         enable_bytecode = 1 << 3,
     };
 
-    explicit eval_test(std::string_view source, int flags = 0)
-        : eval_test(std::string(source), flags) {}
-
-    explicit eval_test(std::string source, int flags = 0);
-    explicit eval_test(std::vector<std::string> sources, int flags = 0);
+    explicit eval_test(eval_spec spec, int flags = 0);
 
     eval_test(const eval_test&) = delete;
     eval_test& operator=(const eval_test&) = delete;
@@ -79,7 +106,7 @@ private:
     result exec(std::string_view function, const std::vector<handle>& args);
 
 private:
-    std::vector<std::string> sources_;
+    eval_spec spec_;
     int flags_ = 0;
     vm vm_;
     compile_result result_;
@@ -103,7 +130,7 @@ public:
 private:
     friend eval_test;
 
-    explicit eval_call(eval_test & test, std::string_view function, std::vector<handle> args);
+    explicit eval_call(eval_test& test, std::string_view function, std::vector<handle> args);
 
 private:
     eval_test& test_;

@@ -8,6 +8,7 @@
 #include <optional>
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace {
 
@@ -20,7 +21,7 @@ struct ShowHelp {
 };
 
 struct Options {
-    std::string input;
+    std::vector<std::string> input_files;
     std::optional<std::string> call;
     bool dump_cst = false;
     bool dump_ast = false;
@@ -28,11 +29,15 @@ struct Options {
     bool dump_bytecode = false;
 };
 
+struct InputFile {
+    std::string filename;
+    std::string content;
+};
+
 using OptionsResult = std::variant<Options, ShowHelp, OptionsError>;
 
 OptionsResult parse_options(int argc, char** argv);
-tiro::compiled_module
-compile(std::string_view filename, std::string_view content, const Options& options);
+tiro::compiled_module compile(const std::vector<InputFile>& files, const Options& options);
 int run(const tiro::compiled_module& module, std::string_view function_name);
 std::string read_file_contents(const char* path);
 
@@ -53,17 +58,22 @@ int main(int argc, char* argv[]) {
         }
 
         Options options = std::get<Options>(options_result);
-        std::string content;
-        try {
-            content = read_file_contents(options.input.c_str());
-        } catch (const std::exception& e) {
-            fmt::print(stderr, "Failed to read '{}': {}\n", options.input, e.what());
-            return 1;
+        std::vector<InputFile> files;
+        for (const auto& filename : options.input_files) {
+            std::string content;
+            try {
+                content = read_file_contents(filename.c_str());
+            } catch (const std::exception& e) {
+                fmt::print(stderr, "Failed to read '{}': {}\n", filename, e.what());
+                return 1;
+            }
+
+            files.push_back(InputFile{filename, std::move(content)});
         }
 
         std::optional<tiro::compiled_module> compiled;
         try {
-            compiled = compile(options.input, content, options);
+            compiled = compile(files, options);
         } catch (const std::exception& e) {
             fmt::print(stderr, "Compilation failed: {}\n", e.what());
             return 1;
@@ -83,7 +93,7 @@ namespace {
 OptionsResult parse_options(int argc, char** argv) {
     cxxopts::Options options(
         argv[0], "simple runner for executing tiro scripts and inspecting internals");
-    options.positional_help("<input>");
+    options.positional_help("<input file>...");
 
     /* clang-format off */
     options.add_options()
@@ -93,7 +103,7 @@ OptionsResult parse_options(int argc, char** argv) {
         ("dump-ir", "print the compiler's intermediate representation", cxxopts::value<bool>())
         ("dump-bytecode", "print the disassembled final bytecode", cxxopts::value<bool>())
         ("dump", "dump all intermediate datastructures", cxxopts::value<bool>())
-        ("input", "input file", cxxopts::value<std::string>(), "<file>")
+        ("input", "input files", cxxopts::value<std::vector<std::string>>(), "<file>")
         ("h,help", "show this message", cxxopts::value<bool>());
     /* clang-format on */
     options.parse_positional("input");
@@ -113,7 +123,7 @@ OptionsResult parse_options(int argc, char** argv) {
 
     Options parsed_options;
     if (auto input = result["input"]; input.count()) {
-        parsed_options.input = input.as<std::string>();
+        parsed_options.input_files = input.as<std::vector<std::string>>();
     } else {
         return OptionsError{"Error: input file is required"};
     }
@@ -135,8 +145,7 @@ OptionsResult parse_options(int argc, char** argv) {
     return parsed_options;
 }
 
-tiro::compiled_module
-compile(std::string_view filename, std::string_view content, const Options& options) {
+tiro::compiled_module compile(const std::vector<InputFile>& files, const Options& options) {
     tiro::compiler_settings settings;
     settings.enable_dump_cst = options.dump_cst;
     settings.enable_dump_ast = options.dump_ast;
@@ -162,7 +171,10 @@ compile(std::string_view filename, std::string_view content, const Options& opti
     };
 
     tiro::compiler compiler(test_module_name, settings);
-    compiler.add_file(filename, content);
+    for (const auto& file : files) {
+        compiler.add_file(file.filename, file.content);
+    }
+
     try {
         compiler.run();
     } catch (...) {

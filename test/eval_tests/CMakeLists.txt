@@ -2,6 +2,7 @@ add_executable(eval_tests
     main.cpp
     eval_test.cpp
     eval_test.hpp
+    matchers.hpp
 
     containers_test.cpp
     control_flow_test.cpp

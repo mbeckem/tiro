@@ -58,6 +58,8 @@ public:
 
     void visit_module(NotNull<AstModule*> module) TIRO_NODE_VISITOR_OVERRIDE;
 
+    void visit_file(NotNull<AstFile*> module) TIRO_NODE_VISITOR_OVERRIDE;
+
     void visit_import_decl(NotNull<AstImportDecl*> imp) TIRO_NODE_VISITOR_OVERRIDE;
 
     void visit_func_decl(NotNull<AstFuncDecl*> func) TIRO_NODE_VISITOR_OVERRIDE;
@@ -84,14 +86,14 @@ public:
 
     void visit_node(NotNull<AstNode*> node) TIRO_NODE_VISITOR_OVERRIDE;
 
+private:
     void handle_decl_modifiers(NotNull<AstDecl*> decl);
 
-private:
     enum Mutability { Mutable, Constant };
 
     // Add a declaration to the symbol table (within the current scope).
-    SymbolId register_decl(
-        NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& data);
+    SymbolId register_decl(NotNull<AstNode*> node, InternedString name, Mutability mutability,
+        const SymbolData& symbol);
 
     // Add a scope as a child of the current scope.
     ScopeId register_scope(ScopeType type, NotNull<AstNode*> node);
@@ -101,6 +103,20 @@ private:
 
     ResetValue<ScopeId> enter_scope(ScopeId new_scope);
     ResetValue<SymbolId> enter_func(SymbolId new_func);
+
+    auto enter_module(ScopeId module_scope) {
+        TIRO_DEBUG_ASSERT(
+            symbols_[module_scope].type() == ScopeType::Module, "must be a module scope");
+
+        struct Holder {
+            ResetValue<ScopeId> reset_scope_;
+            ResetValue<ScopeId> reset_module_scope_;
+        };
+        return Holder{
+            enter_scope(module_scope),
+            replace_value(current_module_scope_, module_scope),
+        };
+    }
 
     // Called to ensure that the child is always wrapped in a fresh block scope.
     // This is kinda ugly, it would be nice if a ast node could define multiple scopes (it is
@@ -120,6 +136,7 @@ private:
     Diagnostics& diag_;
 
     ScopeId global_scope_;
+    ScopeId current_module_scope_;
     ScopeId current_scope_;
     SymbolId current_func_;
 };
@@ -234,8 +251,14 @@ void ScopeBuilder::dispatch(AstNode* node) {
 
 void ScopeBuilder::visit_module(NotNull<AstModule*> module) {
     auto scope_id = register_scope(ScopeType::Module, module);
-    auto exit = enter_scope(scope_id);
+    auto exit = enter_module(scope_id);
     dispatch_children(module);
+}
+
+void ScopeBuilder::visit_file(NotNull<AstFile*> file) {
+    auto scope_id = register_scope(ScopeType::File, file);
+    auto exit = enter_scope(scope_id);
+    dispatch_children(file);
 }
 
 void ScopeBuilder::visit_import_decl(NotNull<AstImportDecl*> imp) {
@@ -345,9 +368,9 @@ void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
     for (auto modifier : decl->modifiers()) {
         if (is_instance<AstExportModifier>(modifier)) {
             const auto& scope = symbols_[current_scope_];
-            if (scope.type() != ScopeType::Module) {
+            if (scope.type() != ScopeType::File) {
                 diag_.reportf(
-                    Diagnostics::Error, decl->range(), "Exports are only allowed at module scope.");
+                    Diagnostics::Error, decl->range(), "Exports are only allowed at file level.");
                 return;
             }
 
@@ -385,40 +408,49 @@ void ScopeBuilder::handle_decl_modifiers(NotNull<AstDecl*> decl) {
 }
 
 SymbolId ScopeBuilder::register_decl(
-    NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& data) {
-    TIRO_DEBUG_ASSERT(current_scope_, "Not inside a scope.");
+    NotNull<AstNode*> node, InternedString name, Mutability mutability, const SymbolData& symbol) {
+    TIRO_DEBUG_ASSERT(current_scope_, "not inside a valid scope");
 
-    [[maybe_unused]] const auto scope_type = symbols_[current_scope_].type();
-    switch (data.type()) {
+    ScopeId scope = current_scope_;
+    ScopeType scope_type = symbols_[scope].type();
+
+    // Declarations at file level are lifted to the module scope so they can be referenced
+    // from other files within the same module.
+    // Imports however are only seen from within the importing file.
+    if (scope_type == ScopeType::File && symbol.type() != SymbolType::Import) {
+        scope = current_module_scope_;
+        scope_type = ScopeType::Module;
+    }
+
+    switch (symbol.type()) {
     case SymbolType::Import:
-        TIRO_DEBUG_ASSERT(
-            scope_type == ScopeType::Module, "Imports are only allowed at module scope.");
+        TIRO_DEBUG_ASSERT(scope_type == ScopeType::File, "imports are only allowed at file scope");
         break;
     case SymbolType::TypeSymbol:
-        TIRO_DEBUG_ASSERT(false, "Types are not implemented yet.");
+        TIRO_DEBUG_ASSERT(false, "types are not implemented yet");
         break;
     case SymbolType::Function:
         break; // allowed everywhere
     case SymbolType::Parameter:
         TIRO_DEBUG_ASSERT(
-            scope_type == ScopeType::Function, "Parameters are only allowed at function scope.");
+            scope_type == ScopeType::Function, "parameters are only allowed at function scope");
         break;
     case SymbolType::Variable:
         TIRO_DEBUG_ASSERT(scope_type == ScopeType::Module || scope_type == ScopeType::ForStatement
                               || scope_type == ScopeType::Block,
-            "Variables are not allowed in this context.");
+            "variables are not allowed in this context");
         break;
     }
 
-    auto sym_id = symbols_.register_decl(Symbol(current_scope_, name, node->id(), data));
+    auto sym_id = symbols_.register_decl(Symbol(scope, name, node->id(), symbol));
     if (!sym_id) {
         node->has_error(true);
         diag_.reportf(Diagnostics::Error, node->range(),
             "The name '{}' has already been declared in this scope.", strings_.dump(name));
 
         // Generate an anonymous symbol to ensure that the analyzer can continue.
-        sym_id = symbols_.register_decl(Symbol(current_scope_, InternedString(), node->id(), data));
-        TIRO_DEBUG_ASSERT(sym_id, "Anonymous symbols can always be created.");
+        sym_id = symbols_.register_decl(Symbol(scope, InternedString(), node->id(), symbol));
+        TIRO_DEBUG_ASSERT(sym_id, "anonymous symbols can always be created");
     }
 
     auto& sym = symbols_[sym_id];
@@ -584,6 +616,7 @@ void SymbolResolver::visit_var_expr(NotNull<AstVarExpr*> expr) {
     // Variables and constants at module scope are not captured.
     if (!decl_symbol->captured()) {
         const bool can_capture = decl_scope->type() != ScopeType::Module
+                                 && decl_scope->type() != ScopeType::File
                                  && decl_scope->type() != ScopeType::Global;
         if (can_capture && decl_scope->function() != expr_scope->function()
             && table_.is_strict_ancestor(decl_scope_id, expr_scope_id)) {

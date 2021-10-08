@@ -1,14 +1,8 @@
 #ifndef TIRO_COMPILER_SEMANTICS_SYMBOL_RESOLUTION_HPP
 #define TIRO_COMPILER_SEMANTICS_SYMBOL_RESOLUTION_HPP
 
-#include "compiler/ast/fwd.hpp"
+#include "compiler/fwd.hpp"
 #include "compiler/semantics/fwd.hpp"
-
-namespace tiro {
-
-class Diagnostics;
-
-} // namespace tiro
 
 namespace tiro {
 

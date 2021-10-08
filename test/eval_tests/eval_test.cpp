@@ -7,14 +7,11 @@ namespace tiro::eval_tests {
 
 static const std::string_view test_module_name = "test";
 
-eval_test::eval_test(std::string source, int flags)
-    : eval_test(std::vector{std::move(source)}, flags) {}
-
-eval_test::eval_test(std::vector<std::string> sources, int flags)
-    : sources_(std::move(sources))
+eval_test::eval_test(eval_spec spec, int flags)
+    : spec_(std::move(spec))
     , flags_(flags)
     , vm_()
-    , result_(compile_sources(sources_, flags)) {
+    , result_(compile_sources(spec_.sources, flags)) {
     vm_.load_std();
     vm_.load(result_.mod);
 }
@@ -54,7 +51,7 @@ eval_test::compile_sources(const std::vector<std::string>& sources, int flags) {
 
     try {
         comp.run();
-    } catch (const error& e) {
+    } catch (const api_error& e) {
         std::string combined = e.message();
         std::string details = e.details();
         if (!details.empty()) {
@@ -67,7 +64,7 @@ eval_test::compile_sources(const std::vector<std::string>& sources, int flags) {
             combined += output;
         }
 
-        throw std::runtime_error(combined);
+        throw compile_error(e.code(), std::move(combined));
     }
 
     if (settings.enable_dump_cst)

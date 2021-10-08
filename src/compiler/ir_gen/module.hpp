@@ -53,6 +53,12 @@ public:
     ModuleMemberId
     add_function(NotNull<AstFuncDecl*> func, NotNull<ClosureEnvCollection*> envs, ClosureEnvId env);
 
+    /// Returns true if the given scope is implemented as static data (members of the module).
+    bool is_static(ScopeId scope) const;
+
+    //// Returns true if the given symbol is implemented as static data (member of the module).
+    bool is_static(SymbolId symbol) const;
+
 private:
     struct FunctionJob {
         /// Function AST node.

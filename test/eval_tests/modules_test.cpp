@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "eval_test.hpp"
+#include "matchers.hpp"
 
 namespace tiro::eval_tests {
 
@@ -76,6 +77,63 @@ TEST_CASE("Functions and variables in the same module can see each other", "[mod
     eval_test test({file_1, file_2, file_3});
     test.call("get_1").returns_int(2);
     test.call("get_2").returns_int(5);
+}
+
+TEST_CASE("Importing the same module from multiple files does not produce an error", "[modules]") {
+    std::string file_1 = R"(
+        import std;
+
+        export func a() {
+            return std.PI;
+        }
+    )";
+
+    std::string file_2 = R"(
+        import std;
+
+        export func b() {
+            return std.print;
+        }
+    )";
+
+    eval_test test({file_1, file_2});
+    auto pi = test.call("a").returns_value();
+    REQUIRE(pi.kind() == value_kind::float_);
+
+    auto print = test.call("b").returns_value();
+    REQUIRE(print.kind() == value_kind::function);
+}
+
+TEST_CASE("Imports cannot be seen from another file in the same module", "[modules]") {
+    std::string file_1 = R"(
+        import std;
+
+        export func a() {
+            return std.PI;
+        }
+    )";
+
+    std::string file_2 = R"(
+        export func b() {
+            return std.print;
+        }
+    )";
+
+    REQUIRE_THROWS_MATCHES(
+        eval_test({file_1, file_2}), compile_error, throws_compile_error(api_errc::bad_source));
+}
+
+TEST_CASE("Redeclaring a symbol at module scope produces an error", "[modules]") {
+    std::string file_1 = R"(
+        const data = [1, 2, 3];
+    )";
+
+    std::string file_2 = R"(
+        export func data() = 1;
+    )";
+
+    REQUIRE_THROWS_MATCHES(
+        eval_test({file_1, file_2}), compile_error, throws_compile_error(api_errc::bad_source));
 }
 
 } // namespace tiro::eval_tests

@@ -12,7 +12,7 @@
 #include "compiler/semantics/symbol_table.hpp"
 #include "compiler/semantics/type_table.hpp"
 
-#include <vector>
+#include "absl/container/inlined_vector.h"
 
 namespace tiro::ir {
 
@@ -632,7 +632,7 @@ void FunctionIRGen::add_phi_operands(SymbolId symbol_id, InstId inst_id, BlockId
 void FunctionIRGen::enter_env(ScopeId parent_scope_id, CurrentBlock& bb) {
     TIRO_DEBUG_ASSERT(can_open_closure_env(parent_scope_id), "Invalid scope type.");
 
-    std::vector<SymbolId> captured; // TODO small vec
+    absl::InlinedVector<SymbolId, 8> captured;
     Fix gather_captured = [&](auto& self, ScopeId scope_id) {
         if (scope_id != parent_scope_id && can_open_closure_env(scope_id))
             return;
@@ -705,21 +705,16 @@ InstId FunctionIRGen::get_env(ClosureEnvId env) {
 }
 
 std::optional<LValue> FunctionIRGen::find_lvalue(SymbolId symbol_id) {
-    const auto& symbol = symbols()[symbol_id];
-    const auto& scope = symbols()[symbol.parent()];
-
-    if (scope.type() == ScopeType::Module) {
+    if (module_gen().is_static(symbol_id)) {
         auto member = module_gen_.find_symbol(symbol_id);
         TIRO_DEBUG_ASSERT(member, "Failed to find member in module.");
         return LValue::make_module(member);
     }
-
-    if (symbol.captured()) {
+    if (const auto& symbol = symbols()[symbol_id]; symbol.captured()) {
         auto pos = envs_->read_location(symbol_id);
         TIRO_DEBUG_ASSERT(pos, "Captured symbol without a defined location used as lvalue.");
         return get_captured_lvalue(*pos);
     }
-
     return {};
 }
 

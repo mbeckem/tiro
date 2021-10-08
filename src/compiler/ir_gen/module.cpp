@@ -1,5 +1,6 @@
 #include "compiler/ir_gen/module.hpp"
 
+#include "common/fix.hpp"
 #include "compiler/ast/ast.hpp"
 #include "compiler/ir/module.hpp"
 #include "compiler/ir_gen/func.hpp"
@@ -76,14 +77,37 @@ ModuleMemberId ModuleIRGen::add_function(
     return member;
 }
 
+bool ModuleIRGen::is_static(ScopeId scope) const {
+    TIRO_DEBUG_ASSERT(scope, "invalid scope");
+    const auto type = symbols()[scope].type();
+    switch (type) {
+    case ScopeType::Global:
+    case ScopeType::Module:
+    case ScopeType::File:
+        return true;
+
+    case ScopeType::Function:
+    case ScopeType::ForStatement:
+    case ScopeType::Block:
+        return false;
+    }
+
+    TIRO_UNREACHABLE("invalid scope type");
+    return false;
+}
+
+bool ModuleIRGen::is_static(SymbolId symbol) const {
+    TIRO_DEBUG_ASSERT(symbol, "invalid symbol");
+    const auto scope = symbols()[symbol].parent();
+    return is_static(scope);
+}
+
 void ModuleIRGen::start() {
     const auto& symbols = this->symbols();
 
-    auto file_scope_id = symbols.get_scope(module()->id());
-    const auto& file_scope = symbols[file_scope_id];
-
+    // Called for every symbol that should be implemented using a module member.
     bool has_vars = false;
-    for (const auto& symbol_id : file_scope.entries()) {
+    auto visit_static_symbol = [&](auto symbol_id) {
         const auto& symbol = symbols[symbol_id];
         const auto member_id = [&]() {
             switch (symbol.type()) {
@@ -100,7 +124,7 @@ void ModuleIRGen::start() {
                 return enqueue_function_job(TIRO_NN(node), TIRO_NN(envs.get()), {});
             }
             default:
-                TIRO_ERROR("Unexpected symbol type at module scope: {}.", symbol.type());
+                TIRO_ERROR("Unexpected symbol type at static scope: {}.", symbol.type());
             }
         }();
 
@@ -110,7 +134,20 @@ void ModuleIRGen::start() {
         }
 
         link(symbol_id, member_id);
-    }
+    };
+
+    // Called for every potentially static scope (currenty global -> module -> file).
+    Fix visit_static_scopes = [&](auto& self, ScopeId scope_id) {
+        if (!is_static(scope_id))
+            return;
+
+        const auto& scope = symbols[scope_id];
+        for (const auto& entry : scope.entries())
+            visit_static_symbol(entry);
+        for (const auto& child : scope.children())
+            self(child);
+    };
+    visit_static_scopes(symbols.get_scope(module()->id()));
 
     // Initializer for module level variables.
     if (has_vars) {

@@ -11,6 +11,7 @@
 #include "compiler/semantics/fwd.hpp"
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/inlined_vector.h"
 
 namespace tiro {
 
@@ -180,9 +181,11 @@ enum class ScopeType : u8 {
     /// add additional items to that scope.
     Global,
 
-    /// Contains module-level symbols such as imports, functions or variables.
-    /// TODO: Module <--> File scope?
+    /// Contains module-level symbols such as functions and variables.
     Module,
+
+    /// File scope currently only contains imports.
+    File,
 
     /// Contains function parameters.
     Function,
@@ -201,7 +204,7 @@ enum class ScopeType : u8 {
 std::string_view to_string(ScopeType type);
 
 /// Represents a scope in the symbol tree. A scope may have multiple
-/// sub scopes and an arbitary number of declared symbols (possibly anonymous).
+/// sub scopes and an arbitrary number of declared symbols (possibly anonymous).
 /// Variable lookup typically involves walking the current scope and its parents for a name match.
 class Scope final {
 public:
@@ -244,7 +247,7 @@ public:
     /// Returns the number of child scopes.
     u32 child_count() const { return children_.size(); }
 
-    /// Returns a range over the symbol entires in this scope.
+    /// Returns a range over the symbol entries in this scope.
     auto entries() const { return IterRange(entries_.begin(), entries_.end()); }
 
     /// Returns the number of symbol entries in this scope.
@@ -271,10 +274,8 @@ private:
     AstId ast_id_;
     u32 level_ = 0;
     bool is_loop_scope_ = false;
-
-    std::vector<ScopeId> children_;
-    std::vector<SymbolId> entries_;
-
+    absl::InlinedVector<ScopeId, 4> children_;
+    absl::InlinedVector<SymbolId, 8> entries_;
     absl::flat_hash_map<InternedString, SymbolId, UseHasher> named_entries_;
 };
 
