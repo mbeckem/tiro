@@ -66,7 +66,7 @@ private:
 
 } // namespace
 
-TEST_CASE("New Lexer should recognize numeric literals", "[syntax]") {
+TEST_CASE("Lexer should recognize numeric literals", "[syntax]") {
     struct test_t {
         std::string_view source;
         std::variant<i64, double> expected;
@@ -105,7 +105,7 @@ TEST_CASE("New Lexer should recognize numeric literals", "[syntax]") {
     }
 }
 
-TEST_CASE("New lexer should not error for unbalanced braces", "[syntax]") {
+TEST_CASE("Lexer should not error for unbalanced braces", "[syntax]") {
     std::string_view source = "}}}";
 
     TestLexer lex(source);
@@ -117,7 +117,7 @@ TEST_CASE("New lexer should not error for unbalanced braces", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should return allow alphabetic character after a number", "[syntax]") {
+TEST_CASE("Lexer should return allow alphabetic character after a number", "[syntax]") {
     std::string_view source = "123aaaa";
 
     TestLexer lex(source);
@@ -131,7 +131,7 @@ TEST_CASE("New Lexer should return allow alphabetic character after a number", "
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize string literals", "[syntax]") {
+TEST_CASE("Lexer should recognize string literals", "[syntax]") {
     struct test_t {
         std::string_view source;
     } tests[] = {
@@ -163,7 +163,7 @@ TEST_CASE("New Lexer should recognize string literals", "[syntax]") {
     }
 }
 
-TEST_CASE("New Lexer should recognize identifiers", "[syntax]") {
+TEST_CASE("Lexer should recognize identifiers", "[syntax]") {
     std::string_view source = "a aa a123 a_b_c _1";
 
     struct expected_t {
@@ -190,7 +190,7 @@ TEST_CASE("New Lexer should recognize identifiers", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize symbols", "[syntax]") {
+TEST_CASE("Lexer should recognize symbols", "[syntax]") {
     std::string_view source = "#a123 #red #__a123";
 
     struct expected_t {
@@ -215,7 +215,7 @@ TEST_CASE("New Lexer should recognize symbols", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support unicode identifiers", "[syntax]") {
+TEST_CASE("Lexer should support unicode identifiers", "[syntax]") {
     std::string_view tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
     for (const auto& source : tests) {
         CAPTURE(source);
@@ -229,7 +229,7 @@ TEST_CASE("New Lexer should support unicode identifiers", "[syntax]") {
     }
 }
 
-TEST_CASE("New Lexer should identify operators", "[syntax]") {
+TEST_CASE("Lexer should identify operators", "[syntax]") {
     std::string_view source =
         "( ) [ ] { } . , : ; ? ?. ?( ?[ ?? + - * ** / % "
         "+= -= *= **= /= %= "
@@ -294,12 +294,12 @@ TEST_CASE("New Lexer should identify operators", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize keywords", "[syntax]") {
+TEST_CASE("Lexer should recognize keywords", "[syntax]") {
     std::string_view source =
         "func var const is as in if else while for "
-        "continue break switch class struct "
+        "continue break switch class interface struct "
         "protocol true false null import export package "
-        "yield async await throw try catch scope defer";
+        "yield throw try catch scope defer";
 
     TokenType expected_tokens[] = {
         TokenType::KwFunc,
@@ -316,6 +316,7 @@ TEST_CASE("New Lexer should recognize keywords", "[syntax]") {
         TokenType::KwBreak,
         TokenType::KwSwitch,
         TokenType::KwClass,
+        TokenType::KwInterface,
         TokenType::KwStruct,
         TokenType::KwProtocol,
         TokenType::KwTrue,
@@ -325,8 +326,6 @@ TEST_CASE("New Lexer should recognize keywords", "[syntax]") {
         TokenType::KwExport,
         TokenType::KwPackage,
         TokenType::KwYield,
-        TokenType::KwAsync,
-        TokenType::KwAwait,
         TokenType::KwThrow,
         TokenType::KwTry,
         TokenType::KwCatch,
@@ -341,7 +340,7 @@ TEST_CASE("New Lexer should recognize keywords", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should recognize block comments", "[syntax]") {
+TEST_CASE("Lexer should recognize block comments", "[syntax]") {
     std::string_view source = "hello/*world*/;";
 
     {
@@ -374,7 +373,7 @@ TEST_CASE("New Lexer should recognize block comments", "[syntax]") {
     }
 }
 
-TEST_CASE("New Lexer should recognize line comment", "[syntax]") {
+TEST_CASE("Lexer should recognize line comment", "[syntax]") {
     std::string_view source = "asd // + - test;\n [";
 
     TestLexer lex(source);
@@ -392,7 +391,7 @@ TEST_CASE("New Lexer should recognize line comment", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support nested block comments", "[syntax]") {
+TEST_CASE("Lexer should support nested block comments", "[syntax]") {
     std::string_view source = "   /* 1 /* 2 /* 3 */ 4 */ 5 */   ";
 
     TestLexer lex(source);
@@ -404,7 +403,7 @@ TEST_CASE("New Lexer should support nested block comments", "[syntax]") {
     lex.require_eof();
 }
 
-TEST_CASE("New Lexer should support interpolated strings", "[syntax]") {
+TEST_CASE("Lexer should support interpolated strings", "[syntax]") {
     auto test = [&](std::string_view source, char delim, char other_delim) {
         TestLexer lex(source);
 
@@ -439,7 +438,7 @@ TEST_CASE("New Lexer should support interpolated strings", "[syntax]") {
     test(source_sq, '\'', '"');
 }
 
-TEST_CASE("New lexer should support interpolated strings with expression blocks", "[syntax]") {
+TEST_CASE("Lexer should support interpolated strings with expression blocks", "[syntax]") {
     TestLexer lex(R"(
         "hello ${name ?? {"world";} + 1}}}!"
     )");
@@ -465,8 +464,8 @@ TEST_CASE("New lexer should support interpolated strings with expression blocks"
     lex.require_eof();
 }
 
-TEST_CASE("New lexer should emit field accesses for integers following a '.' or '?.' operator",
-    "[syntax]") {
+TEST_CASE(
+    "Lexer should emit field accesses for integers following a '.' or '?.' operator", "[syntax]") {
     TestLexer lex(R"(
         a.0?.1.2 . /* comment */ 3.foo
     )");

@@ -24,7 +24,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _ImportPath_ := _Identifier_ (`"."` _Identifier_ )<sup>\*</sup>
 
 > _VarDecl_ := (`"const"` | `"var"`) _Binding_ (`","` _Binding_)<sup>\*</sup>  
-> _Binding_: := _BindingPattern_ `"="` _Expr_  
+> _Binding_: := _BindingPattern_ (`"="` _Expr_)<sup>?</sup>  
 > _BindingPattern_ := _Identifier_ | `"("` _Identifier_ (`","` _Identifier_)<sup>\*</sup> `")"`
 
 > _FuncDecl_ := `"func"` _Identifier_<sup>?</sup> `"("` _ParamList_<sup>?</sup> `")"` _FuncBody_  
@@ -118,7 +118,7 @@ TODO Syntax of Comment (`//` and `/** */`)
 > _MapEntry_ := _Expr_ `":"` _Expr_
 
 > _SetLiteral_ := `"set{"` _SetElements_ <sup>?</sup> `"}"`  
-> _ArrayElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
+> _SetElements_ := _Expr_ (`","` _Expr_)<sup>\*</sup> `","`<sup>?</sup>
 
 ## Atoms
 
