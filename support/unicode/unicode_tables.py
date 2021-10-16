@@ -9,7 +9,6 @@
 # for the 12.1.0 version.
 
 import argparse
-import csv
 import datetime
 import os
 
@@ -37,7 +36,7 @@ def parse_codepoint_range(codepoints):
 
 
 # Path to the unicode character database
-UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "12.1.0")
+UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "14.0.0")
 CATEGORY_FILE = os.path.join(UCD_DIR, "extracted/DerivedGeneralCategory.txt")
 PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
 
