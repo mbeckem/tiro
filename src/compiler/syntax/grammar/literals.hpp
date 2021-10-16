@@ -10,6 +10,12 @@
 
 namespace tiro {
 
+/// Returns true if `c` may start an identifier.
+bool is_identifier_start(CodePoint c);
+
+/// Returns true if `c` may be part of an identifier.
+bool is_identifier_continue(CodePoint c);
+
 /// Attempts to parse the given code point as a digit with the given base.
 /// Base must be 2, 8, 10 or 16.
 std::optional<int> to_digit(CodePoint c, int base);

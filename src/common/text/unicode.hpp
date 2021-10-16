@@ -10,56 +10,14 @@ namespace tiro {
 
 using CodePoint = u32;
 
-enum class GeneralCategory {
-    Invalid,
-    Cc,
-    Cf,
-    Cn,
-    Co,
-    Cs,
-    Ll,
-    Lm,
-    Lo,
-    Lt,
-    Lu,
-    Mc,
-    Me,
-    Mn,
-    Nd,
-    Nl,
-    No,
-    Pc,
-    Pd,
-    Pe,
-    Pf,
-    Pi,
-    Po,
-    Ps,
-    Sc,
-    Sk,
-    Sm,
-    So,
-    Zl,
-    Zp,
-    Zs,
-};
+/// Returns true if the code point has the XID_Start property.
+bool is_xid_start(CodePoint cp);
 
-std::string_view to_string(GeneralCategory category);
-
-/// Returns the general category of the given code point.
-GeneralCategory general_category(CodePoint cp);
-
-/// Returns true if the code point is a letter.
-bool is_letter(CodePoint cp);
-
-/// Returns true if the code point is a number.
-bool is_number(CodePoint cp);
+/// Returns true if the code point has the XID_Continue property.
+bool is_xid_continue(CodePoint cp);
 
 /// Returns true if `cp` is a whitespace code point.
 bool is_whitespace(CodePoint cp);
-
-/// Returns true if `cp` is printable.
-bool is_printable(CodePoint cp);
 
 /// Sentinel value for invalid code points.
 inline constexpr CodePoint invalid_code_point = CodePoint(-1);
@@ -122,8 +80,9 @@ struct Interval {
 };
 
 // Defined in unicode_data.cpp
-extern const Span<const MapEntry<CodePoint, GeneralCategory>> cps_to_cat;
 extern const Span<const Interval<CodePoint>> is_whitespace;
+extern const Span<const Interval<CodePoint>> is_xid_start;
+extern const Span<const Interval<CodePoint>> is_xid_continue_without_start;
 
 } // namespace unicode_data
 

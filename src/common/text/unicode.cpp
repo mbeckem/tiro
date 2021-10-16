@@ -33,92 +33,16 @@ bool sparse_set_contains(Span<const unicode_data::Interval<Key>> sparse_set, Key
     return pos->first <= key;
 }
 
-std::string_view to_string(GeneralCategory category) {
-    switch (category) {
-#define TIRO_CASE(cat)         \
-    case GeneralCategory::cat: \
-        return #cat;
-
-        TIRO_CASE(Invalid)
-        TIRO_CASE(Cc)
-        TIRO_CASE(Cf)
-        TIRO_CASE(Cn)
-        TIRO_CASE(Co)
-        TIRO_CASE(Cs)
-        TIRO_CASE(Ll)
-        TIRO_CASE(Lm)
-        TIRO_CASE(Lo)
-        TIRO_CASE(Lt)
-        TIRO_CASE(Lu)
-        TIRO_CASE(Mc)
-        TIRO_CASE(Me)
-        TIRO_CASE(Mn)
-        TIRO_CASE(Nd)
-        TIRO_CASE(Nl)
-        TIRO_CASE(No)
-        TIRO_CASE(Pc)
-        TIRO_CASE(Pd)
-        TIRO_CASE(Pe)
-        TIRO_CASE(Pf)
-        TIRO_CASE(Pi)
-        TIRO_CASE(Po)
-        TIRO_CASE(Ps)
-        TIRO_CASE(Sc)
-        TIRO_CASE(Sk)
-        TIRO_CASE(Sm)
-        TIRO_CASE(So)
-        TIRO_CASE(Zl)
-        TIRO_CASE(Zp)
-        TIRO_CASE(Zs)
-
-#undef TIRO_CASE
-    }
-
-    TIRO_UNREACHABLE("Invalid category.");
+bool is_xid_start(CodePoint cp) {
+    return sparse_set_contains(unicode_data::is_xid_start, cp);
 }
 
-GeneralCategory general_category(CodePoint cp) {
-    return sparse_map_find(unicode_data::cps_to_cat, cp);
-}
-
-bool is_letter(CodePoint cp) {
-    static constexpr GeneralCategory letter_cats[] = {
-        GeneralCategory::Ll,
-        GeneralCategory::Lm,
-        GeneralCategory::Lo,
-        GeneralCategory::Lt,
-        GeneralCategory::Lu,
-    };
-    return contains(letter_cats, general_category(cp));
-}
-
-bool is_number(CodePoint cp) {
-    static constexpr GeneralCategory number_cats[] = {
-        GeneralCategory::Nd, GeneralCategory::Nl, GeneralCategory::No};
-    return contains(number_cats, general_category(cp));
+bool is_xid_continue(CodePoint cp) {
+    return is_xid_start(cp) || sparse_set_contains(unicode_data::is_xid_continue_without_start, cp);
 }
 
 bool is_whitespace(CodePoint cp) {
     return sparse_set_contains(unicode_data::is_whitespace, cp);
-}
-
-bool is_printable(CodePoint cp) {
-    if (cp == ' ')
-        return true;
-
-    switch (general_category(cp)) {
-    case GeneralCategory::Cc:
-    case GeneralCategory::Cf:
-    case GeneralCategory::Cn:
-    case GeneralCategory::Co:
-    case GeneralCategory::Cs:
-    case GeneralCategory::Zl:
-    case GeneralCategory::Zp:
-    case GeneralCategory::Zs:
-        return false;
-    default:
-        return true;
-    }
 }
 
 std::tuple<CodePoint, const char*> decode_utf8(const char* pos, const char* end) {

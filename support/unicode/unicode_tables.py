@@ -11,6 +11,13 @@
 import argparse
 import datetime
 import os
+from itertools import chain
+
+# Path to the unicode character database
+UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "14.0.0")
+CATEGORY_FILE = os.path.join(UCD_DIR, "extracted/DerivedGeneralCategory.txt")
+PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
+DERIVED_CORE_PROPERTIES_FILE = os.path.join(UCD_DIR, "DerivedCoreProperties.txt")
 
 
 def data_lines(filename):
@@ -35,15 +42,9 @@ def parse_codepoint_range(codepoints):
     return range(int(begin, 16), int(end, 16) + 1)
 
 
-# Path to the unicode character database
-UCD_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)), "14.0.0")
-CATEGORY_FILE = os.path.join(UCD_DIR, "extracted/DerivedGeneralCategory.txt")
-PROPERTIES_FILE = os.path.join(UCD_DIR, "PropList.txt")
-
-
 def generate_table_file(path):
     HEADER = (
-        f"// THIS FILE has been auto generated. Do not edit.\n"
+        f"// This file has been auto generated. Do not edit directly.\n"
         f"// Generated at {datetime.datetime.now().isoformat()}\n\n"
         f'#include "common/defs.hpp"\n'
         f'#include "common/text/unicode.hpp"\n\n'
@@ -54,7 +55,7 @@ def generate_table_file(path):
 
     with open(path, mode="x+", encoding="utf-8") as cpp:
         cpp.write(HEADER)
-        generate_category_table(cpp)
+        # generate_category_table(cpp)
         generate_property_tables(cpp)
         cpp.write(FOOTER)
 
@@ -72,7 +73,9 @@ def generate_category_table(cpp):
 def generate_property_tables(cpp):
     # maps property name to list of ranges
     properties = dict()
-    for line in data_lines(PROPERTIES_FILE):
+    for line in chain(
+        data_lines(PROPERTIES_FILE), data_lines(DERIVED_CORE_PROPERTIES_FILE)
+    ):
         code_points = parse_codepoint_range(line[0])
         prop = line[1]
 
@@ -80,7 +83,19 @@ def generate_property_tables(cpp):
             properties[prop] = set()
         properties[prop].update(code_points)
 
-    generate_code_point_set(cpp, "is_whitespace", properties["White_Space"])
+    whitespace = properties["Pattern_White_Space"]
+    xid_start = properties["XID_Start"]
+    xid_continue = properties["XID_Continue"]
+    if not xid_start.issubset(xid_continue):
+        raise RuntimeError(
+            "Assumption that XID_Start is a subset of XID_CONTINUE has failed"
+        )
+
+    generate_code_point_set(cpp, "is_whitespace", whitespace)
+    generate_code_point_set(cpp, "is_xid_start", xid_start)
+    generate_code_point_set(
+        cpp, "is_xid_continue_without_start", xid_continue - xid_start
+    )
 
 
 def generate_code_point_map(cpp, public_name, enum_name, table):

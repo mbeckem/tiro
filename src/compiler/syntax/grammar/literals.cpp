@@ -29,6 +29,14 @@ parse_ascii_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error
 static std::optional<CodePoint>
 parse_unicode_hex(CodePointRange& range, FunctionRef<void(std::string_view)> error_sink);
 
+bool is_identifier_start(CodePoint c) {
+    return c == '_' || is_xid_start(c);
+}
+
+bool is_identifier_continue(CodePoint c) {
+    return is_xid_continue(c);
+}
+
 std::optional<int> to_digit(CodePoint c, int base) {
     switch (base) {
     case 2: {
@@ -78,7 +86,7 @@ parse_symbol_name(std::string_view symbol_source, FunctionRef<void(std::string_v
         error_sink("symbols must have a name");
         return {};
     }
-    if (!is_letter(*input)) {
+    if (!is_identifier_start(*input)) {
         error_sink("symbols must start with a letter");
         return {};
     }

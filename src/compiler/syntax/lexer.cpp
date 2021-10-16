@@ -51,14 +51,6 @@ static bool is_decimal_digit(CodePoint c) {
     return c >= '0' && c <= '9';
 }
 
-static bool is_identifier_begin(CodePoint c) {
-    return is_letter(c) || c == '_';
-}
-
-static bool is_identifier_part(CodePoint c) {
-    return is_identifier_begin(c) || is_number(c);
-}
-
 Lexer::Lexer(std::string_view file_content)
     : file_content_(file_content)
     , input_(file_content) {}
@@ -122,7 +114,7 @@ again:
     if (c == '#')
         return lex_symbol();
 
-    if (is_identifier_begin(c))
+    if (is_identifier_start(c))
         return lex_identifier();
 
     if (auto op = lex_operator()) {
@@ -151,10 +143,10 @@ again:
 }
 
 TokenType Lexer::lex_identifier() {
-    TIRO_DEBUG_ASSERT(is_identifier_begin(current()), "Not at the start of an identifier.");
+    TIRO_DEBUG_ASSERT(is_identifier_start(current()), "Not at the start of an identifier.");
 
     advance();
-    accept_while(is_identifier_part);
+    accept_while(is_identifier_continue);
 
     auto kw_it = KEYWORDS.find(value());
     if (kw_it != KEYWORDS.end())
@@ -200,7 +192,7 @@ TokenType Lexer::lex_symbol() {
     TIRO_DEBUG_ASSERT(current() == '#', "Not at the start of a symbol.");
 
     advance();
-    accept_while(is_identifier_part);
+    accept_while(is_identifier_continue);
     return TokenType::Symbol;
 }
 
@@ -370,7 +362,7 @@ TokenType Lexer::lex_string() {
     }
 
     if (state_.string_needs_identifier) {
-        if (is_identifier_begin(current())) {
+        if (is_identifier_start(current())) {
             TokenType type = lex_identifier();
             state_.string_needs_identifier = false;
             return type;

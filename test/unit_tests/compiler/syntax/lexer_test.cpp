@@ -216,7 +216,7 @@ TEST_CASE("Lexer should recognize symbols", "[syntax]") {
 }
 
 TEST_CASE("Lexer should support unicode identifiers", "[syntax]") {
-    std::string_view tests[] = {"normal_identifier_23", "hellöchen", "hello⅞", "世界"};
+    std::string_view tests[] = {"normal_identifier_23", "hellöchen", "helloΔ", "世界"};
     for (const auto& source : tests) {
         CAPTURE(source);
         TestLexer lex(source);

@@ -129,7 +129,9 @@ struct EscapedString {
             return;
         }
 
-        if (is_printable(cp)) {
+        // Printable ascii chars (deciding which unicode characters are printable is difficult
+        // and probably requires a better unicode character database on our side).
+        if (cp >= 0x20 && cp <= 0x7E) {
             // TODO: Ouch! Need utf8 append
             stream.format("{}", to_string_utf8(cp));
             return;
@@ -164,7 +166,7 @@ protected:
 
 class [[nodiscard]] DumpStruct : DumpBase {
 public:
-    explicit DumpStruct(std::string_view name, DumpHelper & parent)
+    explicit DumpStruct(std::string_view name, DumpHelper& parent)
         : DumpBase(parent) {
         stream_.format("{}{{", name);
     }
@@ -206,7 +208,7 @@ private:
 
 class [[nodiscard]] DumpList : DumpBase {
 public:
-    explicit DumpList(std::string_view open, std::string_view close, DumpHelper & parent)
+    explicit DumpList(std::string_view open, std::string_view close, DumpHelper& parent)
         : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
@@ -249,7 +251,7 @@ private:
 
 class [[nodiscard]] DumpTuple : DumpBase {
 public:
-    explicit DumpTuple(DumpHelper & parent)
+    explicit DumpTuple(DumpHelper& parent)
         : DumpBase(parent) {
         stream_.format("(");
     }
@@ -300,7 +302,7 @@ private:
 
 class [[nodiscard]] DumpRecord : DumpBase {
 public:
-    explicit DumpRecord(DumpHelper & parent)
+    explicit DumpRecord(DumpHelper& parent)
         : DumpBase(parent) {
         stream_.format("(");
     }
@@ -346,7 +348,7 @@ private:
 
 class [[nodiscard]] DumpMap : DumpBase {
 public:
-    explicit DumpMap(std::string_view open, std::string_view close, DumpHelper & parent)
+    explicit DumpMap(std::string_view open, std::string_view close, DumpHelper& parent)
         : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
