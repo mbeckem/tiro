@@ -3,10 +3,6 @@
 
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
-#include "vm/handles/handle.hpp"
-#include "vm/objects/value.hpp"
-
-#include <optional>
 
 namespace tiro::vm {
 
