@@ -4,14 +4,14 @@ target_include_directories(common_flags INTERFACE "${PROJECT_SOURCE_DIR}/src")
 # Compiler warnings and compiler specific flags
 # TODO MSCV
 if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    if (TIRO_WARNINGS)    
+    if (TIRO_WARNINGS)
         target_compile_options(common_flags INTERFACE
             -Wno-unknown-warning-option
-            
+
             # Disabled because of flexible array members :/
             # -pedantic
             # -pedantic-errors
-            
+
             -Wall
             -Wextra
 
@@ -37,7 +37,7 @@ if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clan
 
                 # Really annoying on some clang versions
                 -Wno-range-loop-analysis
-            >            
+            >
         )
     endif()
 
@@ -61,7 +61,7 @@ tiro_add_headers(TIRO_HEADERS "${BUILD_INCLUDE_DIR}/tiro/" version.h)
 
 tiro_add_headers(TIROPP_HEADERS "${SOURCE_INCLUDE_DIR}/tiropp"
     api.hpp
-    compiler.hpp 
+    compiler.hpp
     def.hpp
     error.hpp
     fwd.hpp
@@ -84,11 +84,15 @@ target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
 target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
 target_link_libraries(tiro_objects PRIVATE common_flags)
-target_link_libraries_system(tiro_objects PUBLIC 
+target_link_libraries_system(tiro_objects PUBLIC
     absl::hash absl::flat_hash_map
     fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
+
+if (TIRO_IWYU)
+    set_property(TARGET tiro_objects PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
+endif()
 
 add_subdirectory(api)
 add_subdirectory(bytecode)
@@ -101,7 +105,7 @@ add_subdirectory(vm)
 add_library(tiro_static STATIC)
 add_library(tiro::tiro_static ALIAS tiro_static)
 target_include_directories(tiro_static
-    PUBLIC 
+    PUBLIC
         $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -114,7 +118,7 @@ if (NOT TIRO_SKIP_SHARED)
     add_library(tiro SHARED)
     add_library(tiro::tiro ALIAS tiro)
     target_include_directories(tiro
-        PUBLIC 
+        PUBLIC
             $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
             $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -170,10 +174,10 @@ if (NOT TIRO_SKIP_INSTALL)
     install(FILES ${TIRO_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tiro)
     install(FILES ${TIROPP_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tiropp)
     install(
-        FILES 
+        FILES
             "${PROJECT_BINARY_DIR}/tiro-config-version.cmake"
             "${PROJECT_BINARY_DIR}/tiro-config.cmake"
-        DESTINATION 
+        DESTINATION
             "${CMAKE_INSTALL_LIBDIR}/cmake/tiro"
     )
 endif()
