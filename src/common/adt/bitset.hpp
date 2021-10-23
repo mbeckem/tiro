@@ -197,10 +197,10 @@ public:
             return;
 
         // Has one bits before bit `index`. Index must not be 0.
-        auto keep_before = [](u32 index) { return (1 << index) - 1; };
+        auto keep_before = [](u32 index) { return (block_type(1) << index) - 1; };
 
         // Has one bits at `index` and after.
-        auto keep_after = [](u32 index) { return ~((1 << index) - 1); };
+        auto keep_after = [](u32 index) { return ~((block_type(1) << index) - 1); };
 
         size_t end = begin + n;
         size_t current_block = block_index(begin);
