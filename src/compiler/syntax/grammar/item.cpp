@@ -40,7 +40,7 @@ void parse_item(Parser& p, const TokenSet& recovery) {
     auto item = p.start();
     auto modifiers = try_parse_modifiers(p);
     if (p.at_any(VAR_FIRST)) {
-        parse_var(p, recovery.union_with(TokenType::Semicolon), modifiers);
+        parse_var(p, VarKind::Default, recovery.union_with(TokenType::Semicolon), modifiers);
         p.expect(TokenType::Semicolon);
         item.complete(SyntaxType::VarItem);
         return;

@@ -16,6 +16,9 @@ const TokenSet BINDING_PATTERN_FIRST = {
     TokenType::Identifier,
 };
 
+/// Parses a complete binding, i.e `pattern = expr`,
+static void parse_binding(Parser& p, VarKind kind, const TokenSet& recovery);
+
 void parse_name(Parser& p, const TokenSet& recovery) {
     if (!p.at(TokenType::Identifier)) {
         p.error_recover("expected a name", recovery);
@@ -102,14 +105,14 @@ parse_func(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> m
 }
 
 static void parse_var_decl_unchecked(
-    Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+    Parser& p, VarKind kind, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
     TIRO_DEBUG_ASSERT(p.at_any(VAR_FIRST), "Not at the start of a var declaration.");
 
     auto m = modifiers ? modifiers->precede() : p.start();
     p.advance(); // var | const
 
     while (!p.at(TokenType::Eof)) {
-        parse_binding(p, recovery.union_with(TokenType::Comma));
+        parse_binding(p, kind, recovery.union_with(TokenType::Comma));
         if (!p.accept(TokenType::Comma))
             break;
     }
@@ -117,7 +120,8 @@ static void parse_var_decl_unchecked(
     m.complete(SyntaxType::Var);
 }
 
-void parse_var(Parser& p, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
+void parse_var(
+    Parser& p, VarKind kind, const TokenSet& recovery, std::optional<CompletedMarker> modifiers) {
     if (!p.at_any(VAR_FIRST)) {
         if (modifiers) {
             auto m = modifiers->precede();
@@ -130,7 +134,7 @@ void parse_var(Parser& p, const TokenSet& recovery, std::optional<CompletedMarke
         return;
     }
 
-    parse_var_decl_unchecked(p, recovery, modifiers);
+    parse_var_decl_unchecked(p, kind, recovery, modifiers);
 }
 
 void parse_binding_pattern(Parser& p, const TokenSet& recovery) {
@@ -165,15 +169,23 @@ void parse_binding_pattern(Parser& p, const TokenSet& recovery) {
     }
 }
 
-void parse_binding(Parser& p, const TokenSet& recovery) {
+void parse_binding(Parser& p, VarKind kind, const TokenSet& recovery) {
     auto m = p.start();
 
     // Parse left hand side
     parse_binding_pattern(p, recovery.union_with(TokenType::Equals));
 
     // Parse initializer expression
-    if (p.accept(TokenType::Equals))
-        parse_expr(p, recovery);
+    if (p.accept(TokenType::Equals)) {
+        switch (kind) {
+        case VarKind::Default:
+            parse_expr(p, recovery);
+            break;
+        case VarKind::NoBlock:
+            parse_expr_no_block(p, recovery);
+            break;
+        }
+    }
 
     m.complete(SyntaxType::Binding);
 }

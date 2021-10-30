@@ -224,9 +224,9 @@ parse_primary_expr(Parser& p, ExprFlags flags, const TokenSet& recovery) {
     // objects, and the special cases for map and set should be removed.
     case TokenType::Identifier: {
         if (!(flags & NoBlock) && p.ahead(1) == TokenType::LeftBrace) {
-            SyntaxType type = p.at_source("map")
-                                  ? SyntaxType::MapExpr
-                                  : p.at_source("set") ? SyntaxType::SetExpr : SyntaxType::Error;
+            SyntaxType type = p.at_source("map")   ? SyntaxType::MapExpr
+                              : p.at_source("set") ? SyntaxType::SetExpr
+                                                   : SyntaxType::Error;
             switch (type) {
             case SyntaxType::MapExpr:
                 return parse_map_expr(p, recovery);

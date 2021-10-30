@@ -94,7 +94,7 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
         auto h = p.start();
         // Optional variable declaration
         if (!p.accept(TokenType::Semicolon)) {
-            parse_var(p, recovery.union_with(TokenType::Semicolon), {});
+            parse_var(p, VarKind::NoBlock, recovery.union_with(TokenType::Semicolon), {});
             p.expect(TokenType::Semicolon);
         }
         // Optional condition
@@ -133,7 +133,7 @@ void parse_for_stmt(Parser& p, const TokenSet& recovery) {
 void parse_var_stmt(Parser& p, const TokenSet& recovery) {
     TIRO_DEBUG_ASSERT(p.at_any(VAR_FIRST), "Not at the start of a var declaration.");
     auto m = p.start();
-    parse_var(p, recovery.union_with(TokenType::Semicolon), {});
+    parse_var(p, VarKind::Default, recovery.union_with(TokenType::Semicolon), {});
     p.expect(TokenType::Semicolon);
     m.complete(SyntaxType::VarStmt);
 }
