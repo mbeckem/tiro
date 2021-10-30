@@ -96,8 +96,8 @@ void Parser::error_recover(std::string message, const TokenSet& recovery) {
     }
 
     auto m = start();
-    error(std::move(message));
     advance();
+    error(std::move(message));
     m.complete(SyntaxType::Error);
 }
 
