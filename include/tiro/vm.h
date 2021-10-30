@@ -110,14 +110,14 @@ TIRO_API void tiro_vm_load_bytecode(tiro_vm_t vm, tiro_module_t module, tiro_err
 TIRO_API void tiro_vm_load_module(tiro_vm_t vm, tiro_handle_t module, tiro_error_t* err);
 
 /**
- * Attempts to find the exported value with the given name in the specified module. The found function value
- * will be stored in the `result` handle, which must not be NULL.
+ * Attempts to find the exported value with the given name in the specified module.
+ * The found value will be stored in the `result` handle, which must not be NULL.
  *
  * Returns `TIRO_ERROR_MODULE_NOT_FOUND` if the specified module was not loaded.
  * Returns `TIRO_ERROR_EXPORT_NOT_FOUND` if the module does not contain an exported member with that name.
  */
-TIRO_API void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name,
-    tiro_string_t function_name, tiro_handle_t result, tiro_error_t* err);
+TIRO_API void tiro_vm_get_export(tiro_vm_t vm, tiro_string_t module_name, tiro_string_t export_name,
+    tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Runs all ready coroutines. Returns (and does not block) when all coroutines are either waiting or done.
