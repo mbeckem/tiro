@@ -1,7 +1,3 @@
-# TODO LIST
-
--   VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
-
 # IDEAS
 
 -   Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
