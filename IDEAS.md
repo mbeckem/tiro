@@ -1,21 +1,8 @@
-# First MVP
-
--   VM: Better garbage collector, see `docs/design/gc_design.md`
-
--   C API: add error handling to functions that return a sentinel value (such as NULL).
-
--   A simple standard library
-
-    -   Simple input & output
-    -   Some math stuff
-    -   String utilities
-    -   Container methods (Array, Tuple, Set, Map)
-
--   Overview article and docs
-
 # TODO LIST
 
 -   VM: MUST NOT cache the internal data pointers because the gc will move objects in the future
+
+# IDEAS
 
 -   Compiler: Analyzer: variables must not be used until they have been initialized in the current code path
     There must be tests for this, it should already be implemented like this.
@@ -33,8 +20,6 @@
     Alternative: define container behavior when modifying while iterating
 
 -   VM: Iterator protocol (and framework for other protocols).
-
-# IDEAS
 
 -   Compiler: Make functions (in mir translation phase) compile and optimize separately. This would enable parallel compilation.
     The function translation would not be able to reference the module's state and the parent function's closure environments (if any).
