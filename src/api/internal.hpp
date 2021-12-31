@@ -179,7 +179,7 @@ inline tiro::vm::NativeAsyncFunctionFrame* to_internal(tiro_async_frame_t frame)
 }
 
 struct tiro_compiler {
-    using InternalMessageCallback = std::function<void(const tiro_compiler_message_t&)>;
+    using InternalMessageCallback = std::function<bool(const tiro_compiler_message_t&)>;
 
     tiro::Compiler compiler;
     InternalMessageCallback message_callback; // optional
@@ -190,7 +190,7 @@ struct tiro_compiler {
         if (settings.message_callback) {
             auto cb = settings.message_callback;
             auto data = settings.message_callback_data;
-            message_callback = [cb, data](const auto& message) { cb(&message, data); };
+            message_callback = [cb, data](const auto& message) { return cb(&message, data); };
         }
     }
 

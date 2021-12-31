@@ -23,13 +23,14 @@ static constexpr tiro_compiler_settings_t default_compiler_settings = []() {
             std::fflush(out);
         } catch (...) {
         }
+        return true;
     };
     return settings;
 }();
 
-static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
+static bool report(tiro_compiler_t comp, const Diagnostics::Message& message) {
     if (!comp || !comp->message_callback)
-        return;
+        return true;
 
     auto get_severity = [](Diagnostics::Level level) {
         switch (level) {
@@ -58,7 +59,7 @@ static void report(tiro_compiler_t comp, const Diagnostics::Message& message) {
         msg.column = 0;
     }
     msg.text = to_external(message.text);
-    comp->message_callback(msg);
+    return comp->message_callback(msg);
 }
 
 const char* tiro_severity_str(tiro_severity_t severity) {
@@ -123,7 +124,10 @@ void tiro_compiler_run(tiro_compiler_t comp, tiro_error_t* err) {
 
         comp->result = compiler.run();
         for (const auto& message : compiler.diag().messages()) {
-            report(comp, message);
+            if (!report(comp, message)) {
+                return TIRO_REPORT(
+                    err, TIRO_ERROR_BAD_STATE, [&] { return "fatal error in message callback"; });
+            }
         }
 
         if (!comp->result->success)

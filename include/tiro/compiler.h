@@ -73,9 +73,13 @@ typedef struct tiro_compiler_settings {
     /* Userdata pointer that will be passed to message_callback. Defaults to NULL. */
     void* message_callback_data;
 
-    /* Will be invoked for every diagnostic message emitted by the compiler.
-     * The default function prints messages to stdout. */
-    void (*message_callback)(const tiro_compiler_message_t* message, void* userdata);
+    /*
+     * Will be invoked for every diagnostic message emitted by the compiler.
+     * The default function prints messages to stdout.
+     *
+     * Should usually return true, but may return false to indicate a fatal error (compilation will halt).
+     */
+    bool (*message_callback)(const tiro_compiler_message_t* message, void* userdata);
 } tiro_compiler_settings_t;
 
 /**

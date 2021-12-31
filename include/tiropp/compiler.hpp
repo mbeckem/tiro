@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
 
 namespace tiro {
 
@@ -64,7 +65,6 @@ struct compiler_settings {
 
     /// Callback for diagnostic messages (may be empty).
     /// The compiler will print to the process output stream if this is not set.
-    // TODO: MUST NOT throw an exception
     message_callback_type message_callback;
 };
 
@@ -87,13 +87,13 @@ private:
 class compiler final {
 public:
     /// Constructs a new compiler instance for a module with the given name.
-    compiler(std::string_view module_name)
-        : raw_compiler_(construct_compiler(module_name, nullptr)) {}
+    explicit compiler(std::string_view module_name)
+        : compiler(module_name, compiler_settings()) {}
 
     /// Constructs a new compiler instance for a module with the given name and the given settings.
     explicit compiler(std::string_view module_name, compiler_settings settings)
-        : settings_(std::make_unique<compiler_settings>(std::move(settings)))
-        , raw_compiler_(construct_compiler(module_name, settings_.get())) {}
+        : state_(std::make_unique<state_t>(std::move(settings)))
+        , raw_compiler_(construct_compiler(module_name, state_.get())) {}
 
     explicit compiler(tiro_compiler_t raw_compiler)
         : raw_compiler_(raw_compiler) {
@@ -112,7 +112,34 @@ public:
     /// Run the compiler on the set of source files provided via `add_file`.
     /// Requires at least one source file.
     /// This function can only be called once for every compiler instance.
-    void run() { tiro_compiler_run(raw_compiler_, error_adapter()); }
+    void run() {
+        struct exception_handler_t {
+            state_t* state_;
+
+            exception_handler_t(state_t* state)
+                : state_(state) {
+                TIRO_ASSERT(!state_->stored_exception);
+            }
+
+            ~exception_handler_t() {
+                if (state_ && state_->stored_exception)
+                    state_->stored_exception = std::exception_ptr();
+            }
+
+            void check() {
+                if (state_ && state_->stored_exception) {
+                    std::rethrow_exception(std::move(state_->stored_exception));
+                }
+            }
+        } handler(state_.get());
+
+        try {
+            tiro_compiler_run(raw_compiler_, error_adapter());
+        } catch (const tiro::api_error&) {
+            handler.check(); // Rethrow stored exception from callback instead
+            throw;
+        }
+    }
 
     /// Returns true if the compiler has successfully compiled a bytecode module.
     bool has_module() const { return tiro_compiler_has_module(raw_compiler_); }
@@ -157,42 +184,51 @@ public:
         return std::string(result.get());
     }
 
-    const compiler_settings& settings() const { return *settings_; }
-
     tiro_compiler_t raw_compiler() const { return raw_compiler_; }
 
 private:
-    static tiro_compiler_t
-    construct_compiler(std::string_view module_name, compiler_settings* settings) {
+    struct state_t {
+        compiler_settings settings;
+        std::exception_ptr stored_exception;
+
+        state_t(compiler_settings&& settings_)
+            : settings(std::move(settings_))
+            , stored_exception() {}
+    };
+
+    static tiro_compiler_t construct_compiler(std::string_view module_name, state_t* state) {
         tiro_compiler_settings raw_settings;
         tiro_compiler_settings_init(&raw_settings);
 
-        if (settings) {
-            raw_settings.enable_dump_cst = settings->enable_dump_cst;
-            raw_settings.enable_dump_ast = settings->enable_dump_ast;
-            raw_settings.enable_dump_ir = settings->enable_dump_ir;
-            raw_settings.enable_dump_bytecode = settings->enable_dump_bytecode;
-            if (settings->message_callback) {
-                raw_settings.message_callback_data = &settings->message_callback;
+        if (state) {
+            auto& settings = state->settings;
+            raw_settings.enable_dump_cst = settings.enable_dump_cst;
+            raw_settings.enable_dump_ast = settings.enable_dump_ast;
+            raw_settings.enable_dump_ir = settings.enable_dump_ir;
+            raw_settings.enable_dump_bytecode = settings.enable_dump_bytecode;
+            if (settings.message_callback) {
+                raw_settings.message_callback_data = state;
                 raw_settings.message_callback = [](const tiro_compiler_message_t* m,
                                                     void* userdata) {
-                    using callback_type = compiler_settings::message_callback_type;
-                    try {
-                        TIRO_ASSERT(userdata);
-
-                        compiler_message message;
-                        message.severity = static_cast<severity>(m->severity);
-                        message.file = detail::from_raw(m->file);
-                        message.line = m->line;
-                        message.column = m->column;
-                        message.text = detail::from_raw(m->text);
-
-                        auto& func = *static_cast<callback_type*>(userdata);
-                        func(message);
-                    } catch (...) {
-                        // TODO: No way to signal error to tiro (if needed at all!)
-                        std::terminate();
+                    state_t* cb_state = static_cast<state_t*>(userdata);
+                    if (cb_state->stored_exception) {
+                        return false;
                     }
+
+                    compiler_message message;
+                    message.severity = static_cast<severity>(m->severity);
+                    message.file = detail::from_raw(m->file);
+                    message.line = m->line;
+                    message.column = m->column;
+                    message.text = detail::from_raw(m->text);
+
+                    try {
+                        cb_state->settings.message_callback(message);
+                    } catch (...) {
+                        cb_state->stored_exception = std::current_exception();
+                        return false;
+                    }
+                    return true;
                 };
             }
         }
@@ -205,7 +241,7 @@ private:
 
 private:
     // unique_ptr: reference must stay stable (used in message callback)
-    std::unique_ptr<compiler_settings> settings_;
+    std::unique_ptr<state_t> state_;
     detail::resource_holder<tiro_compiler_t, tiro_compiler_free> raw_compiler_;
 };
 

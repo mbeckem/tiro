@@ -108,3 +108,37 @@ TEST_CASE("tiro::compiler supports move assignment", "[api]") {
     REQUIRE(source.raw_compiler() == nullptr);
     REQUIRE(target.raw_compiler() == raw_source);
 }
+
+TEST_CASE("tiro::compiler supports custom message callbacks", "[api]") {
+    tiro::compiler_settings settings;
+    std::vector<std::string> messages;
+    settings.message_callback = [&](const tiro::compiler_message& message) {
+        messages.push_back(std::string(message.text));
+    };
+
+    tiro::compiler comp("test", settings);
+    comp.add_file("foo", "export func bar() {");
+    REQUIRE_THROWS_MATCHES(comp.run(), tiro::api_error, throws_code(tiro::api_errc::bad_source));
+
+    REQUIRE(messages.size() == 1);
+    REQUIRE(messages[0] == "expected '}'");
+}
+
+TEST_CASE("tiro::compiler supports throwing message callbacks", "[api]") {
+    struct custom_exception : std::runtime_error {
+        custom_exception()
+            : runtime_error("my custom exception") {}
+    };
+
+    tiro::compiler_settings settings;
+    int called = 0;
+    settings.message_callback = [&](const tiro::compiler_message&) {
+        ++called;
+        throw custom_exception();
+    };
+
+    tiro::compiler comp("test", settings);
+    comp.add_file("foo", "export func bar() {a b c d f e");
+    REQUIRE_THROWS_MATCHES(comp.run(), custom_exception, Catch::Message("my custom exception"));
+    REQUIRE(called == 1);
+}
