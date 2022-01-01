@@ -147,4 +147,17 @@ TEST_CASE("Modules can be imported using an alias", "[modules]") {
     test.call("test", 4.5).returns_float(5);
 }
 
+TEST_CASE("Importing unknown modules fails even if the module is never used", "[modules]") {
+    std::string_view source = R"(
+        import does_not_exist;
+
+        export func test() {}
+    )";
+
+    // TODO: modules are only resolved when first loaded. This delays reporting of the error.
+    eval_test test(source);
+    REQUIRE_THROWS_MATCHES(test.get_export("test"), api_error,
+        message_contains("module 'does_not_exist' was not found"));
+}
+
 } // namespace tiro::eval_tests

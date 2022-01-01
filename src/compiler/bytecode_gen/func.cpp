@@ -703,10 +703,8 @@ static void compile_member(ir::ModuleMemberId member_id, ir::Module& module, Lin
         LinkObject& object;
         ir::ModuleMemberId member_id;
 
-        BytecodeMemberId visit_import(const ir::ModuleMemberData::Import&) {
-            // Imports are defined when actually used.
-            // TODO: It this a problem w.r.t. side effects?
-            return {};
+        BytecodeMemberId visit_import(const ir::ModuleMemberData::Import& i) {
+            return object.use_import(i.name);
         }
 
         BytecodeMemberId visit_variable(const ir::ModuleMemberData::Variable& v) {

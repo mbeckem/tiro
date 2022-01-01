@@ -44,6 +44,9 @@ std::optional<Module> ModuleRegistry::get_module(Context& ctx, Handle<String> mo
 }
 
 void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
+    if (module->initialized())
+        return;
+
     enum State { Enter, Dependencies, Init, Exit };
 
     struct Frame {
@@ -156,7 +159,8 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
                     if (auto found = find_module(*imported_name)) {
                         imported_module = *found;
                     } else {
-                        TIRO_ERROR("module was not found");
+                        TIRO_ERROR_WITH_CODE(TIRO_ERROR_MODULE_NOT_FOUND,
+                            "module '{}' was not found", imported_name->view());
                     }
                     current_members->unchecked_set(i, *imported_module);
                     ++i;
