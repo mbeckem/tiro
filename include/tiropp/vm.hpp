@@ -26,6 +26,13 @@ struct vm_settings {
     /// allocated "on the side" using a separate allocation.
     size_t page_size = 0;
 
+    /// The maximum size (in bytes) that can be occupied by the virtual machine's heap.
+    /// The virtual machine will throw out of memory errors if this limit is reached.
+    ///
+    /// The default value (0) will apply a sane default memory limit.
+    /// Use `std::numeric_limits<size_t>::max()` for an unconstrained heap size.
+    size_t max_heap_size = 0;
+
     /// Invoked by the vm to print a message to the standard output, e.g. when
     /// `std.print(...)` was called. The vm will print to the process's standard output
     /// when this function is not set.
@@ -90,6 +97,7 @@ private:
         tiro_vm_settings_t raw_settings;
         tiro_vm_settings_init(&raw_settings);
         raw_settings.page_size = settings_.page_size;
+        raw_settings.max_heap_size = settings_.max_heap_size;
         raw_settings.userdata = this;
 
         if (settings_.print_stdout) {

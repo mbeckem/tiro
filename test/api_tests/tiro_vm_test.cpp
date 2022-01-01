@@ -143,7 +143,7 @@ TEST_CASE("Virtual machine should support maximum heap size", "[api]") {
         Holder holder;
         settings.max_heap_size = 1;
         tiro_errc_t errc = TIRO_OK;
-        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, error_observer(errc));
+        holder.vm = tiro_vm_new(&settings, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_ALLOC);
     }
 }
