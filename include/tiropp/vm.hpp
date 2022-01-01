@@ -49,6 +49,9 @@ public:
     /// Returns the vm's page size, in bytes.
     size_t page_size() const { return tiro_vm_page_size(raw_vm_); }
 
+    /// Returns the vm's maximum heap size, in bytes.
+    size_t max_heap_size() const { return tiro_vm_max_heap_size(raw_vm_); }
+
     /// Userdata associated with this virtual machine.
     /// @{
     const std::any& userdata() const { return userdata_; }

@@ -46,9 +46,10 @@ Context::Context()
 
 Context::Context(ContextSettings settings)
     : settings_(default_settings(*this, std::move(settings)))
-    , heap_(settings_.page_size, settings_.alloc)
+    , heap_(settings_.page_size_bytes, settings_.alloc)
     , startup_time_(timestamp()) {
     heap_.collector().roots(&roots_);
+    heap_.max_size(settings_.max_heap_size_bytes);
     roots_.init(*this);
 }
 

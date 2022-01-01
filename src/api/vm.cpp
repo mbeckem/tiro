@@ -30,7 +30,10 @@ tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings, tiro_error_t* err) {
         tiro::vm::ContextSettings internal_settings;
 
         if (auto page_size = raw_settings.page_size) // 0 -> leave at default value
-            internal_settings.page_size = page_size;
+            internal_settings.page_size_bytes = page_size;
+
+        if (auto max_heap_size = raw_settings.max_heap_size) // 0 -> leave at default value
+            internal_settings.max_heap_size_bytes = max_heap_size;
 
         if (raw_settings.print_stdout) {
             auto func = raw_settings.print_stdout;
@@ -59,6 +62,12 @@ size_t tiro_vm_page_size(tiro_vm_t vm) {
     if (!vm)
         return 0;
     return vm->ctx.heap().layout().page_size;
+}
+
+size_t tiro_vm_max_heap_size(tiro_vm_t vm) {
+    if (!vm)
+        return 0;
+    return vm->ctx.heap().max_size();
 }
 
 void tiro_vm_load_std(tiro_vm_t vm, tiro_error_t* err) {

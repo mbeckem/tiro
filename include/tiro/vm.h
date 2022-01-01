@@ -33,6 +33,15 @@ typedef struct tiro_vm_settings {
     size_t page_size;
 
     /**
+     * The maximum size (in bytes) that can be occupied by the virtual machine's heap.
+     * The virtual machine will throw out of memory errors if this limit is reached.
+     *
+     * The default value (0) will apply a sane default memory limit.
+     * Use `SIZE_MAX` for an unconstrained heap size.
+     */
+    size_t max_heap_size;
+
+    /**
      * Arbitrary user data that will be accessible by calling `tiro_vm_userdata()`. This value
      * is never interpreted in any way. This value is NULL by default.
      */
@@ -84,9 +93,14 @@ TIRO_API void tiro_vm_free(tiro_vm_t vm);
 TIRO_API void* tiro_vm_userdata(tiro_vm_t vm);
 
 /**
- * Returns the vm's page size.
+ * Returns the vm's page size (in bytes).
  */
 TIRO_API size_t tiro_vm_page_size(tiro_vm_t vm);
+
+/**
+ * Returns the vm's maximum heap size (in bytes).
+ */
+TIRO_API size_t tiro_vm_max_heap_size(tiro_vm_t vm);
 
 /**
  * Load the default modules provided by the runtime.

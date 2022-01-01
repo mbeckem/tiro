@@ -105,6 +105,49 @@ TEST_CASE("Virtual machine should use a default page size", "[api]") {
     }
 }
 
+TEST_CASE("Virtual machine should support maximum heap size", "[api]") {
+    tiro_vm_settings_t settings;
+    tiro_vm_settings_init(&settings);
+    REQUIRE(settings.max_heap_size == 0);
+
+    struct Holder {
+        tiro_vm_t vm = nullptr;
+        ~Holder() { tiro_vm_free(vm); }
+    };
+
+    SECTION("Default value when null settings") {
+        Holder holder;
+        settings.max_heap_size = 0;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(nullptr, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_max_heap_size(vm) == (64 << 20));
+    }
+
+    SECTION("Default value when not set") {
+        Holder holder;
+        settings.max_heap_size = 0;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_max_heap_size(vm) == (64 << 20));
+    }
+
+    SECTION("Custom value is accepted") {
+        Holder holder;
+        settings.max_heap_size = 128 << 20;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, tiro::error_adapter());
+        REQUIRE(vm != nullptr);
+        REQUIRE(tiro_vm_max_heap_size(vm) == (128 << 20));
+    }
+
+    SECTION("Out of memory error is thrown") {
+        Holder holder;
+        settings.max_heap_size = 1;
+        tiro_errc_t errc = TIRO_OK;
+        tiro_vm_t& vm = holder.vm = tiro_vm_new(&settings, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_ALLOC);
+    }
+}
+
 TEST_CASE("Virtual machine supports userdata", "[api]") {
     tiro_vm_settings_t settings;
     tiro_vm_settings_init(&settings);

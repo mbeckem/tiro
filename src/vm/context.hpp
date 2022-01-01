@@ -17,6 +17,8 @@
 
 namespace tiro::vm {
 
+inline constexpr size_t default_heap_max_size_bytes = 64 << 20;
+
 /// Classes that implement this interface can be used as callbacks for coroutine completions.
 class CoroutineCallback {
 public:
@@ -42,7 +44,11 @@ struct ContextSettings {
     // TODO: Make this an option.
     DefaultHeapAllocator alloc;
 
-    size_t page_size = Page::default_size_bytes;
+    // Page size used by the heap.
+    size_t page_size_bytes = Page::default_size_bytes;
+
+    // Maximum size of the heap.
+    size_t max_heap_size_bytes = default_heap_max_size_bytes;
 };
 
 class Context final {
