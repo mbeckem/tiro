@@ -1635,7 +1635,45 @@ TEST_CASE("Native sync function invocation should succeed", "[api]") {
         std::rethrow_exception(context.error);
 }
 
-TEST_CASE("Sync frame functions should fail for invalid input.", "[api]") {
+TEST_CASE("Native sync functions should support panics", "[api]") {
+    struct Context {
+        std::exception_ptr error;
+    } context;
+
+    tiro::vm vm;
+    vm.userdata() = &context;
+
+    constexpr tiro_sync_function_t func = [](tiro_vm_t frame_vm, tiro_sync_frame_t frame) {
+        tiro::vm& inner_vm = tiro::vm::unsafe_from_raw_vm(frame_vm);
+        try {
+            tiro_errc_t errc = TIRO_OK;
+            tiro_sync_frame_panic_msg(
+                frame, tiro_cstr("error from native function"), error_observer(errc));
+        } catch (...) {
+            std::any_cast<Context*>(inner_vm.userdata())->error = std::current_exception();
+        }
+    };
+
+    tiro::string name = tiro::make_string(vm, "func");
+    tiro::handle function = tiro::make_null(vm);
+    tiro_make_sync_function(vm.raw_vm(), name.raw_handle(), func, 0, nullptr, function.raw_handle(),
+        tiro::error_adapter());
+
+    tiro::handle result = run_sync(vm, function.as<tiro::function>(), tiro::make_null(vm));
+    if (context.error) {
+        std::rethrow_exception(context.error);
+    }
+
+    REQUIRE(result.kind() == tiro::value_kind::result);
+
+    tiro::handle error = result.as<tiro::result>().error();
+    REQUIRE(error.kind() == tiro::value_kind::exception);
+
+    std::string message = error.as<tiro::exception>().message().value();
+    REQUIRE(message == "error from native function");
+}
+
+TEST_CASE("Sync frame functions should fail for invalid input", "[api]") {
     tiro::vm vm;
 
     SECTION("Invalid frame for argc") {
@@ -1882,6 +1920,45 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
     REQUIRE(async_context.called == 1);
     if (async_context.error)
         std::rethrow_exception(async_context.error);
+}
+
+TEST_CASE("Native async functions should support panics", "[api]") {
+    struct Context {
+        std::exception_ptr error;
+    } context;
+
+    tiro::vm vm;
+    vm.userdata() = &context;
+
+    constexpr tiro_async_function_t func = [](tiro_vm_t frame_vm, tiro_async_frame_t frame) {
+        tiro::vm& inner_vm = tiro::vm::unsafe_from_raw_vm(frame_vm);
+        try {
+            tiro_errc_t errc = TIRO_OK;
+            tiro_async_frame_panic_msg(
+                frame, tiro_cstr("error from native function"), error_observer(errc));
+        } catch (...) {
+            std::any_cast<Context*>(inner_vm.userdata())->error = std::current_exception();
+        }
+        tiro_async_frame_free(frame);
+    };
+
+    tiro::string name = tiro::make_string(vm, "func");
+    tiro::handle function = tiro::make_null(vm);
+    tiro_make_async_function(vm.raw_vm(), name.raw_handle(), func, 0, nullptr,
+        function.raw_handle(), tiro::error_adapter());
+
+    tiro::handle result = run_sync(vm, function.as<tiro::function>(), tiro::make_null(vm));
+    if (context.error) {
+        std::rethrow_exception(context.error);
+    }
+
+    REQUIRE(result.kind() == tiro::value_kind::result);
+
+    tiro::handle error = result.as<tiro::result>().error();
+    REQUIRE(error.kind() == tiro::value_kind::exception);
+
+    std::string message = error.as<tiro::exception>().message().value();
+    REQUIRE(message == "error from native function");
 }
 
 TEST_CASE("Async frame functions should fail for invalid input.", "[api]") {

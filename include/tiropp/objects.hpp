@@ -481,8 +481,11 @@ function make_sync_function(vm& v, const string& name, size_t argc, const handle
             handle result = Function(inner_v, frame);
             detail::check_handles(raw_vm, result);
             tiro_sync_frame_return_value(raw_frame, result.raw_handle(), error_adapter());
+        } catch (const std::exception& e) {
+            std::string_view message(e.what());
+            tiro_sync_frame_panic_msg(raw_frame, detail::to_raw(message), nullptr);
         } catch (...) {
-            std::terminate(); // TODO Exceptions!
+            tiro_sync_frame_panic_msg(raw_frame, detail::to_raw("unknown exception"), nullptr);
         }
     };
 
@@ -530,10 +533,15 @@ public:
         return result;
     }
 
-    /// Sets the return value for the given function call frame to the given `value`.
+    /// Sets the return value for this function call frame to the given `value`.
     void return_value(const handle& value) {
         detail::check_handles(raw_vm_, value);
         tiro_async_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
+    }
+
+    /// Signals a panic from this function call frame using the given message.
+    void panic_msg(std::string_view message) {
+        tiro_async_frame_panic_msg(raw_frame_, detail::to_raw(message), error_adapter());
     }
 
     tiro_vm_t raw_vm() const { return raw_vm_; }
@@ -556,12 +564,14 @@ private:
 template<auto Function>
 function make_async_function(vm& v, const string& name, size_t argc, const handle& closure) {
     constexpr tiro_async_function_t func = [](tiro_vm_t raw_vm, tiro_async_frame_t raw_frame) {
+        vm& inner_v = vm::unsafe_from_raw_vm(raw_vm);
+        async_frame frame(raw_vm, raw_frame);
         try {
-            vm& inner_v = vm::unsafe_from_raw_vm(raw_vm);
-            async_frame frame(raw_vm, raw_frame);
             Function(inner_v, std::move(frame));
         } catch (...) {
-            std::terminate(); // TODO Exceptions
+            // FIXME: Bad design :(
+            // Cannot panic here because the frame was already moved and the callee may have freed it.
+            std::terminate();
         }
     };
 

@@ -40,7 +40,7 @@ enum FrameFlags : u8 {
     /// Indicates that the function is currently unwinding, i.e. an exception is in flight.
     /// NOTE:
     ///     - code frame: when the bit is set, `current_exception` will contain the in-flight exception value.
-    ///     - (sync) native frames: signals that the value must be thrown
+    ///     - native frames: signals that the value must be thrown
     ///     - catch frame: exception was caught and stored in `exception`.
     FRAME_UNWINDING = 1 << 1,
 
@@ -142,7 +142,10 @@ struct alignas(Value) SyncFrame : CoroutineFrame {
 /// to the next iteration of the main loop to avoid problems due to unexpected control flow.
 struct alignas(Value) AsyncFrame : CoroutineFrame {
     NativeFunction func;
-    Value return_value = Value::null();
+
+    // Either null (function not done yet), the function's return value or an exception (panic).
+    // The meaning of this value depends on the frame's flags.
+    Value return_value_or_exception = Value::null();
 
     AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
         : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
@@ -155,7 +158,7 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
     void trace(Tracer&& t) {
         CoroutineFrame::trace(t);
         t(func);
-        t(return_value);
+        t(return_value_or_exception);
     }
 };
 

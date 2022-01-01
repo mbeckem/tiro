@@ -135,7 +135,16 @@ HandleSpan<Value> NativeAsyncFunctionFrame::args() const {
 }
 
 void NativeAsyncFunctionFrame::return_value(Value v) {
-    frame()->return_value = v;
+    AsyncFrame* af = frame();
+    af->return_value_or_exception = v;
+    af->flags &= ~FRAME_UNWINDING;
+    resume();
+}
+
+void NativeAsyncFunctionFrame::panic(Value ex) {
+    AsyncFrame* af = frame();
+    af->return_value_or_exception = ex;
+    af->flags |= FRAME_UNWINDING;
     resume();
 }
 

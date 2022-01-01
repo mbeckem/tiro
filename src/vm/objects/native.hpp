@@ -90,9 +90,28 @@ public:
     size_t arg_count() const;
     Handle<Value> arg(size_t index) const;
     HandleSpan<Value> args() const;
-    void return_value(Value v);
 
-    // TODO exceptions!
+    /// Sets the return slot of this function frame to the value `r`.
+    /// The value will be returned to the caller of this function once it returns.
+    void return_value(Value r);
+
+    /// Sets the panic slot of this function frame to the value `ex`.
+    /// Once the native function returns, the value will be thrown and stack unwinding will take place.
+    void panic(Value ex);
+
+    /// Panics or returns a value, depending on the fallible's state.
+    template<typename T>
+    void return_or_panic(Fallible<T> fallible) {
+        if (fallible.has_exception()) {
+            panic(std::move(fallible).exception());
+        } else {
+            if constexpr (std::is_same_v<T, void>) {
+                return_value(Value::null());
+            } else {
+                return_value(std::move(fallible).value());
+            }
+        }
+    }
 
 private:
     // Schedules the coroutine for execution (after setting the return value).

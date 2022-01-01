@@ -949,8 +949,10 @@ void Interpreter::run(Handle<Coroutine> coro) {
 void Interpreter::run_until_block(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(is_runnable(coro->state()), "Coroutine must be in a runnable state.");
 
-    // Arrange for the initial function call on a new coroutine.
-    if (coro->state() == CoroutineState::Started) {
+    switch (coro->state()) {
+
+    // Initial call. Arrange for the initial function call on a new coroutine.
+    case CoroutineState::Started: {
         auto func = reg(coro->function());
         auto args = reg(coro->arguments());
 
@@ -961,11 +963,20 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
                 must_push_value(coro, args->value().unchecked_get(i));
         }
 
+        coro->state(CoroutineState::Running);
         call_function(coro, func, argc);
+        break;
     }
 
-    // Interpret call frames until yield or done
-    coro->state(CoroutineState::Running);
+    // Coroutine has been resumed.
+    case CoroutineState::Ready:
+        coro->state(CoroutineState::Running);
+        break;
+
+    default:
+        TIRO_UNREACHABLE("invalid coroutine state");
+    }
+
     while (coro->state() == CoroutineState::Running) {
         // WARNING: Invalidated by stack growth!
         auto frame = current_stack(coro).top_frame();
@@ -1031,7 +1042,8 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     if (frame->flags & FRAME_UNWINDING) {
         if (result->type() != ValueType::Exception) {
             result.set(TIRO_FORMAT_EXCEPTION(*ctx_,
-                "native function attempted to throw a non-exception type '{}'.", result->type()));
+                "native function attempted to throw object of non-exception type '{}'.",
+                result->type()));
         }
         return unwind(coro, result->must_cast<Exception>());
     }
@@ -1065,8 +1077,19 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
         return;
     }
 
-    if ((frame->flags & FRAME_ASYNC_RESUMED) != 0)
-        return return_function(coro, frame->return_value);
+    if (frame->flags & FRAME_ASYNC_RESUMED) {
+        if (frame->flags & FRAME_UNWINDING) {
+            // Safety: stack of current coroutine (and thus this frame) is rooted and does not move.
+            auto ex = MutHandle<Value>::from_raw_slot(&frame->return_value_or_exception);
+            if (ex->type() != ValueType::Exception) {
+                ex.set(TIRO_FORMAT_EXCEPTION(*ctx_,
+                    "native function attempted to throw object of non-exception type '{}'.",
+                    ex->type()));
+            }
+            return unwind(coro, ex->must_cast<Exception>());
+        }
+        return return_function(coro, frame->return_value_or_exception);
+    }
 }
 
 void Interpreter::run_frame(Handle<Coroutine> coro, CatchFrame* frame) {

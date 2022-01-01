@@ -502,6 +502,13 @@ TIRO_API void
 tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err);
 
 /**
+ * Signals a panic from the given function call frame.
+ * TODO: Allow user defined exception objects instead of plain string?
+ */
+TIRO_API void
+tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string message, tiro_error_t* err);
+
+/**
  * Constructs a new function object with the given name that will invoke the native function `func` when called.
  * `argc` is the number of arguments required for calling `func`. `closure` may be an arbitrary value
  * that will be passed to the function on every invocation.
@@ -572,6 +579,14 @@ tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, tiro_er
  */
 TIRO_API void
 tiro_async_frame_return_value(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err);
+
+/**
+ * Signals a panic from the given function call frame.
+ * TODO: Allow user defined exception objects instead of plain string?
+ * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
+ */
+TIRO_API void
+tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err);
 
 /**
  * Constructs a new function object with the given name that will invoke the native function `func` when called.

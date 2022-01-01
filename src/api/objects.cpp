@@ -1054,6 +1054,22 @@ void tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, 
     });
 }
 
+void tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string message, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !valid_string(message))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto message_view = to_internal(message);
+
+        // TODO: Ensure that function always goes into panic mode, even if the following throws!
+        auto& ctx = internal_frame->ctx();
+        vm::Scope sc(ctx);
+        vm::Local message_string = sc.local(vm::String::make(ctx, message_view));
+        internal_frame->panic(vm::Exception::make(ctx, message_string));
+    });
+}
+
 void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_sync_function_t func,
     size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
     return make_native_function(vm, name, func, argc, closure, result, err);
@@ -1116,6 +1132,22 @@ void tiro_async_frame_return_value(
         auto internal_frame = to_internal(frame);
         auto value_handle = to_internal(value);
         internal_frame->return_value(*value_handle);
+    });
+}
+
+void tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !valid_string(message))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto message_view = to_internal(message);
+
+        // TODO: Ensure that function always goes into panic mode, even if the following throws!
+        auto& ctx = internal_frame->ctx();
+        vm::Scope sc(ctx);
+        vm::Local message_string = sc.local(vm::String::make(ctx, message_view));
+        internal_frame->panic(vm::Exception::make(ctx, message_string));
     });
 }
 
