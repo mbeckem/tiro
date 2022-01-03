@@ -10,6 +10,8 @@ target_sources(tiro_objects
         buffer.hpp
         class.cpp
         class.hpp
+        coroutine_stack.cpp
+        coroutine_stack.hpp
         coroutine.cpp
         coroutine.hpp
         exception.cpp

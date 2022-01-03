@@ -86,6 +86,7 @@ class NativeAsyncFunctionFrame;
 
 using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
 using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
+using NativeResumableFunctionPtr = void (*)(NativeResumableFunctionFrame&);
 
 struct CoroutineFrame;
 struct CodeFrame;

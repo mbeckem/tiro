@@ -4,6 +4,7 @@
 #include "common/error.hpp"
 #include "vm/object_support/layout.hpp"
 #include "vm/object_support/type_desc.hpp"
+#include "vm/objects/string.hpp"
 #include "vm/objects/value.hpp"
 
 #include "fmt/format.h"
@@ -118,12 +119,12 @@ public:
     bool has_exception() const { return std::holds_alternative<Exception>(value_); }
     explicit operator bool() const { return has_value(); }
 
-    T& value() & {
+    T& value()& {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
         return std::get<T>(value_);
     }
 
-    T value() && {
+    T value()&& {
         TIRO_DEBUG_ASSERT(has_value(), "Fallible<T> does not contain a value.");
         return std::get<T>(std::move(value_));
     }
@@ -138,7 +139,7 @@ public:
         return std::get<Exception>(value_);
     }
 
-    T& must(std::string_view message) & {
+    T& must(std::string_view message)& {
         detail::check_fallible_impl(*this, message);
         return value();
     }
@@ -148,7 +149,7 @@ public:
         return value();
     }
 
-    T must(std::string_view message) && {
+    T must(std::string_view message)&& {
         detail::check_fallible_impl(*this, message);
         return std::move(*this).value();
     }
