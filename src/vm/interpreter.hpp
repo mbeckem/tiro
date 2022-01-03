@@ -56,8 +56,8 @@ class BytecodeInterpreter final {
 public:
     // Constructs a new bytecode interpreter for the given coroutine. The coroutine's topmost frame
     // must be a bytecode frame (CodeFrame).
-    explicit BytecodeInterpreter(
-        Context& ctx, Interpreter& parent, Registers& regs, Coroutine coro, CodeFrame* frame);
+    explicit BytecodeInterpreter(Context& ctx, Interpreter& parent, Registers& regs, Coroutine coro,
+        NotNull<CodeFrame*> frame);
 
     // Runs the bytecode of the current function frame and returns on the first suspension point.
     //
@@ -133,10 +133,10 @@ private:
 private:
     Context& ctx_;
     Interpreter& parent_;
-    Registers& regs_;      // Temp storage (TODO: Investigate efficiency?).
-    Coroutine coro_;       // Currently executing coroutine.
-    CoroutineStack stack_; // The coroutine's stack (changes on growth).
-    CodeFrame* frame_;     // Current frame (points into the stack, adjusted on stack growth).
+    Registers& regs_;           // Temp storage (TODO: Investigate efficiency?).
+    Coroutine coro_;            // Currently executing coroutine.
+    CoroutineStack stack_;      // The coroutine's stack (changes on growth).
+    NotNull<CodeFrame*> frame_; // Current frame (points into the stack, adjusted on stack growth).
 };
 
 /// The interpreter is responsible for the creation and the execution
@@ -172,10 +172,11 @@ private:
     // Run the topmost frame of the coroutine's stack.
     // Note: frame points into the coroutine's current stack and will be invalidated
     // by stack growth during the the interpretation of the function frame.
-    void run_frame(Handle<Coroutine> coro, CodeFrame* frame);
-    void run_frame(Handle<Coroutine> coro, SyncFrame* frame);
-    void run_frame(Handle<Coroutine> coro, AsyncFrame* frame);
-    void run_frame(Handle<Coroutine> coro, CatchFrame* frame);
+    void run_frame(Handle<Coroutine> coro, NotNull<CodeFrame*> frame);
+    void run_frame(Handle<Coroutine> coro, NotNull<SyncFrame*> frame);
+    void run_frame(Handle<Coroutine> coro, NotNull<AsyncFrame*> frame);
+    void run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
+    void run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame);
 
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.

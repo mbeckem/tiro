@@ -77,30 +77,30 @@ std::optional<Value> SetIterator::next(Context& ctx) {
     return iter.next(ctx);
 }
 
-static void set_size_impl(NativeFunctionFrame& frame) {
+static void set_size_impl(SyncFrameContext& frame) {
     auto set = check_instance<Set>(frame);
     i64 size = static_cast<i64>(set->size());
     frame.return_value(frame.ctx().get_integer(size));
 }
 
-static void set_contains_impl(NativeFunctionFrame& frame) {
+static void set_contains_impl(SyncFrameContext& frame) {
     auto set = check_instance<Set>(frame);
     bool result = set->contains(*frame.arg(1));
     frame.return_value(frame.ctx().get_boolean(result));
 }
 
-static void set_clear_impl(NativeFunctionFrame& frame) {
+static void set_clear_impl(SyncFrameContext& frame) {
     auto set = check_instance<Set>(frame);
     set->clear();
 }
 
-static void set_insert_impl(NativeFunctionFrame& frame) {
+static void set_insert_impl(SyncFrameContext& frame) {
     auto set = check_instance<Set>(frame);
     TIRO_FRAME_TRY(inserted, set->insert(frame.ctx(), frame.arg(1)));
     frame.return_value(frame.ctx().get_boolean(inserted));
 }
 
-static void set_remove_impl(NativeFunctionFrame& frame) {
+static void set_remove_impl(SyncFrameContext& frame) {
     auto set = check_instance<Set>(frame);
     set->remove(*frame.arg(1));
 }

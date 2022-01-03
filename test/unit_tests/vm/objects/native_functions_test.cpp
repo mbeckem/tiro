@@ -40,9 +40,9 @@ struct SimpleCallback : CoroutineCallback {
 
 } // namespace
 
-static void sync_dummy(NativeFunctionFrame&) {}
+static void sync_dummy(SyncFrameContext&) {}
 
-static void async_dummy(NativeAsyncFunctionFrame) {}
+static void async_dummy(AsyncFrameContext) {}
 
 TEST_CASE("Native function arg should be trivial", "[native_functions]") {
     static_assert(std::is_trivially_copyable_v<NativeFunctionStorage>);
@@ -51,7 +51,7 @@ TEST_CASE("Native function arg should be trivial", "[native_functions]") {
 
 TEST_CASE("Native function arg should wrap sync functions", "[native_functions]") {
     SECTION("Without userdata.") {
-        auto arg = NativeFunctionStorage::sync([](NativeFunctionFrame&) {});
+        auto arg = NativeFunctionStorage::sync([](SyncFrameContext&) {});
         REQUIRE(arg.type() == NativeFunctionType::Sync);
     }
 
@@ -66,14 +66,14 @@ TEST_CASE("Native function arg should wrap sync functions", "[native_functions]"
             void* y;
         } capture{};
 
-        auto arg = NativeFunctionStorage::sync([capture](NativeFunctionFrame&) { (void) capture; });
+        auto arg = NativeFunctionStorage::sync([capture](SyncFrameContext&) { (void) capture; });
         REQUIRE(arg.type() == NativeFunctionType::Sync);
     }
 }
 
 TEST_CASE("Native function arg should wrap async functions", "[native_functions]") {
     SECTION("Without userdata.") {
-        auto arg = NativeFunctionStorage::async([](NativeAsyncFunctionFrame) {});
+        auto arg = NativeFunctionStorage::async([](AsyncFrameContext) {});
         REQUIRE(arg.type() == NativeFunctionType::Async);
     }
 
@@ -88,14 +88,13 @@ TEST_CASE("Native function arg should wrap async functions", "[native_functions]
             void* y;
         } capture{};
 
-        auto arg = NativeFunctionStorage::async(
-            [capture](NativeAsyncFunctionFrame) { (void) capture; });
+        auto arg = NativeFunctionStorage::async([capture](AsyncFrameContext) { (void) capture; });
         REQUIRE(arg.type() == NativeFunctionType::Async);
     }
 }
 
 TEST_CASE("Native functions should be invokable", "[native_functions]") {
-    auto native_func = [](NativeFunctionFrame& frame) {
+    auto native_func = [](SyncFrameContext& frame) {
         Scope sc(frame.ctx());
 
         Local values = sc.local(frame.closure());
@@ -132,7 +131,7 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
 
 TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     // Resumes immediately.
-    NativeAsyncFunctionPtr native_func = [](NativeAsyncFunctionFrame frame) {
+    NativeAsyncFunctionPtr native_func = [](AsyncFrameContext frame) {
         return frame.return_value(SmallInteger::make(3));
     };
 
@@ -150,15 +149,15 @@ TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
 }
 
 TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
-    NativeAsyncFunctionPtr native_func = [](NativeAsyncFunctionFrame frame) {
+    NativeAsyncFunctionPtr native_func = [](AsyncFrameContext frame) {
         void* loop_ptr = frame.closure().must_cast<NativePointer>().data();
         REQUIRE(loop_ptr);
 
-        auto& loop = *static_cast<std::vector<NativeAsyncFunctionFrame>*>(loop_ptr);
+        auto& loop = *static_cast<std::vector<AsyncFrameContext>*>(loop_ptr);
         loop.push_back(std::move(frame));
     };
 
-    std::vector<NativeAsyncFunctionFrame> main_loop;
+    std::vector<AsyncFrameContext> main_loop;
     i64 result = 0;
 
     Context ctx;

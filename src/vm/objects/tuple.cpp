@@ -97,7 +97,7 @@ std::optional<Value> TupleIterator::next() {
     return tuple.unchecked_get(index++);
 }
 
-static void tuple_size_impl(NativeFunctionFrame& frame) {
+static void tuple_size_impl(SyncFrameContext& frame) {
     auto tuple = check_instance<Tuple>(frame);
     frame.return_value(frame.ctx().get_integer(static_cast<i64>(tuple->size())));
 }

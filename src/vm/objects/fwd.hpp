@@ -81,13 +81,13 @@ class Nullable;
 template<typename T = void>
 class Fallible;
 
-class NativeFunctionFrame;
-class NativeAsyncFunctionFrame;
-class NativeResumableFunctionFrame;
+class SyncFrameContext;
+class AsyncFrameContext;
+class ResumableFrameContext;
 
-using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
-using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
-using NativeResumableFunctionPtr = void (*)(NativeResumableFunctionFrame&);
+using NativeFunctionPtr = void (*)(SyncFrameContext&);
+using NativeAsyncFunctionPtr = void (*)(AsyncFrameContext);
+using NativeResumableFunctionPtr = void (*)(ResumableFrameContext&);
 
 struct CoroutineFrame;
 struct CodeFrame;

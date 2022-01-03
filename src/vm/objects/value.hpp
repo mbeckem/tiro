@@ -257,6 +257,7 @@ struct ValueTypeCheck<SmallInteger> {
     static bool test(Value v) { return v.is_embedded_integer(); }
 };
 
+// See definition of Number class.
 template<>
 struct ValueTypeCheck<Number> {
     static bool test(Value v) {
@@ -264,6 +265,7 @@ struct ValueTypeCheck<Number> {
     }
 };
 
+// See definition of StringLike class.
 template<>
 struct ValueTypeCheck<StringLike> {
     static bool test(Value v) {
@@ -271,6 +273,7 @@ struct ValueTypeCheck<StringLike> {
     }
 };
 
+// See definition of Nullable<T> class.
 template<typename T>
 struct ValueTypeCheck<Nullable<T>> {
     static bool test(Value v) { return v.is_null() || ValueTypeCheck<T>::test(v); }

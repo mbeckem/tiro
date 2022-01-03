@@ -66,7 +66,7 @@ std::optional<Value> Type::find_member(Handle<Symbol> name) {
     return layout()->read_static_slot<HashTable>(MembersSlot).get(*name);
 }
 
-static void class_name_impl(NativeFunctionFrame& frame) {
+static void class_name_impl(SyncFrameContext& frame) {
     auto type = check_instance<Type>(frame);
     frame.return_value(type->name());
 }

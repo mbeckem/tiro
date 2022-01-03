@@ -44,6 +44,9 @@ enum FrameFlags : u8 {
 
     // Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
     FRAME_ASYNC_RESUMED = 1 << 3,
+
+    // Signals that the resumable function requests to invoke another function.
+    FRAME_RESUMABLE_INVOKE = 1 << 2,
 };
 
 // Improvement: Call frames could be made more compact.
@@ -61,6 +64,7 @@ struct alignas(Value) CoroutineFrame {
     u32 locals = 0;
 
     // Parent call frame. Null for the first frame on the stack.
+    // TODO: Offset to parent would be more efficient (and would not need adjustment when copying).
     CoroutineFrame* caller = nullptr;
 
     CoroutineFrame(FrameType type_, u8 flags_, u32 args_, u32 locals_, CoroutineFrame* caller_)
@@ -106,6 +110,7 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
     }
 };
 
+/// Represents a call to a blocking native function.
 struct alignas(Value) SyncFrame : CoroutineFrame {
     NativeFunction func;
 
@@ -173,7 +178,16 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
 
     // Either null (function not done yet), the function's return value or an exception (panic).
     // The meaning of this value depends on the frame's flags.
+    // TODO: can be optimized away because it does not need to persist between calls.
     Value return_value_or_exception = Value::null();
+
+    // Function to be invoked next or null.
+    // TODO: can be optimized away because it does not need to persist between calls.
+    Value invoke_func = Value::null();
+
+    // Function arguments for invoke_func, or null.
+    // TODO: can be optimized away because it does not need to persist between calls.
+    Nullable<Tuple> invoke_arguments;
 
     // The current state of this function call.
     int state = START;
@@ -190,6 +204,8 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
         CoroutineFrame::trace(t);
         t(func);
         t(return_value_or_exception);
+        t(invoke_func);
+        t(invoke_arguments);
     }
 };
 
@@ -309,11 +325,12 @@ public:
     void pop_frame();
 
     /// Access the function argument at the given index.
-    static Value* arg(CoroutineFrame* frame, u32 index);
-    static Span<Value> args(CoroutineFrame* frame);
+    static Value* arg(NotNull<CoroutineFrame*> frame, u32 index);
+    static Span<Value> args(NotNull<CoroutineFrame*> frame);
 
     /// Access the local variable at the given index.
-    static Value* local(CoroutineFrame* frame, u32 index);
+    static Value* local(NotNull<CoroutineFrame*> frame, u32 index);
+    static Span<Value> locals(NotNull<CoroutineFrame*> frame);
 
     /// Push a value on the current frame's value stack.
     bool push_value(Value v);

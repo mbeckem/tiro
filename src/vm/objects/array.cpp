@@ -152,18 +152,18 @@ std::optional<Value> ArrayIterator::next() {
     return array.unchecked_get(index++);
 }
 
-static void array_size_impl(NativeFunctionFrame& frame) {
+static void array_size_impl(SyncFrameContext& frame) {
     auto array = check_instance<Array>(frame);
     frame.return_value(frame.ctx().get_integer(static_cast<i64>(array->size())));
 }
 
-static void array_append_impl(NativeFunctionFrame& frame) {
+static void array_append_impl(SyncFrameContext& frame) {
     auto array = check_instance<Array>(frame);
     auto value = frame.arg(1);
     TIRO_FRAME_TRY_VOID(array->append(frame.ctx(), value));
 }
 
-static void array_clear_impl(NativeFunctionFrame& frame) {
+static void array_clear_impl(SyncFrameContext& frame) {
     auto array = check_instance<Array>(frame);
     array->clear();
 }

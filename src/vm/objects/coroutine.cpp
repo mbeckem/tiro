@@ -162,7 +162,7 @@ bool CoroutineToken::resume(Context& ctx, Handle<CoroutineToken> token) {
     return true;
 }
 
-static void coroutine_name_impl(NativeFunctionFrame& frame) {
+static void coroutine_name_impl(SyncFrameContext& frame) {
     auto coroutine = check_instance<Coroutine>(frame);
     frame.return_value(coroutine->name());
 }
@@ -173,17 +173,17 @@ static const FunctionDesc coroutine_methods[] = {
 
 const TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
 
-static void coroutine_token_coroutine_impl(NativeFunctionFrame& frame) {
+static void coroutine_token_coroutine_impl(SyncFrameContext& frame) {
     auto token = check_instance<CoroutineToken>(frame);
     frame.return_value(token->coroutine());
 }
 
-static void coroutine_token_valid_impl(NativeFunctionFrame& frame) {
+static void coroutine_token_valid_impl(SyncFrameContext& frame) {
     auto token = check_instance<CoroutineToken>(frame);
     frame.return_value(frame.ctx().get_boolean(token->valid()));
 }
 
-static void coroutine_token_resume_impl(NativeFunctionFrame& frame) {
+static void coroutine_token_resume_impl(SyncFrameContext& frame) {
     auto token = check_instance<CoroutineToken>(frame);
     bool success = CoroutineToken::resume(frame.ctx(), token);
     frame.return_value(frame.ctx().get_boolean(success));

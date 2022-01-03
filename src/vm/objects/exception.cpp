@@ -45,7 +45,7 @@ Exception vformat_exception_impl(Context& ctx, std::string_view format, fmt::for
     return Exception::make(ctx, message);
 }
 
-static void exception_message_impl(NativeFunctionFrame& frame) {
+static void exception_message_impl(SyncFrameContext& frame) {
     auto ex = check_instance<Exception>(frame);
     frame.return_value(ex->message());
 }

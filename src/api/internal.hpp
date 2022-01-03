@@ -157,25 +157,25 @@ inline tiro::vm::MaybeMutHandle<tiro::vm::Value> to_internal_maybe(tiro_handle_t
 // This is fine in this case because the lifetime is stack based for sync function calls.
 struct tiro_sync_frame;
 
-inline tiro_sync_frame_t to_external(tiro::vm::NativeFunctionFrame* frame) {
+inline tiro_sync_frame_t to_external(tiro::vm::SyncFrameContext* frame) {
     return reinterpret_cast<tiro_sync_frame_t>(frame);
 }
 
-inline tiro::vm::NativeFunctionFrame* to_internal(tiro_sync_frame_t frame) {
-    return reinterpret_cast<tiro::vm::NativeFunctionFrame*>(frame);
+inline tiro::vm::SyncFrameContext* to_internal(tiro_sync_frame_t frame) {
+    return reinterpret_cast<tiro::vm::SyncFrameContext*>(frame);
 }
 
 // Never actually defined. Async frames have public type `tiro_async_frame` but will be
-// cast to their real type, which is `vm::NativeAsyncFunctionFrame`.
+// cast to their real type, which is `vm::AsyncFrameContext`.
 // This is fine in this case because the lifetime is stack based for sync function calls.
 struct tiro_async_frame;
 
-inline tiro_async_frame_t to_external(tiro::vm::NativeAsyncFunctionFrame* frame) {
+inline tiro_async_frame_t to_external(tiro::vm::AsyncFrameContext* frame) {
     return reinterpret_cast<tiro_async_frame_t>(frame);
 }
 
-inline tiro::vm::NativeAsyncFunctionFrame* to_internal(tiro_async_frame_t frame) {
-    return reinterpret_cast<tiro::vm::NativeAsyncFunctionFrame*>(frame);
+inline tiro::vm::AsyncFrameContext* to_internal(tiro_async_frame_t frame) {
+    return reinterpret_cast<tiro::vm::AsyncFrameContext*>(frame);
 }
 
 struct tiro_compiler {

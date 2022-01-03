@@ -159,20 +159,23 @@ void CoroutineStack::pop_frame() {
     data->top_frame = data->top_frame->caller;
 }
 
-Value* CoroutineStack::arg(CoroutineFrame* frame, u32 index) {
-    TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
-    TIRO_DEBUG_ASSERT(index < frame->args, "CoroutineStack: Argument index out of bounds.");
-    return args_begin(TIRO_NN(frame)) + index;
+Value* CoroutineStack::arg(NotNull<CoroutineFrame*> frame, u32 index) {
+    TIRO_DEBUG_ASSERT(index < frame->args, "CoroutineStack: argument index out of bounds");
+    return args_begin(frame) + index;
 }
 
-Span<Value> CoroutineStack::args(CoroutineFrame* frame) {
-    return {args_begin(TIRO_NN(frame)), args_end(TIRO_NN(frame))};
+Span<Value> CoroutineStack::args(NotNull<CoroutineFrame*> frame) {
+    return {args_begin(frame), args_end(frame)};
 }
 
-Value* CoroutineStack::local(CoroutineFrame* frame, u32 index) {
-    TIRO_DEBUG_ASSERT(frame, "CoroutineStack: Invalid frame.");
-    TIRO_DEBUG_ASSERT(index < frame->locals, "CoroutineStack: Local index out of bounds.");
-    return locals_begin(TIRO_NN(frame)) + index;
+Value* CoroutineStack::local(NotNull<CoroutineFrame*> frame, u32 index) {
+    TIRO_DEBUG_ASSERT(index < frame->locals, "CoroutineStack: local index out of bounds");
+    return locals_begin(frame) + index;
+}
+
+Span<Value> CoroutineStack::locals(NotNull<CoroutineFrame*> frame) {
+    auto begin = locals_begin(frame);
+    return {begin, begin + frame->locals};
 }
 
 bool CoroutineStack::push_value(Value v) {

@@ -19,7 +19,7 @@ static_assert(alignof(CodeFrame) == alignof(Value));
 static_assert(alignof(CatchFrame) == alignof(Value));
 
 static NativeFunction dummy_function(Context& ctx) {
-    auto callback = [&](NativeFunctionFrame& frame) { frame.return_value(Value::null()); };
+    auto callback = [&](SyncFrameContext& frame) { frame.return_value(Value::null()); };
 
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "dummy_function"));
@@ -46,13 +46,13 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
     REQUIRE(base_class_offset(&user_frame) == 0);
 
     Local sync_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](NativeFunctionFrame&) {})));
+        ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](SyncFrameContext&) {})));
     SyncFrame sync_frame(0, 0, nullptr, *sync_func);
     REQUIRE(sizeof(SyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&sync_frame) == 0);
 
     Local async_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::async([](NativeAsyncFunctionFrame) {})));
+        ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
     AsyncFrame async_frame(0, 0, nullptr, *async_func);
     REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&async_frame) == 0);

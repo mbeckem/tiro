@@ -419,7 +419,7 @@ StringLike::Which StringLike::which() {
 
 // TODO: Code deduplication with shared methods (implemented as templates). Probably requires C++20 for constexpr strings as template parameters.
 
-static void string_contains_impl(NativeFunctionFrame& frame) {
+static void string_contains_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
     TIRO_FRAME_TRY(needle, require_string_like(ctx, "String.contains", "str", frame.arg(1)));
@@ -427,26 +427,26 @@ static void string_contains_impl(NativeFunctionFrame& frame) {
     frame.return_value(ctx.get_boolean(found));
 }
 
-static void string_size_impl(NativeFunctionFrame& frame) {
+static void string_size_impl(SyncFrameContext& frame) {
     auto string = check_instance<String>(frame);
     frame.return_value(frame.ctx().get_integer(string->size()));
 }
 
-static void string_slice_first_impl(NativeFunctionFrame& frame) {
+static void string_slice_first_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice_first", "offset", frame.arg(1)));
     frame.return_value(string->slice_first(frame.ctx(), offset));
 }
 
-static void string_slice_last_impl(NativeFunctionFrame& frame) {
+static void string_slice_last_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice_last", "offset", frame.arg(1)));
     frame.return_value(string->slice_last(frame.ctx(), offset));
 }
 
-static void string_slice_impl(NativeFunctionFrame& frame) {
+static void string_slice_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto string = check_instance<String>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "String.slice", "offset", frame.arg(1)));
@@ -467,7 +467,7 @@ static constexpr FunctionDesc string_methods[] = {
 
 constexpr TypeDesc string_type_desc{"String"sv, string_methods};
 
-static void string_slice_contains_impl(NativeFunctionFrame& frame) {
+static void string_slice_contains_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
     TIRO_FRAME_TRY(needle, require_string_like(ctx, "StringSlice.contains", "str", frame.arg(1)));
@@ -475,26 +475,26 @@ static void string_slice_contains_impl(NativeFunctionFrame& frame) {
     frame.return_value(ctx.get_boolean(found));
 }
 
-static void string_slice_size_impl(NativeFunctionFrame& frame) {
+static void string_slice_size_impl(SyncFrameContext& frame) {
     auto slice = check_instance<StringSlice>(frame);
     frame.return_value(frame.ctx().get_integer(slice->size()));
 }
 
-static void string_slice_slice_first_impl(NativeFunctionFrame& frame) {
+static void string_slice_slice_first_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice_first", "offset", frame.arg(1)));
     frame.return_value(slice->slice_first(frame.ctx(), offset));
 }
 
-static void string_slice_slice_last_impl(NativeFunctionFrame& frame) {
+static void string_slice_slice_last_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice_last", "offset", frame.arg(1)));
     frame.return_value(slice->slice_last(frame.ctx(), offset));
 }
 
-static void string_slice_slice_impl(NativeFunctionFrame& frame) {
+static void string_slice_slice_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto slice = check_instance<StringSlice>(frame);
     TIRO_FRAME_TRY(offset, slice_arg(ctx, "StringSlice.slice", "offset", frame.arg(1)));
@@ -502,7 +502,7 @@ static void string_slice_slice_impl(NativeFunctionFrame& frame) {
     frame.return_value(slice->slice(frame.ctx(), offset, size));
 }
 
-static void string_slice_to_string_impl(NativeFunctionFrame& frame) {
+static void string_slice_to_string_impl(SyncFrameContext& frame) {
     auto slice = check_instance<StringSlice>(frame);
     frame.return_value(slice->to_string(frame.ctx()));
 }
@@ -523,7 +523,7 @@ static constexpr FunctionDesc string_slice_methods[] = {
 
 constexpr TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
 
-static void string_builder_append_impl(NativeFunctionFrame& frame) {
+static void string_builder_append_impl(SyncFrameContext& frame) {
     auto builder = check_instance<StringBuilder>(frame);
     for (size_t i = 1; i < frame.arg_count(); ++i) {
         Handle<Value> arg = frame.arg(i);
@@ -531,7 +531,7 @@ static void string_builder_append_impl(NativeFunctionFrame& frame) {
     }
 }
 
-static void string_builder_append_byte_impl(NativeFunctionFrame& frame) {
+static void string_builder_append_byte_impl(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     auto builder = check_instance<StringBuilder>(frame);
     Handle arg = frame.arg(1);
@@ -547,12 +547,12 @@ static void string_builder_append_byte_impl(NativeFunctionFrame& frame) {
     builder->append(ctx, std::string_view((char*) &b, 1));
 }
 
-static void string_builder_clear_impl(NativeFunctionFrame& frame) {
+static void string_builder_clear_impl(SyncFrameContext& frame) {
     auto builder = check_instance<StringBuilder>(frame);
     builder->clear();
 }
 
-static void string_builder_contains_impl(NativeFunctionFrame& frame) {
+static void string_builder_contains_impl(SyncFrameContext& frame) {
     auto& ctx = frame.ctx();
     auto builder = check_instance<StringBuilder>(frame);
     TIRO_FRAME_TRY(needle, require_string_like(ctx, "StringBuilder.contains", "str", frame.arg(1)));
@@ -560,13 +560,13 @@ static void string_builder_contains_impl(NativeFunctionFrame& frame) {
     frame.return_value(frame.ctx().get_boolean(found));
 }
 
-static void string_builder_size_impl(NativeFunctionFrame& frame) {
+static void string_builder_size_impl(SyncFrameContext& frame) {
     auto builder = check_instance<StringBuilder>(frame);
     size_t size = static_cast<size_t>(builder->size());
     frame.return_value(frame.ctx().get_integer(size));
 }
 
-static void string_builder_to_string_impl(NativeFunctionFrame& frame) {
+static void string_builder_to_string_impl(SyncFrameContext& frame) {
     auto builder = check_instance<StringBuilder>(frame);
     frame.return_value(builder->to_string(frame.ctx()));
 }

@@ -55,7 +55,7 @@ Buffer Buffer::make_impl(Context& ctx, size_t total_size, Init&& init) {
     return Buffer(Value::from_heap(data));
 }
 
-static void buffer_size_impl(NativeFunctionFrame& frame) {
+static void buffer_size_impl(SyncFrameContext& frame) {
     auto buffer = check_instance<Buffer>(frame);
     i64 size = static_cast<i64>(buffer->size());
     frame.return_value(frame.ctx().get_integer(size));

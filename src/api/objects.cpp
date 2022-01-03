@@ -121,7 +121,7 @@ static vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func) {
     struct Function {
         tiro_sync_function_t func;
 
-        void operator()(vm::NativeFunctionFrame& frame) {
+        void operator()(vm::SyncFrameContext& frame) {
             func(vm_from_context(frame.ctx()), to_external(&frame));
         }
     };
@@ -133,8 +133,8 @@ static vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func)
     struct Function {
         tiro_async_function_t func;
 
-        void operator()(vm::NativeAsyncFunctionFrame frame) {
-            auto dynamic_frame = std::make_unique<vm::NativeAsyncFunctionFrame>(std::move(frame));
+        void operator()(vm::AsyncFrameContext frame) {
+            auto dynamic_frame = std::make_unique<vm::AsyncFrameContext>(std::move(frame));
             func(vm_from_context(frame.ctx()), to_external(dynamic_frame.release()));
         }
     };
