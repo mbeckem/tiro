@@ -26,7 +26,13 @@ bool is_runnable(CoroutineState state);
 
 std::string_view to_string(CoroutineState state);
 
-enum class FrameType : u8 { Code = 0, Async = 1, Sync = 2, Catch = 3 };
+enum class FrameType : u8 {
+    Code = 0,
+    Async = 1,
+    Sync = 2,
+    Resumable = 3,
+    Catch = 4,
+};
 
 std::string_view to_string(FrameType type);
 
@@ -122,7 +128,7 @@ struct alignas(Value) SyncFrame : CoroutineFrame {
         : CoroutineFrame(FrameType::Sync, flags_, args_, 0, caller_)
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Sync,
-            "Unexpected function type (should be sync).");
+            "unexpected function type (should be sync)");
     }
 
     template<typename Tracer>
@@ -151,7 +157,47 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
         : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Async,
-            "Unexpected function type (should be async).");
+            "unexpected function type (should be async)");
+    }
+
+    template<typename Tracer>
+    void trace(Tracer&& t) {
+        CoroutineFrame::trace(t);
+        t(func);
+        t(return_value_or_exception);
+    }
+};
+
+/// Represents a native function call that can be suspend any number of times.
+///
+/// Functions of resumable type may invoke other tiro functions: they do not need
+/// to be leaves in the call stack, making them more powerful than sync and async functions.
+///
+/// Resumable functions and their call frames are implemented as state machines.
+/// They can either yield manually (like async functions) and be resumed by the host application at
+/// a later time or they may call another tiro function and be automatically resumed
+/// once that function call completes.
+struct alignas(Value) ResumableFrame : CoroutineFrame {
+    enum WellKnownState {
+        START = 0,
+        END = -1,
+    };
+
+    // The native function. Must be of type 'resumable'.
+    NativeFunction func;
+
+    // Either null (function not done yet), the function's return value or an exception (panic).
+    // The meaning of this value depends on the frame's flags.
+    Value return_value_or_exception = Value::null();
+
+    // The current state of this function call.
+    int state = START;
+
+    ResumableFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
+        : CoroutineFrame(FrameType::Resumable, flags_, args_, func_.locals(), caller_)
+        , func(func_) {
+        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Resumable,
+            "unexpected function type (should be resumable)");
     }
 
     template<typename Tracer>
@@ -349,6 +395,10 @@ private:
                 static_cast<AsyncFrame*>(frame)->trace(t);
                 break;
             }
+            case FrameType::Resumable: {
+                static_cast<ResumableFrame*>(frame)->trace(t);
+                break;
+            }
             case FrameType::Catch: {
                 static_cast<CatchFrame*>(frame)->trace(t);
                 break;
@@ -454,7 +504,7 @@ public:
     void next_ready(Nullable<Coroutine> next);
 
     // Creates a token suitable to resume this coroutine. The token may only be used once.
-    // After this call, the current token will also be resumed from current_token() (which is used
+    // After this call, the new token will also be returned from current_token() (which is used
     // to check whether a token is still valid).
     static CoroutineToken create_token(Context& ctx, Handle<Coroutine> coroutine);
 
@@ -489,10 +539,8 @@ struct LayoutTraits<CoroutineStack::Layout> final {
     }
 };
 
-/**
- * A coroutine token allows the user to resume a waiting coroutine. Tokens are invalidated after they
- * have been used, i.e. a coroutine cannot be resumed more than once from the same token.
- */
+/// A coroutine token allows the user to resume a waiting coroutine. Tokens are invalidated after they
+/// have been used, i.e. a coroutine cannot be resumed more than once from the same token.
 class CoroutineToken final : public HeapValue {
 private:
     enum Slots { CoroutineSlot, SlotCount_ };

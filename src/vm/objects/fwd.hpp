@@ -91,6 +91,7 @@ struct CoroutineFrame;
 struct CodeFrame;
 struct SyncFrame;
 struct AsyncFrame;
+struct ResumableFrame;
 
 } // namespace tiro::vm
 

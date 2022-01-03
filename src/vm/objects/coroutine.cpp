@@ -37,22 +37,24 @@ std::string_view to_string(CoroutineState state) {
         return "Done";
     }
 
-    TIRO_UNREACHABLE("Invalid coroutine state.");
+    TIRO_UNREACHABLE("invalid coroutine state");
 }
 
 std::string_view to_string(FrameType type) {
     switch (type) {
     case FrameType::Code:
         return "Code";
-    case FrameType::Async:
-        return "Async";
     case FrameType::Sync:
         return "Sync";
+    case FrameType::Async:
+        return "Async";
+    case FrameType::Resumable:
+        return "Resumable";
     case FrameType::Catch:
         return "Catch";
     }
 
-    TIRO_UNREACHABLE("Invalid frame type.");
+    TIRO_UNREACHABLE("invalid frame type");
 }
 
 size_t frame_size(const CoroutineFrame* frame) {
@@ -65,11 +67,13 @@ size_t frame_size(const CoroutineFrame* frame) {
         return sizeof(SyncFrame);
     case FrameType::Async:
         return sizeof(AsyncFrame);
+    case FrameType::Resumable:
+        return sizeof(ResumableFrame);
     case FrameType::Catch:
         return sizeof(CatchFrame);
     }
 
-    TIRO_UNREACHABLE("Invalid frame type.");
+    TIRO_UNREACHABLE("invalid frame type");
 }
 
 CoroutineStack CoroutineStack::make(Context& ctx, u32 object_size) {

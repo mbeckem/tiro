@@ -13,12 +13,14 @@ std::string_view to_string(NativeFunctionType type) {
         return "Sync";
     case NativeFunctionType::Async:
         return "Async";
+    case NativeFunctionType::Resumable:
+        return "Resumable";
     }
     TIRO_UNREACHABLE("Invalid native function type.");
 }
 
 NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-    u32 params, const NativeFunctionStorage& function) {
+    u32 params, u32 locals, const NativeFunctionStorage& function) {
 
     // TODO: Invalid value only exists because static layout requires default construction at the moment.
     TIRO_DEBUG_ASSERT(
@@ -28,6 +30,7 @@ NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHand
     data->write_static_slot(NameSlot, name);
     data->write_static_slot(ClosureSlot, closure.to_nullable());
     data->static_payload()->params = params;
+    data->static_payload()->locals = locals;
     data->static_payload()->function = function;
     return NativeFunction(from_heap(data));
 }
@@ -42,6 +45,10 @@ Value NativeFunction::closure() {
 
 u32 NativeFunction::params() {
     return layout()->static_payload()->params;
+}
+
+u32 NativeFunction::locals() {
+    return layout()->static_payload()->locals;
 }
 
 NativeFunctionStorage NativeFunction::function() {

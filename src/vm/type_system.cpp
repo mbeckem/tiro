@@ -33,7 +33,7 @@ public:
         Local member_name = sc.local(ctx_.get_symbol(name));
         Local member_str = sc.local(member_name->name());
         Local member_value = sc.local<Value>(
-            NativeFunction::make(ctx_, member_str, {}, argc, func));
+            NativeFunction::make(ctx_, member_str, {}, argc, 0, func));
 
         if (flags & FunctionDesc::InstanceMethod) {
             member_value = Method::make(ctx_, member_value);

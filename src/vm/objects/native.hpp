@@ -23,6 +23,7 @@ enum class NativeFunctionType {
     Invalid,
     Sync,
     Async,
+    Resumable,
 };
 
 std::string_view to_string(NativeFunctionType type);
@@ -126,6 +127,68 @@ private:
     AsyncFrame* frame_ = nullptr;    // Reset to null if already resumed!
 };
 
+class NativeResumableFunctionFrame final {
+public:
+    explicit NativeResumableFunctionFrame(Context& ctx, Handle<Coroutine> coro, SyncFrame* frame);
+
+    NativeResumableFunctionFrame(NativeResumableFunctionFrame&&) = delete;
+    NativeResumableFunctionFrame& operator=(NativeResumableFunctionFrame&&) = delete;
+
+    Context& ctx() const { return ctx_; }
+
+    Value closure() const;
+    size_t arg_count() const;
+    Handle<Value> arg(size_t index) const;
+    HandleSpan<Value> args() const;
+
+    size_t local_count() const;
+    Handle<Value> local(size_t index) const;
+    HandleSpan<Value> locals() const;
+
+    /// Changes the state of this function frame.
+    /// Usually invoked just before yielding or calling another function
+    /// to control where to continue after the current frame resumes.
+    ///
+    /// See `ResumeableFrame::WellKnownState` for reserved values.
+    void state(int state);
+
+    /// Returns the current state of this frame.
+    int state() const;
+
+    /// Sets the return slot of this function frame to the value `r`.
+    /// The value will be returned to the caller of this function once it returns.
+    ///
+    /// Note: the state of this frame will be set to `DONE`.
+    void return_value(Value r);
+
+    /// Sets the panic slot of this function frame to the value `ex`.
+    /// Once the native function returns, the value will be thrown and stack unwinding will take place.
+    ///
+    /// Note: the state of this frame will be set to `DONE`.
+    void panic(Value ex);
+
+    /// Panics or returns a value, depending on the fallible's state.
+    ///
+    /// Note: the state of this frame will be set to `DONE`.
+    template<typename T>
+    void return_or_panic(Fallible<T> fallible) {
+        if (fallible.has_exception()) {
+            panic(std::move(fallible).exception());
+        } else {
+            if constexpr (std::is_same_v<T, void>) {
+                return_value(Value::null());
+            } else {
+                return_value(std::move(fallible).value());
+            }
+        }
+    }
+
+private:
+    Context& ctx_;
+    Handle<Coroutine> coro_;
+    ResumableFrame* frame_ = nullptr; // TODO: Reset if done
+};
+
 class NativeFunctionStorage final {
 private:
     static constexpr size_t buffer_size = 2 * sizeof(void*); // Adjust as necessary
@@ -175,6 +238,21 @@ public:
             ConstexprConstructorTag<NativeFunctionType::Async, Function>());
     }
 
+    /// Represents a native function that can be called as a resumable function.
+    /// The coroutine can yield and resume any number of times.
+    template<typename Function>
+    static NativeFunctionStorage resumable(Function&& func) {
+        return NativeFunctionStorage(
+            ConstructorTag<NativeFunctionType::Resumable>(), std::forward<Function>(func));
+    }
+
+    /// Similar to `resumable()`, but accepts a compile time function pointer (or function like object) to invoke.
+    template<auto Function>
+    constexpr static NativeFunctionStorage static_resumable() {
+        return NativeFunctionStorage(
+            ConstexprConstructorTag<NativeFunctionType::Resumable, Function>());
+    }
+
     /// Returns the type of the native function. Native functions of different types expect
     /// different calling conventions (e.g. sync vs async) and different arguments.
     constexpr NativeFunctionType type() const { return type_; }
@@ -183,7 +261,7 @@ public:
     /// \pre `type() == NativeFunctionType::Sync`.
     void invoke_sync(NativeFunctionFrame& frame) {
         TIRO_DEBUG_ASSERT(
-            type() == NativeFunctionType::Sync, "Cannot call this function as a sync function.");
+            type() == NativeFunctionType::Sync, "cannot call this function as a sync function");
         return invoke_sync_(frame, buffer_);
     }
 
@@ -191,8 +269,16 @@ public:
     /// \pre `type() == NativeFunctionType::Async`.
     void invoke_async(NativeAsyncFunctionFrame frame) {
         TIRO_DEBUG_ASSERT(
-            type() == NativeFunctionType::Async, "Cannot call this function as an async function.");
+            type() == NativeFunctionType::Async, "cannot call this function as an async function");
         return invoke_async_(std::move(frame), buffer_);
+    }
+
+    /// Invokes this function as a resumable function.
+    /// \pre `type() == NativeFunctionType::Resumable`.
+    void invoke_resumable(NativeResumableFunctionFrame& frame) {
+        TIRO_DEBUG_ASSERT(type() == NativeFunctionType::Resumable,
+            "cannot call this function as a resumable function");
+        return invoke_resumable_(frame, buffer_);
     }
 
 private:
@@ -216,6 +302,16 @@ private:
         new (&buffer_) Func(std::forward<AsyncFunction>(func));
     }
 
+    template<typename ResumableFunction>
+    NativeFunctionStorage(ConstructorTag<NativeFunctionType::Resumable>, ResumableFunction&& func) {
+        using Func = remove_cvref_t<ResumableFunction>;
+        check_function_properties<Func>();
+
+        type_ = NativeFunctionType::Resumable;
+        invoke_resumable_ = invoke_resumable_impl<Func>;
+        new (&buffer_) Func(std::forward<ResumableFunction>(func));
+    }
+
     template<auto Function>
     constexpr NativeFunctionStorage(ConstexprConstructorTag<NativeFunctionType::Sync, Function>)
         : type_(NativeFunctionType::Sync)
@@ -228,15 +324,22 @@ private:
         , invoke_async_(invoke_static_async_impl<Function>)
         , buffer_() {}
 
+    template<auto Function>
+    constexpr NativeFunctionStorage(
+        ConstexprConstructorTag<NativeFunctionType::Resumable, Function>)
+        : type_(NativeFunctionType::Resumable)
+        , invoke_async_(invoke_static_resumable_impl<Function>)
+        , buffer_() {}
+
     template<typename Func>
     constexpr void check_function_properties() {
-        static_assert(sizeof(Func) <= buffer_size, "Buffer is too small for that function.");
+        static_assert(sizeof(Func) <= buffer_size, "buffer is too small for that function");
         static_assert(
-            alignof(Func) <= alignof(void*), "Buffer is insufficiently aligned for that function.");
+            alignof(Func) <= alignof(void*), "buffer is insufficiently aligned for that function");
         static_assert(
-            std::is_trivially_copyable_v<Func>, "The function must be trivial to move around.");
+            std::is_trivially_copyable_v<Func>, "the function must be trivial to move around");
         static_assert(
-            std::is_trivially_destructible_v<Func>, "The function must be trivial to destroy.");
+            std::is_trivially_destructible_v<Func>, "the function must be trivial to destroy");
     }
 
     template<typename Func>
@@ -251,6 +354,12 @@ private:
         (*func)(std::move(frame));
     }
 
+    template<typename Func>
+    static void invoke_resumable_impl(NativeResumableFunctionFrame& frame, void* buffer) {
+        Func* func = static_cast<Func*>(buffer);
+        (*func)(frame);
+    }
+
     template<auto Func>
     static void invoke_static_sync_impl(NativeFunctionFrame& frame, void*) {
         Func(frame);
@@ -261,12 +370,18 @@ private:
         Func(std::move(frame));
     }
 
+    template<auto Func>
+    static void invoke_static_resumable_impl(NativeResumableFunctionFrame& frame, void*) {
+        Func(frame);
+    }
+
 private:
     NativeFunctionType type_;
     union {
         void (*invalid_)(); // needed for constexpr default constructor
         void (*invoke_sync_)(NativeFunctionFrame& frame, void* buffer);
         void (*invoke_async_)(NativeAsyncFunctionFrame frame, void* buffer);
+        void (*invoke_resumable_)(NativeResumableFunctionFrame& frame, void* buffer);
     };
     alignas(void*) char buffer_[buffer_size];
 };
@@ -282,6 +397,7 @@ private:
 
     struct Payload {
         u32 params;
+        u32 locals;
         NativeFunctionStorage function;
     };
 
@@ -290,7 +406,7 @@ public:
 
     /// Constructs a new native function from the given arguments.
     static NativeFunction make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-        u32 params, const NativeFunctionStorage& function);
+        u32 params, u32 locals, const NativeFunctionStorage& function);
 
     explicit NativeFunction(Value v)
         : HeapValue(v, DebugCheck<NativeFunction>()) {}
@@ -298,6 +414,7 @@ public:
     String name();
     Value closure();
     u32 params();
+    u32 locals();
 
     /// Returns the actual native function.
     NativeFunctionStorage function();

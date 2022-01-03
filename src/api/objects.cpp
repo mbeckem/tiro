@@ -165,7 +165,7 @@ static void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr f
         auto result_handle = to_internal(result);
 
         result_handle.set(vm::NativeFunction::make(
-            ctx, name_handle, maybe_closure, static_cast<u32>(argc), wrap_function(func)));
+            ctx, name_handle, maybe_closure, static_cast<u32>(argc), 0, wrap_function(func)));
     });
 }
 

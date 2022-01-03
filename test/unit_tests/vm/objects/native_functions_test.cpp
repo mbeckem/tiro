@@ -115,8 +115,8 @@ TEST_CASE("Native functions should be invokable", "[native_functions]") {
         Local pointer = sc.local(NativePointer::make(ctx, &i));
         Local values = sc.local(Tuple::make(ctx, 1));
         values->checked_set(0, *pointer);
-        func.set(
-            NativeFunction::make(ctx, name, values, 0, NativeFunctionStorage::sync(native_func)));
+        func.set(NativeFunction::make(
+            ctx, name, values, 0, 0, NativeFunctionStorage::sync(native_func)));
     }
 
     REQUIRE(func->name().view() == "test");
@@ -140,7 +140,7 @@ TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
     Local func = sc.local(
-        NativeFunction::make(ctx, name, {}, 0, NativeFunctionStorage::async(native_func)));
+        NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::async(native_func)));
 
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
@@ -168,7 +168,7 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
     Local name = sc.local(String::make(ctx, "Test"));
     Local loop_ptr = sc.local(NativePointer::make(ctx, &main_loop));
     Local func = sc.local(
-        NativeFunction::make(ctx, name, loop_ptr, 0, NativeFunctionStorage::async(native_func)));
+        NativeFunction::make(ctx, name, loop_ptr, 0, 0, NativeFunctionStorage::async(native_func)));
     Local coro = sc.local(ctx.make_coroutine(func, {}));
 
     SimpleCallback callback = [&ctx, &result, &coro](

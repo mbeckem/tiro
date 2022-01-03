@@ -17,7 +17,7 @@ namespace tiro::vm {
 // Returns the current stack of the given coroutine. Asserts that the coroutine has a valid stack (if not,
 // it would have been already completed).
 static CoroutineStack current_stack(Coroutine coro) {
-    TIRO_DEBUG_ASSERT(coro.stack().has_value(), "Coroutine does not have a valid stack.");
+    TIRO_DEBUG_ASSERT(coro.stack().has_value(), "coroutine does not have a valid stack");
     return coro.stack().value();
 }
 
@@ -45,7 +45,7 @@ grow_stack_impl(Context& ctx, Handle<Coroutine> coro, FunctionRef<bool(Coroutine
     Local new_stack = sc.local<CoroutineStack>(defer_init);
 
     TIRO_DEBUG_ASSERT(
-        object_size(*old_stack) <= CoroutineStack::max_size, "Existing stack is too large.");
+        object_size(*old_stack) <= CoroutineStack::max_size, "existing stack is too large");
 
     // This should only do a single iteration in almost all circumstances, since the required memory
     // is typically very small (e.g. enough space for a function frame, or for a few values on the stack).
@@ -75,7 +75,7 @@ reserve_values(Context& ctx, Handle<Coroutine> coro, u32 required_value_capacity
 
     auto result = grow_stack_impl(ctx, coro, cond);
     TIRO_DEBUG_ASSERT(!grow_stack_impl(ctx, coro, cond),
-        "A repeated invocation must be a noop since enough space has been allocated.");
+        "a repeated invocation must be a noop since enough space has been allocated");
     return result;
 }
 
@@ -136,7 +136,7 @@ trace_call(Context& ctx, Handle<Coroutine> coro, Handle<Value> function, u32 arg
     Local builder = sc.local(StringBuilder::make(ctx));
 
     TIRO_DEBUG_ASSERT(stack->top_value_count() >= argc,
-        "Not enough arguments on the stack for this function call.");
+        "not enough arguments on the stack for this function call");
     HandleSpan args = HandleSpan<Value>(stack->top_values(argc));
 
     to_string(ctx, builder, function);
@@ -168,8 +168,8 @@ BytecodeInterpreter::BytecodeInterpreter(
     , coro_(coro)
     , stack_(coro.stack().value())
     , frame_(frame) {
-    TIRO_DEBUG_ASSERT(frame == stack_.top_frame(), "Frame must be on top of the stack.");
-    TIRO_DEBUG_ASSERT(frame->type == FrameType::Code, "Unexpected frame type.");
+    TIRO_DEBUG_ASSERT(frame == stack_.top_frame(), "frame must be on top of the stack");
+    TIRO_DEBUG_ASSERT(frame->type == FrameType::Code, "unexpected frame type");
 }
 
 #define TIRO_BINOP(op)                         \
@@ -248,7 +248,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::LoadParam: {
             const u32 source = read_u32();
             auto target = read_local();
-            TIRO_DEBUG_ASSERT(source < frame_->args, "Parameter index out of bounds.");
+            TIRO_DEBUG_ASSERT(source < frame_->args, "parameter index out of bounds");
 
             target.set(*CoroutineStack::arg(frame_, source));
             break;
@@ -256,7 +256,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::StoreParam: {
             auto source = read_local();
             const u32 target = read_u32();
-            TIRO_DEBUG_ASSERT(target < frame_->args, "Parameter index out of bounds.");
+            TIRO_DEBUG_ASSERT(target < frame_->args, "parameter index out of bounds");
 
             *CoroutineStack::arg(frame_, target) = *source;
             break;
@@ -991,6 +991,8 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
         case FrameType::Async:
             run_frame(coro, static_cast<AsyncFrame*>(frame));
             break;
+        case FrameType::Resumable:
+            TIRO_NOT_IMPLEMENTED(); // TODO
         case FrameType::Catch:
             run_frame(coro, static_cast<CatchFrame*>(frame));
             break;
@@ -1042,7 +1044,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, SyncFrame* frame) {
     if (frame->flags & FRAME_UNWINDING) {
         if (result->type() != ValueType::Exception) {
             result.set(TIRO_FORMAT_EXCEPTION(*ctx_,
-                "native function attempted to throw object of non-exception type '{}'.",
+                "native function attempted to throw object of non-exception type '{}'",
                 result->type()));
         }
         return unwind(coro, result->must_cast<Exception>());
@@ -1083,7 +1085,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, AsyncFrame* frame) {
             auto ex = MutHandle<Value>::from_raw_slot(&frame->return_value_or_exception);
             if (ex->type() != ValueType::Exception) {
                 ex.set(TIRO_FORMAT_EXCEPTION(*ctx_,
-                    "native function attempted to throw object of non-exception type '{}'.",
+                    "native function attempted to throw object of non-exception type '{}'",
                     ex->type()));
             }
             return unwind(coro, ex->must_cast<Exception>());
@@ -1281,12 +1283,15 @@ bool Interpreter::unwind_into(CoroutineFrame* frame, MutHandle<Exception> ex) {
     case FrameType::Sync:
         return false; // Native functions cannot catch panics at the moment
 
+    case FrameType::Resumable:
+        TIRO_NOT_IMPLEMENTED(); // TODO
+
     case FrameType::Code:
         return BytecodeInterpreter::handle_exception(ctx(), static_cast<CodeFrame*>(frame), ex);
 
     case FrameType::Catch: {
         CatchFrame* cf = static_cast<CatchFrame*>(frame);
-        TIRO_DEBUG_ASSERT(cf->flags & FRAME_CATCH_STARTED, "catch frame must have been started.");
+        TIRO_DEBUG_ASSERT(cf->flags & FRAME_CATCH_STARTED, "catch frame must have been started");
         cf->flags |= FRAME_UNWINDING;
         cf->exception = *ex;
         return true;
