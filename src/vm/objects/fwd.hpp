@@ -83,6 +83,7 @@ class Fallible;
 
 class NativeFunctionFrame;
 class NativeAsyncFunctionFrame;
+class NativeResumableFunctionFrame;
 
 using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
 using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
