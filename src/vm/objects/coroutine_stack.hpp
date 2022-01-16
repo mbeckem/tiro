@@ -22,10 +22,10 @@ enum class FrameType : u8 {
 std::string_view to_string(FrameType type);
 
 enum FrameFlags : u8 {
-    // Set if we must pop one more value than usual if we return from this function.
-    // This is set if a normal function value is called in a a method context, i.e.
-    // `a.foo()` where foo is a field value and not a method. There is one more
-    // value on the stack (the unused `this` arg) that must be cleaned up properly.
+    /// Set if we must pop one more value than usual if we return from this function.
+    /// This is set if a normal function value is called in a a method context, i.e.
+    /// `a.foo()` where foo is a field value and not a method. There is one more
+    /// value on the stack (the unused `this` arg) that must be cleaned up properly.
     FRAME_POP_ONE_MORE = 1 << 0,
 
     /// Indicates that the function is currently unwinding, i.e. an exception is in flight.
@@ -38,15 +38,31 @@ enum FrameFlags : u8 {
     /// Set if the "catch" frame already initiated the wrapped function call.
     FRAME_CATCH_STARTED = 1 << 2,
 
-    // Set if an async function has has it's initialiting function called.
-    // This is only valid for frames of type `AsyncFrame`.
+    /// Set if an async function has has it's initialiting function called.
+    /// This is only valid for frames of type `AsyncFrame`.
     FRAME_ASYNC_CALLED = 1 << 2,
 
-    // Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
+    /// Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
     FRAME_ASYNC_RESUMED = 1 << 3,
 
-    // Signals that the resumable function requests to invoke another function.
+    /// Signals that the resumable function requests to invoke another function.
     FRAME_RESUMABLE_INVOKE = 1 << 2,
+};
+
+/// Common constructor parameters for coroutine frames.
+struct CoroutineFrameParams {
+    /// Bitset of FrameFlags.
+    u8 flags = 0;
+
+    /// Number of function arguments on the stack.
+    u32 argc = 0;
+
+    /// Number of allocated locals.
+    u32 locals = 0;
+
+    /// Pointer to the calling frame.
+    /// Must be on the same stack, at a LOWER address.
+    CoroutineFrame* caller = nullptr;
 };
 
 // Improvement: Call frames could be made more compact.
@@ -58,21 +74,35 @@ struct alignas(Value) CoroutineFrame {
     u8 flags = 0;
 
     // Number of argument values on the stack before this frame.
-    u32 args = 0;
+    u32 argc = 0;
 
     // Number of local variables on the stack after this frame.
     u32 locals = 0;
 
-    // Parent call frame. Null for the first frame on the stack.
-    // TODO: Offset to parent would be more efficient (and would not need adjustment when copying).
-    CoroutineFrame* caller = nullptr;
+    // Offset to the caller's call frame. Zero for the first frame on the stack.
+    u32 caller_offset = 0;
 
-    CoroutineFrame(FrameType type_, u8 flags_, u32 args_, u32 locals_, CoroutineFrame* caller_)
+    CoroutineFrame(FrameType type_, const CoroutineFrameParams& params)
         : type(type_)
-        , flags(flags_)
-        , args(args_)
-        , locals(locals_)
-        , caller(caller_) {}
+        , flags(params.flags)
+        , argc(params.argc)
+        , locals(params.locals) {
+
+        if (params.caller) {
+            TIRO_DEBUG_ASSERT(
+                params.caller < this, "caller frame must have a lower address on the stack");
+            caller_offset = static_cast<u32>(
+                reinterpret_cast<byte*>(this) - reinterpret_cast<byte*>(params.caller));
+        }
+    }
+
+    /// Returns the address of the caller's function frame, or nullptr if this is the first frame on the stack.
+    CoroutineFrame* caller() {
+        if (caller_offset == 0)
+            return nullptr;
+
+        return reinterpret_cast<CoroutineFrame*>(reinterpret_cast<byte*>(this) - caller_offset);
+    }
 
     template<typename Tracer>
     void trace(Tracer&&) {}
@@ -93,9 +123,9 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
     // Program counter, points into tmpl->code. FIXME moves
     const byte* pc = nullptr;
 
-    CodeFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, CodeFunctionTemplate tmpl_,
-        Nullable<Environment> closure_)
-        : CoroutineFrame(FrameType::Code, flags_, args_, tmpl_.locals(), caller_)
+    CodeFrame(CodeFunctionTemplate tmpl_, Nullable<Environment> closure_,
+        const CoroutineFrameParams& params)
+        : CoroutineFrame(FrameType::Code, params)
         , tmpl(tmpl_)
         , closure(closure_) {
         pc = tmpl_.code().data();
@@ -114,8 +144,8 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
 struct alignas(Value) SyncFrame : CoroutineFrame {
     NativeFunction func;
 
-    SyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
-        : CoroutineFrame(FrameType::Sync, flags_, args_, 0, caller_)
+    SyncFrame(NativeFunction func_, const CoroutineFrameParams& params)
+        : CoroutineFrame(FrameType::Sync, params)
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Sync,
             "unexpected function type (should be sync)");
@@ -143,8 +173,8 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
     // The meaning of this value depends on the frame's flags.
     Value return_value_or_exception = Value::null();
 
-    AsyncFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
-        : CoroutineFrame(FrameType::Async, flags_, args_, 0, caller_)
+    AsyncFrame(NativeFunction func_, const CoroutineFrameParams& params)
+        : CoroutineFrame(FrameType::Async, params)
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Async,
             "unexpected function type (should be async)");
@@ -201,8 +231,8 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
     // The current state of this function call.
     int state = START;
 
-    ResumableFrame(u8 flags_, u32 args_, CoroutineFrame* caller_, NativeFunction func_)
-        : CoroutineFrame(FrameType::Resumable, flags_, args_, func_.locals(), caller_)
+    ResumableFrame(NativeFunction func_, const CoroutineFrameParams& params)
+        : CoroutineFrame(FrameType::Resumable, params)
         , func(func_) {
         TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Resumable,
             "unexpected function type (should be resumable)");
@@ -225,8 +255,8 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
 struct alignas(Value) CatchFrame : CoroutineFrame {
     Nullable<Exception> exception; // set if FRAME_UNWINDING bit is set
 
-    CatchFrame(u8 flags_, u32 args_, CoroutineFrame* caller_)
-        : CoroutineFrame(FrameType::Catch, flags_, args_, 0, caller_) {}
+    CatchFrame(const CoroutineFrameParams& params)
+        : CoroutineFrame(FrameType::Catch, params) {}
 
     template<typename Tracer>
     void trace(Tracer&& t) {
@@ -285,10 +315,20 @@ public:
             // Unused portions of the stack are uninitialized
         }
 
+        // Reference to the undefined value for initialization of locals
         Value undef;
+
+        // Points to the topmost frame (or nullptr)
         CoroutineFrame* top_frame = nullptr;
+
+        // Points after the current top value (or frame) on the stack. Everything
+        // after this pointer (inclusive) is garbage.
         byte* top;
+
+        // Points after the end of `data`.
         byte* end;
+
+        // Raw storage for the stack. Frames and values interleave.
         alignas(CoroutineFrame) byte data[];
     };
 
@@ -397,31 +437,24 @@ private:
             // the upper frame will do it since they are normal values there.
             t(Span<Value>(locals_begin(TIRO_NN(frame)), values_end(frame, max)));
 
+            // Trace all frame headers
             switch (frame->type) {
-            case FrameType::Code: {
-                static_cast<CodeFrame*>(frame)->trace(t);
-                break;
-            }
-            case FrameType::Sync: {
-                static_cast<SyncFrame*>(frame)->trace(t);
-                break;
-            }
-            case FrameType::Async: {
-                static_cast<AsyncFrame*>(frame)->trace(t);
-                break;
-            }
-            case FrameType::Resumable: {
-                static_cast<ResumableFrame*>(frame)->trace(t);
-                break;
-            }
-            case FrameType::Catch: {
-                static_cast<CatchFrame*>(frame)->trace(t);
-                break;
-            }
+#define TIRO_TRACE(Tag, Type)            \
+case FrameType::Tag:                     \
+    static_cast<Type*>(frame)->trace(t); \
+    break;
+
+                TIRO_TRACE(Code, CodeFrame)
+                TIRO_TRACE(Sync, SyncFrame)
+                TIRO_TRACE(Async, AsyncFrame)
+                TIRO_TRACE(Resumable, ResumableFrame)
+                TIRO_TRACE(Catch, CatchFrame)
+
+#undef TIRO_TRACE
             }
 
             max = reinterpret_cast<byte*>(frame);
-            frame = frame->caller;
+            frame = frame->caller();
         }
 
         // Values before the first frame
@@ -447,8 +480,8 @@ private:
     /// Returns false on failure (full stack).
     /// Returns true and constructs (and links) the new frame otherwise.
     /// Arguments after 'locals' are forwarded to the frame constructor.
-    template<typename Frame, typename... Args>
-    Frame* push_frame(u32 locals, Args&&... args);
+    template<typename Frame, typename... Params>
+    Frame* push_frame(u8 flags, u32 argc, u32 locals, Params&&... additional_frame_params);
 
     // Allocates a frame by incrementing the top pointer of the stack.
     // Returns nullptr on allocation failure (stack is full).

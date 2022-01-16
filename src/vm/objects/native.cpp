@@ -74,7 +74,7 @@ Value SyncFrameContext::closure() const {
 }
 
 size_t SyncFrameContext::arg_count() const {
-    return frame_->args;
+    return frame_->argc;
 }
 
 Handle<Value> SyncFrameContext::arg(size_t index) const {
@@ -122,7 +122,7 @@ Value AsyncFrameContext::closure() const {
 }
 
 size_t AsyncFrameContext::arg_count() const {
-    return frame()->args;
+    return frame()->argc;
 }
 
 Handle<Value> AsyncFrameContext::arg(size_t index) const {
@@ -196,7 +196,7 @@ Value ResumableFrameContext::closure() const {
 }
 
 size_t ResumableFrameContext::arg_count() const {
-    return frame()->args;
+    return frame()->argc;
 }
 
 Handle<Value> ResumableFrameContext::arg(size_t index) const {

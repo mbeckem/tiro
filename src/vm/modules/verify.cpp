@@ -328,6 +328,10 @@ void ModuleVerifier::fail(std::string_view message) {
 }
 
 void FunctionVerifier::verify() {
+    if (function_.locals() > max_locals)
+        fail(fmt::format("function uses too many locals ({} locals, maximum is {})",
+            function_.locals(), max_locals));
+
     // Name has already been verified in ModuleVerifier#visit_function
     const auto& insts = parsed_instructions_ = read_instructions();
 

@@ -7,6 +7,9 @@
 
 namespace tiro::vm {
 
+/// Maximum number of locals supported in a function.
+inline constexpr u32 max_locals = 1 << 14;
+
 /// Verifies the module's content with static checks.
 /// Throws an exception if verification fails.
 ///

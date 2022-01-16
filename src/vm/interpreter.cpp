@@ -269,7 +269,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::LoadParam: {
             const u32 source = read_u32();
             auto target = read_local();
-            TIRO_DEBUG_ASSERT(source < frame_->args, "parameter index out of bounds");
+            TIRO_DEBUG_ASSERT(source < frame_->argc, "parameter index out of bounds");
 
             target.set(*CoroutineStack::arg(frame_, source));
             break;
@@ -277,7 +277,7 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::StoreParam: {
             auto source = read_local();
             const u32 target = read_u32();
-            TIRO_DEBUG_ASSERT(target < frame_->args, "parameter index out of bounds");
+            TIRO_DEBUG_ASSERT(target < frame_->argc, "parameter index out of bounds");
 
             *CoroutineStack::arg(frame_, target) = *source;
             break;
@@ -1157,7 +1157,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame) 
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Catch, "expected a catch frame");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "the coroutine must be marked as running");
-    TIRO_DEBUG_ASSERT(frame->args == 1, "expected a single argument");
+    TIRO_DEBUG_ASSERT(frame->argc == 1, "expected a single argument");
 
     // Fresh frame.
     if ((frame->flags & FRAME_CATCH_STARTED) == 0) {
@@ -1381,7 +1381,7 @@ void Interpreter::pop_frame(Handle<Coroutine> coro) {
     auto frame = stack.top_frame();
     TIRO_DEBUG_ASSERT(frame, "invalid frame");
 
-    u32 pop_args = frame->args;
+    u32 pop_args = frame->argc;
     if (frame->flags & FRAME_POP_ONE_MORE) {
         // Normal function invoked via CALL_METHOD, pop the additional value,
         // see the comment for call_method.

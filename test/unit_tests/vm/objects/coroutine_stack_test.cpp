@@ -26,7 +26,7 @@ static_assert(alignof(CodeFrame) == alignof(Value));
 static_assert(alignof(CatchFrame) == alignof(Value));
 static_assert(alignof(ResumableFrame) == alignof(Value));
 
-TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
+TEST_CASE("Function frames should have the correct layout", "[coroutine-stack]") {
     Context ctx;
 
     Scope sc(ctx);
@@ -41,31 +41,69 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine]") {
         return reinterpret_cast<char*>(frame) - reinterpret_cast<char*>(object);
     };
 
-    CodeFrame user_frame(0, 0, nullptr, *tmpl, {});
+    CodeFrame user_frame(*tmpl, {}, CoroutineFrameParams{});
     REQUIRE(sizeof(CodeFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
 
     Local sync_func = sc.local(NativeFunction::make(
         ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](SyncFrameContext&) {})));
-    SyncFrame sync_frame(0, 0, nullptr, *sync_func);
+    SyncFrame sync_frame(*sync_func, CoroutineFrameParams{});
     REQUIRE(sizeof(SyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&sync_frame) == 0);
 
     Local async_func = sc.local(NativeFunction::make(
         ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
-    AsyncFrame async_frame(0, 0, nullptr, *async_func);
+    AsyncFrame async_frame(*async_func, CoroutineFrameParams{});
     REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&async_frame) == 0);
 
-    CatchFrame catch_frame(0, 0, nullptr);
+    CatchFrame catch_frame(CoroutineFrameParams{});
     REQUIRE(sizeof(CatchFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&catch_frame) == 0);
 
     Local resumable_func = sc.local(NativeFunction::make(
         ctx, name, {}, 0, 0, NativeFunctionStorage::resumable([](ResumableFrameContext&) {})));
-    ResumableFrame resumable_frame(0, 0, nullptr, *resumable_func);
+    ResumableFrame resumable_frame(*resumable_func, CoroutineFrameParams{});
     REQUIRE(sizeof(ResumableFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&resumable_frame) == 0);
 }
+
+TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]") {
+    Context ctx;
+
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local sync_func = sc.local(NativeFunction::make(
+        ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](SyncFrameContext&) {})));
+
+    alignas(Value) byte stack[1 << 10];
+    byte* end = stack + (1 << 10);
+    byte* top = &stack[0];
+    auto alloc = [&](u32 n) {
+        if (end - top < n)
+            throw std::bad_alloc();
+
+        byte* ret = top;
+        top += n;
+        return ret;
+    };
+
+    // Caller frame on top
+    SyncFrame* caller = new (alloc(sizeof(SyncFrame)))
+        SyncFrame(*sync_func, CoroutineFrameParams());
+    REQUIRE(caller->caller_offset == 0);
+    REQUIRE(caller->caller() == nullptr);
+
+    // Create a trivial gap
+    alloc(sizeof(Value));
+
+    // Callee frame after gap
+    CoroutineFrameParams callee_params;
+    callee_params.caller = caller;
+    SyncFrame* callee = new (alloc(sizeof(SyncFrame))) SyncFrame(*sync_func, callee_params);
+
+    REQUIRE(callee->caller_offset == sizeof(SyncFrame) + sizeof(Value));
+    REQUIRE(callee->caller() == caller);
+};
 
 } // namespace tiro::vm::test
