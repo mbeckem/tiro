@@ -116,6 +116,13 @@ static void push_async_frame(
         [&](CoroutineStack current) { return current.push_async_frame(*func, argc, flags); });
 }
 
+// Pushes an resumable native function call frame on the coroutine stack. Resizes the stack as necessary.
+static void push_resumable_frame(
+    Context& ctx, Handle<Coroutine> coro, Handle<NativeFunction> func, u32 argc, u8 flags) {
+    grow_stack_impl(ctx, coro,
+        [&](CoroutineStack current) { return current.push_resumable_frame(*func, argc, flags); });
+}
+
 // Pushes a catch frame on the coroutine stack. Resizes the stack as necessary.
 static void push_catch_frame(Context& ctx, Handle<Coroutine> coro, u32 argc, u8 flags) {
     grow_stack_impl(
@@ -770,9 +777,9 @@ void BytecodeInterpreter::run() {
         case BytecodeOp::Rethrow: {
             // TODO: Static verify usage of rethrow in bytecode
             TIRO_DEBUG_ASSERT(frame_->flags & FRAME_UNWINDING,
-                "Function must be unwinding when using the rethrow instruction.");
+                "function must be unwinding when using the rethrow instruction");
             TIRO_DEBUG_ASSERT(
-                frame_->current_exception.has_value(), "Current exception must be present.");
+                frame_->current_exception.has_value(), "current exception must be present");
             return unwind(frame_->current_exception.value());
         }
         case BytecodeOp::AssertFail: {
@@ -1095,18 +1102,29 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Resumable, "expected a resumable frame");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "the coroutine must be marked as running");
+    TIRO_DEBUG_ASSERT(
+        frame->state != ResumableFrame::END, "resumable function must not be in end state");
 
-    while (frame->state != ResumableFrame::END) {
-        ResumableFrameContext native_frame(ctx(), coro, frame);
-        frame->func.function().invoke_resumable(native_frame);
+    ScopeExit reset_regs = [&] { regs_.reset(); };
 
-        if (frame->flags & FRAME_UNWINDING)
-            break;
+    // Resume the function by invoking its native function pointer once.
+    ResumableFrameContext native_frame(ctx(), coro, frame);
+    frame->func.function().invoke_resumable(native_frame);
 
+    // There may contain a function return result from a previous nested call to `call_function`.
+    // We remove all values to ensure that the stack does not have uncontrolled growth.
+    {
+        auto stack = current_stack(coro);
+        if (auto n = stack.top_value_count())
+            stack.pop_values(n);
+    }
+
+    if (frame->state != ResumableFrame::END) {
+        // Resumable function requested to call another function.
+        // This calls the provided function and leaves the current resumable function's state on the stack until later.
         if (frame->flags & FRAME_RESUMABLE_INVOKE) {
             auto func = reg(frame->invoke_func);
             auto args = reg(frame->invoke_arguments);
-            ScopeExit reset_regs = [&] { regs_.reset(); };
 
             frame->invoke_func = {};
             frame->invoke_arguments = {};
@@ -1117,8 +1135,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
             return call_function(coro, func, argc);
         }
 
-        // TODO: Yield
-        // TODO: Make return value of invoked function accessible
+        // TODO: Yield?
+
+        // Not in end state -> call again
+        return;
     }
 
     if (frame->flags & FRAME_UNWINDING) {
@@ -1126,7 +1146,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
         auto ex = MutHandle<Value>::from_raw_slot(&frame->return_value_or_exception);
         return unwind(coro, ex->must_cast<Exception>());
     }
-    return return_function(coro, frame->return_value_or_exception);
+
+    auto ret = reg(frame->return_value_or_exception);
+    cleanup_frame(coro, frame);
+    return return_function(coro, *ret);
 }
 
 void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame) {
@@ -1156,6 +1179,17 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame) 
     auto stack = current_stack(coro);
     TIRO_DEBUG_ASSERT(stack.top_value_count() > 0, "missing return value on the stack");
     return return_function(coro, Result::make_success(ctx(), Handle<Value>(stack.top_value())));
+}
+
+void Interpreter::cleanup_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame) {
+    TIRO_DEBUG_ASSERT(frame == current_stack(coro).top_frame(), "expected the topmost frame");
+    TIRO_DEBUG_ASSERT(frame->type == FrameType::Resumable, "expected a resumable frame");
+    TIRO_DEBUG_ASSERT(
+        coro->state() == CoroutineState::Running, "the coroutine must be marked as running");
+
+    frame->state = ResumableFrame::CLEANUP;
+    ResumableFrameContext native_frame(ctx(), coro, frame);
+    frame->func.function().invoke_resumable(native_frame);
 }
 
 void Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
@@ -1243,14 +1277,15 @@ again:
             return missing_args(native_func->params(), argc);
 
         switch (native_func->function().type()) {
-        case NativeFunctionType::Sync: {
+        case NativeFunctionType::Sync:
             push_sync_frame(ctx(), coro, native_func, argc, frame_flags());
             return;
-        }
-        case NativeFunctionType::Async: {
+        case NativeFunctionType::Async:
             push_async_frame(ctx(), coro, native_func, argc, frame_flags());
             return;
-        }
+        case NativeFunctionType::Resumable:
+            push_resumable_frame(ctx(), coro, native_func, argc, frame_flags());
+            return;
         default:
             TIRO_UNREACHABLE("invalid native function type");
         }
@@ -1301,7 +1336,7 @@ void Interpreter::unwind(Handle<Coroutine> coro, Exception unsafe_ex) {
         if (!frame)
             break;
 
-        if (unwind_into(frame, ex))
+        if (unwind_into(coro, TIRO_NN(frame), ex))
             return; // Evaluation continues in frame
 
         pop_frame(coro);
@@ -1311,20 +1346,25 @@ void Interpreter::unwind(Handle<Coroutine> coro, Exception unsafe_ex) {
     coro->state(CoroutineState::Done);
 }
 
-bool Interpreter::unwind_into(CoroutineFrame* frame, MutHandle<Exception> ex) {
+bool Interpreter::unwind_into(
+    Handle<Coroutine> coro, NotNull<CoroutineFrame*> frame, MutHandle<Exception> ex) {
     switch (frame->type) {
     case FrameType::Async:
     case FrameType::Sync:
-        return false; // Native functions cannot catch panics at the moment
+        // Sync and async functions cannot catch panics at the moment
+        return false;
 
     case FrameType::Resumable:
-        TIRO_NOT_IMPLEMENTED(); // TODO
+        // Resumable functions may perform cleanup but cannot handle (i.e. catch) panics
+        cleanup_frame(coro, static_not_null_cast<ResumableFrame*>(frame));
+        return false;
 
     case FrameType::Code:
-        return BytecodeInterpreter::handle_exception(ctx(), static_cast<CodeFrame*>(frame), ex);
+        return BytecodeInterpreter::handle_exception(
+            ctx(), static_not_null_cast<CodeFrame*>(frame), ex);
 
     case FrameType::Catch: {
-        CatchFrame* cf = static_cast<CatchFrame*>(frame);
+        auto cf = static_not_null_cast<CatchFrame*>(frame);
         TIRO_DEBUG_ASSERT(cf->flags & FRAME_CATCH_STARTED, "catch frame must have been started");
         cf->flags |= FRAME_UNWINDING;
         cf->exception = *ex;

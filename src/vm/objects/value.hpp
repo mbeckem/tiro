@@ -55,7 +55,7 @@ public:
     /// \pre The type of the value must match the target type.
     template<typename T>
     T must_cast() const {
-        TIRO_DEBUG_ASSERT(is<T>(), "Value is not an instance of this type.");
+        TIRO_DEBUG_ASSERT(is<T>(), "value is not an instance of this type");
         return T(*this);
     }
 
@@ -86,7 +86,7 @@ public:
             return ValueCategory::EmbeddedInteger;
 
         TIRO_DEBUG_ASSERT(
-            is_heap_ptr(), "The value must be on the heap if the other conditions are false.");
+            is_heap_ptr(), "the value must be on the heap if the other conditions are false");
         return ValueCategory::Heap;
     }
 
@@ -111,19 +111,19 @@ protected:
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
         : raw_(value) {
         TIRO_DEBUG_ASSERT(
-            raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
+            raw_ & embedded_integer_flag, "value does not represent an embedded integer");
     }
 
     explicit Value(HeapPointerTag, NotNull<Header*> ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr.get())) {
         TIRO_DEBUG_ASSERT(
-            (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
+            (raw_ & embedded_integer_flag) == 0, "heap pointer is not aligned correctly");
     }
 
     template<typename CheckedType>
     explicit Value(Value v, DebugCheck<CheckedType>)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
+        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "value has unexpected type");
     }
 
     static Value from_heap(Header* object) { return Value(HeapPointerTag(), TIRO_NN(object)); }
@@ -145,12 +145,12 @@ public:
 
     explicit HeapValue(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "value must be a heap pointer");
     }
 
     /// Returns the heap pointer stored in this value.
     Header* heap_ptr() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(is_heap_ptr(), "value must be a heap pointer");
         return reinterpret_cast<Header*>(raw());
     }
 
@@ -164,7 +164,7 @@ protected:
     template<typename CheckedType>
     explicit HeapValue(Value v, DebugCheck<CheckedType> check)
         : Value(v, check) {
-        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "value must be a heap pointer");
     }
 
     // Cast to the inner layout. T must be a layout type derived from Header.
@@ -172,7 +172,7 @@ protected:
     // Warning: the type cast in unchecked!
     template<typename T>
     T* access_heap() const {
-        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
+        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header");
         return static_cast<T*>(heap_ptr());
     }
 };
@@ -207,7 +207,7 @@ public:
     /// Returns the inner value. Fails with an assertion error if this instance is null.
     /// \pre `has_value()`.
     T value() const {
-        TIRO_DEBUG_ASSERT(has_value(), "Nullable: instance does not holds a value.");
+        TIRO_DEBUG_ASSERT(has_value(), "Nullable: instance does not hold a value");
         return T(static_cast<Value>(*this));
     }
 };

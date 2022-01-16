@@ -849,7 +849,6 @@ template class HashTableIteratorBase<HashTableValueIterator>;
 
 Value HashTableIterator::return_value(Context& ctx, Value key, Value value) {
     // TODO performance, reuse the same tuple every time?
-    // XXX: key/value must be rooted before performing any allocations.
     Scope sc(ctx);
     Local rooted_key = sc.local(key);
     Local rooted_value = sc.local(value);

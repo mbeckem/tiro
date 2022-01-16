@@ -4,6 +4,7 @@
 #include "tiropp/compiler.hpp"
 #include "tiropp/def.hpp"
 #include "tiropp/detail/resource_holder.hpp"
+#include "tiropp/detail/translate.hpp"
 #include "tiropp/error.hpp"
 #include "tiropp/fwd.hpp"
 
@@ -104,12 +105,12 @@ private:
             raw_settings.print_stdout = [](tiro_string_t message, void* userdata) {
                 // FIXME handle exceptions?
                 tiro::vm& self = *static_cast<tiro::vm*>(userdata);
-                self.settings_.print_stdout({message.data, message.length});
+                self.settings_.print_stdout(detail::from_raw(message));
             };
         }
 
         tiro_vm_t raw_vm = tiro_vm_new(&raw_settings, error_adapter());
-        TIRO_ASSERT(raw_vm); // Returns error on failure
+        TIRO_ASSERT(raw_vm);
         return raw_vm;
     }
 

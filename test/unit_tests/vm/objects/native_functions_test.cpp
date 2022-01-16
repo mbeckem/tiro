@@ -44,6 +44,8 @@ static void sync_dummy(SyncFrameContext&) {}
 
 static void async_dummy(AsyncFrameContext) {}
 
+static void resumable_dummy(ResumableFrameContext&) {}
+
 TEST_CASE("Native function arg should be trivial", "[native_functions]") {
     static_assert(std::is_trivially_copyable_v<NativeFunctionStorage>);
     static_assert(std::is_trivially_destructible_v<NativeFunctionStorage>);
@@ -93,7 +95,30 @@ TEST_CASE("Native function arg should wrap async functions", "[native_functions]
     }
 }
 
-TEST_CASE("Native functions should be invokable", "[native_functions]") {
+TEST_CASE("Native function arg should wrap resumable functions", "[native_functions]") {
+    SECTION("Without userdata.") {
+        auto arg = NativeFunctionStorage::resumable([](ResumableFrameContext&) {});
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
+    }
+
+    SECTION("Static stateless") {
+        auto arg = NativeFunctionStorage::static_resumable<resumable_dummy>();
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
+    }
+
+    SECTION("With some user data") {
+        struct Capture {
+            void* x;
+            void* y;
+        } capture{};
+
+        auto arg = NativeFunctionStorage::resumable(
+            [capture](ResumableFrameContext&) { (void) capture; });
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
+    }
+}
+
+TEST_CASE("Native functions should be invocable", "[native_functions]") {
     auto native_func = [](SyncFrameContext& frame) {
         Scope sc(frame.ctx());
 
@@ -148,7 +173,7 @@ TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     REQUIRE(value->must_cast<SmallInteger>().value() == 3);
 }
 
-TEST_CASE("Async functions that pause the coroutine should be invokable", "[native_functions]") {
+TEST_CASE("Async functions that pause the coroutine should be invocable", "[native_functions]") {
     NativeAsyncFunctionPtr native_func = [](AsyncFrameContext frame) {
         void* loop_ptr = frame.closure().must_cast<NativePointer>().data();
         REQUIRE(loop_ptr);
@@ -205,6 +230,104 @@ TEST_CASE("Async functions that pause the coroutine should be invokable", "[nati
 
     ctx.run_ready();
     REQUIRE(result == 123); // Coroutine completion callback was executed
+}
+
+TEST_CASE("Trivial resumable functions should be invocable", "[native_functions]") {
+    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+        switch (frame.state()) {
+        case ResumableFrame::START:
+            return frame.return_value(SmallInteger::make(3));
+        }
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(
+        NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::resumable(native_func)));
+
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->unchecked_value());
+    REQUIRE(value->must_cast<SmallInteger>().value() == 3);
+}
+
+TEST_CASE("Resumable functions should be able to call other functions", "[native_functions]") {
+    enum UserState {
+        START = 0,
+        AFTER_INVOKE,
+    };
+
+    int expected_state = START;
+    auto native_resumable_func = [&expected_state](ResumableFrameContext& frame) {
+        REQUIRE(frame.state() == expected_state);
+
+        auto& ctx = frame.ctx();
+        switch (frame.state()) {
+        case ResumableFrame::START: {
+            Scope sc(ctx);
+            auto func = frame.arg(0);
+            auto num = sc.local(HeapInteger::make(ctx, 100));
+            auto args = sc.local(Tuple::make(ctx, {num}));
+
+            expected_state = AFTER_INVOKE;
+            return frame.invoke(AFTER_INVOKE, *func, *args);
+        }
+        case AFTER_INVOKE: {
+            auto result = frame.invoke_return();
+            REQUIRE(result.is<Integer>());
+            REQUIRE(result.must_cast<Integer>().value() == 202);
+            expected_state = ResumableFrame::CLEANUP;
+            return frame.return_value(result);
+        }
+        }
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local simple_name = sc.local(String::make(ctx, "simple"));
+    Local simple_func = sc.local(NativeFunction::make(
+        ctx, simple_name, {}, 1, 0, NativeFunctionStorage::sync([](SyncFrameContext& frame) {
+            auto num = frame.arg(0);
+            REQUIRE(num->is<Integer>());
+            i64 result = (num.must_cast<Integer>()->value() * 2) + 2;
+            frame.return_value(frame.ctx().get_integer(result));
+        })));
+
+    Local resumable_name = sc.local(String::make(ctx, "TestResumable"));
+    Local resumable_func = sc.local(NativeFunction::make(
+        ctx, resumable_name, {}, 1, 0, NativeFunctionStorage::resumable(native_resumable_func)));
+    Local resumable_func_args = sc.local(Tuple::make(ctx, {simple_func}));
+
+    Local result = sc.local(ctx.run_init(resumable_func, resumable_func_args));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->unchecked_value());
+    REQUIRE(value->must_cast<SmallInteger>().value() == 202);
+}
+
+TEST_CASE("Resumable functions should be able to perform cleanup", "[native_functions]") {
+    int cleanup_called = 0;
+    auto native_func = [&cleanup_called](ResumableFrameContext& frame) {
+        switch (frame.state()) {
+        case ResumableFrame::START:
+            return frame.return_value(SmallInteger::make(3));
+        case ResumableFrame::CLEANUP:
+            ++cleanup_called;
+            break;
+        }
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(
+        NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::resumable(native_func)));
+
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+    REQUIRE(cleanup_called == 1);
 }
 
 } // namespace tiro::vm::test

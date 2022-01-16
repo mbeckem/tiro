@@ -82,20 +82,14 @@ bool CoroutineStack::push_user_frame(
     CodeFunctionTemplate tmpl, Nullable<Environment> closure, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= tmpl.params(), "Not enough arguments on the stack.");
 
-    Layout* data = layout();
-
     const u32 params = tmpl.params();
     const u32 locals = tmpl.locals();
-
-    void* storage = allocate_frame(sizeof(CodeFrame), locals);
-    if (!storage) {
+    CodeFrame* frame = push_frame<CodeFrame>(locals, flags, params, top_frame(), tmpl, closure);
+    if (!frame) {
         return false;
     }
 
-    CodeFrame* frame = new (storage) CodeFrame(flags, params, top_frame(), tmpl, closure);
-    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, data->undef);
-
-    data->top_frame = frame;
+    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, layout()->undef);
     return true;
 }
 
@@ -103,48 +97,26 @@ bool CoroutineStack::push_sync_frame(NativeFunction func, u32 argc, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
     TIRO_DEBUG_ASSERT(
         argc >= func.params(), "Not enough arguments to the call the given function.");
-
-    Layout* data = layout();
-
-    void* storage = allocate_frame(sizeof(SyncFrame), 0);
-    if (!storage) {
-        return false;
-    }
-
-    SyncFrame* frame = new (storage) SyncFrame(flags, argc, top_frame(), func);
-    data->top_frame = frame;
-    return true;
+    return push_frame<SyncFrame>(0, flags, argc, top_frame(), func);
 }
 
 bool CoroutineStack::push_async_frame(NativeFunction func, u32 argc, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
     TIRO_DEBUG_ASSERT(
         argc >= func.params(), "Not enough arguments to the call the given function.");
+    return push_frame<AsyncFrame>(0, flags, argc, top_frame(), func);
+}
 
-    Layout* data = layout();
-
-    void* storage = allocate_frame(sizeof(AsyncFrame), 0);
-    if (!storage) {
-        return false;
-    }
-
-    AsyncFrame* frame = new (storage) AsyncFrame(flags, argc, top_frame(), func);
-    data->top_frame = frame;
-    return true;
+bool CoroutineStack::push_resumable_frame(NativeFunction func, u32 argc, u8 flags) {
+    TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
+    TIRO_DEBUG_ASSERT(
+        argc >= func.params(), "Not enough arguments to the call the given function.");
+    return push_frame<ResumableFrame>(0, flags, argc, top_frame(), func);
 }
 
 bool CoroutineStack::push_catch_frame(u32 argc, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= argc, "Not enough arguments on the stack.");
-
-    Layout* data = layout();
-    void* storage = allocate_frame(sizeof(CatchFrame), 0);
-    if (!storage) {
-        return false;
-    }
-
-    CatchFrame* frame = new (storage) CatchFrame(flags, argc, top_frame());
-    data->top_frame = frame;
-    return true;
+    return push_frame<CatchFrame>(0, flags, argc, top_frame());
 }
 
 CoroutineFrame* CoroutineStack::top_frame() {
@@ -282,6 +254,20 @@ Value* CoroutineStack::values_end([[maybe_unused]] CoroutineFrame* frame, byte* 
 
 u32 CoroutineStack::value_count(CoroutineFrame* frame, byte* max) {
     return values_end(frame, max) - values_begin(frame);
+}
+
+template<typename Frame, typename... Args>
+Frame* CoroutineStack::push_frame(u32 locals, Args&&... args) {
+    Layout* data = layout();
+
+    void* storage = allocate_frame(sizeof(Frame), locals);
+    if (!storage) {
+        return nullptr;
+    }
+
+    Frame* frame = new (storage) Frame(std::forward<Args>(args)...);
+    data->top_frame = frame;
+    return frame;
 }
 
 void* CoroutineStack::allocate_frame(u32 frame_size, u32 locals) {

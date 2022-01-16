@@ -167,10 +167,19 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
 /// They can either yield manually (like async functions) and be resumed by the host application at
 /// a later time or they may call another tiro function and be automatically resumed
 /// once that function call completes.
+///
+/// The lifecycle of a resumable function frame is as follows:
+///     START -> [any number of user transitions...] -> END -> CLEANUP
+///
+/// TODO: More elegant way to cleanup resources other than an extra state?
+///
+/// Note: resumable frames currently use 0 or 1 temp value on the stack (not counting locals and arguments)
+/// to implement the return value of invoked functions.
 struct alignas(Value) ResumableFrame : CoroutineFrame {
     enum WellKnownState {
         START = 0,
         END = -1,
+        CLEANUP = -2,
     };
 
     // The native function. Must be of type 'resumable'.
@@ -315,6 +324,10 @@ public:
     /// There must be enough arguments on the stack to satisfy the given async function.
     bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
 
+    /// Pushes a new call frame for the given resumable function on the stack.
+    /// There must be enough arguments on the stack to satisfy the given resumable function.
+    bool push_resumable_frame(NativeFunction func, u32 argc, u8 flags);
+
     /// Pushes a new catch frame on the stack.
     bool push_catch_frame(u32 argc, u8 flags);
 
@@ -429,6 +442,13 @@ private:
 
     // Number of values on the frame's value stack.
     u32 value_count(CoroutineFrame* frame, byte* max);
+
+    /// Attempts to add a new frame of the given type to the stack.
+    /// Returns false on failure (full stack).
+    /// Returns true and constructs (and links) the new frame otherwise.
+    /// Arguments after 'locals' are forwarded to the frame constructor.
+    template<typename Frame, typename... Args>
+    Frame* push_frame(u32 locals, Args&&... args);
 
     // Allocates a frame by incrementing the top pointer of the stack.
     // Returns nullptr on allocation failure (stack is full).

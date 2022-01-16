@@ -223,33 +223,45 @@ HandleSpan<Value> ResumableFrameContext::locals() const {
     return HandleSpan<Value>::from_raw_slots(CoroutineStack::locals(frame()));
 }
 
-void ResumableFrameContext::state(int new_state) {
-    frame()->state = new_state;
-}
-
 int ResumableFrameContext::state() const {
     return frame()->state;
 }
 
-void ResumableFrameContext::invoke(Value func, Nullable<Tuple> arguments) {
+void ResumableFrameContext::set_state(int state) {
+    frame()->state = state;
+}
+
+void ResumableFrameContext::invoke(int next_state, Value func, Nullable<Tuple> arguments) {
     auto rf = frame();
     rf->invoke_func = func;
     rf->invoke_arguments = arguments;
     rf->flags |= FRAME_RESUMABLE_INVOKE;
+    set_state(next_state);
+}
+
+Value ResumableFrameContext::invoke_return() {
+    auto rf = frame();
+    auto stack = coro_->stack().value();
+    TIRO_DEBUG_ASSERT(stack.top_frame() == rf, "current frame must be the top frame");
+
+    u32 values = stack.top_value_count();
+    TIRO_DEBUG_ASSERT(
+        values == 0 || values == 1, "expected zero or one top values in resumable function frame");
+    return stack.top_value_count() > 0 ? *stack.top_value() : Value::null();
 }
 
 void ResumableFrameContext::return_value(Value r) {
     auto rf = frame();
     rf->return_value_or_exception = r;
     rf->flags &= ~FRAME_UNWINDING;
-    state(ResumableFrame::END);
+    set_state(ResumableFrame::END);
 }
 
 void ResumableFrameContext::panic(Exception ex) {
     auto rf = frame();
     rf->return_value_or_exception = ex;
     rf->flags |= FRAME_UNWINDING;
-    state(ResumableFrame::END);
+    set_state(ResumableFrame::END);
 }
 
 NotNull<ResumableFrame*> ResumableFrameContext::frame() const {

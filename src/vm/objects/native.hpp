@@ -19,7 +19,6 @@
 namespace tiro::vm {
 
 enum class NativeFunctionType {
-    // TODO: Remove this, currently required because StaticLayout needs default constructible types.
     Invalid,
     Sync,
     Async,
@@ -146,34 +145,41 @@ public:
     Handle<Value> local(size_t index) const;
     HandleSpan<Value> locals() const;
 
-    /// Changes the state of this function frame.
-    /// Usually invoked just before yielding or calling another function
-    /// to control where to continue after the current frame resumes.
-    ///
-    /// See `ResumeableFrame::WellKnownState` for reserved values.
-    void state(int new_state);
-
     /// Returns the current state of this frame.
     int state() const;
+
+    /// Changes the state of this function frame.
+    /// Should be followed by an immediate return from the native function.
+    /// It is usually not needed to call this function directly since continuation methods
+    /// accept a `next_state` parameter,
+    ///
+    /// See `ResumeableFrame::WellKnownState` for reserved values.
+    void set_state(int new_state);
 
     /// Indicates that the given function shall be invoked from this frame.
     /// - `func` must refer to a valid function
     /// - `arguments` must be either null or a tuple of arguments appropriate for `func`
     ///
     /// The native function should return immediately without performing any other action on this frame.
-    /// It will be resumed with the configured state once `func` returned or panicked.
-    void invoke(Value func, Nullable<Tuple> arguments);
+    /// It will be resumed with the configured state once `func` returned or panicked. (TODO: panic)
+    void invoke(int next_state, Value func, Nullable<Tuple> arguments);
+
+    /// Returns the return value of the last function invocation performed by `invoke`.
+    /// Should only be used after the function is being resumed after `invoke`.
+    ///
+    /// TODO: Make panic handling possible
+    Value invoke_return();
 
     /// Sets the return slot of this function frame to the value `r`.
     /// The value will be returned to the caller of this function once it returns.
     ///
-    /// Note: the state of this frame will be set to `DONE`.
+    /// Note: the state of this frame will be set to `DONE` and it will not be resumed again.
     void return_value(Value r);
 
     /// Sets the panic slot of this function frame to the value `ex`.
     /// Once the native function returns, the value will be thrown and stack unwinding will take place.
     ///
-    /// Note: the state of this frame will be set to `DONE`.
+    /// Note: the state of this frame will be set to `DONE` and it will not be resumed again.
     void panic(Exception ex);
 
     /// Panics or returns a value, depending on the fallible's state.
@@ -198,7 +204,7 @@ private:
 private:
     Context& ctx_;
     Handle<Coroutine> coro_;
-    ResumableFrame* frame_ = nullptr; // TODO: Reset if done
+    ResumableFrame* frame_ = nullptr;
 };
 
 class NativeFunctionStorage final {
@@ -340,7 +346,7 @@ private:
     constexpr NativeFunctionStorage(
         ConstexprConstructorTag<NativeFunctionType::Resumable, Function>)
         : type_(NativeFunctionType::Resumable)
-        , invoke_async_(invoke_static_resumable_impl<Function>)
+        , invoke_resumable_(invoke_static_resumable_impl<Function>)
         , buffer_() {}
 
     template<typename Func>

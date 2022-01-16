@@ -519,7 +519,6 @@ Fallible<Value> TypeSystem::load_member(Context& ctx, Handle<Value> object, Hand
 
         // Static data and plain function can be returned as-is. Methods must be unwrapped:
         // `const method = Type.method` returns a function that takes an instance of `Type` as its first argument.
-        // TODO: Static members on types
         auto found = type->find_member(member);
         if (!found || !found->is<Method>())
             return member_not_found_in_type_exception(ctx, type, member);
@@ -531,7 +530,6 @@ Fallible<Value> TypeSystem::load_member(Context& ctx, Handle<Value> object, Hand
         Type type = type_of(object);
         auto found = type.find_member(member);
 
-        // TODO: Static members on types
         if (!found || !found->is<Method>())
             return member_not_found_exception(ctx, object, member);
 
@@ -556,14 +554,13 @@ Fallible<void> TypeSystem::store_member(
         return {};
     }
 
-    case ValueType::Type: // TODO Static members
+    case ValueType::Type:
     default:
         return member_assignment_not_supported_exception(ctx, object);
     }
 }
 
 Fallible<Value> TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
-    // TODO: Implement fields.
     switch (object->type()) {
     case ValueType::Module:
     case ValueType::Record:
@@ -571,7 +568,6 @@ Fallible<Value> TypeSystem::load_method(Context& ctx, Handle<Value> object, Hand
         return load_member(ctx, object, member);
 
     default: {
-        // TODO: Instance fields are not implemented.
         auto public_type = type_of(object);
         auto found = public_type.find_member(member);
         if (!found)

@@ -3,6 +3,7 @@ target_sources(unit_tests
         array_test.cpp
         buffer_test.cpp
         classes_test.cpp
+        coroutine_stack_test.cpp
         coroutine_test.cpp
         exception_test.cpp
         function_test.cpp

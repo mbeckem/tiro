@@ -178,6 +178,8 @@ private:
     void run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
     void run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame);
 
+    void cleanup_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
+
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.
     //
@@ -240,7 +242,8 @@ private:
     // Call frames deeper in the stack have already been handled.
     // Returns true if control flow continues in `frame` (i.e. an exception handler exists),
     // false if there is no handler (frame can be popped, continue in caller).
-    bool unwind_into(CoroutineFrame* frame, MutHandle<Exception> ex);
+    bool
+    unwind_into(Handle<Coroutine> coro, NotNull<CoroutineFrame*> frame, MutHandle<Exception> ex);
 
     // Pops the topmost frame from the stack. This is the reverse of enter_function.
     // Used during normal function returns and during stack unwinding.
