@@ -54,12 +54,16 @@ TEST_CASE("Native function arg should be trivial", "[native_functions]") {
 TEST_CASE("Native function arg should wrap sync functions", "[native_functions]") {
     SECTION("Without userdata.") {
         auto arg = NativeFunctionStorage::sync([](SyncFrameContext&) {});
-        REQUIRE(arg.type() == NativeFunctionType::Sync);
+
+        // Now implemented in terms of resumable functions
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
     }
 
     SECTION("Static stateless") {
         auto arg = NativeFunctionStorage::static_sync<sync_dummy>();
-        REQUIRE(arg.type() == NativeFunctionType::Sync);
+
+        // Now implemented in terms of resumable functions
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
     }
 
     SECTION("With some user data") {
@@ -69,7 +73,9 @@ TEST_CASE("Native function arg should wrap sync functions", "[native_functions]"
         } capture{};
 
         auto arg = NativeFunctionStorage::sync([capture](SyncFrameContext&) { (void) capture; });
-        REQUIRE(arg.type() == NativeFunctionType::Sync);
+
+        // Now implemented in terms of resumable functions
+        REQUIRE(arg.type() == NativeFunctionType::Resumable);
     }
 }
 

@@ -3,7 +3,6 @@
 
 #include "common/error.hpp"
 #include "vm/object_support/layout.hpp"
-#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/string.hpp"
 #include "vm/objects/value.hpp"
 

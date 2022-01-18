@@ -8,6 +8,7 @@
 #include "vm/handles/handle.hpp"
 #include "vm/handles/span.hpp"
 #include "vm/object_support/layout.hpp"
+#include "vm/objects/exception.hpp"
 #include "vm/objects/tuple.hpp"
 #include "vm/objects/value.hpp"
 
@@ -26,52 +27,6 @@ enum class NativeFunctionType {
 };
 
 std::string_view to_string(NativeFunctionType type);
-
-class SyncFrameContext final {
-public:
-    explicit SyncFrameContext(Context& ctx, Handle<Coroutine> coro, NotNull<SyncFrame*> frame,
-        OutHandle<Value> return_value);
-
-    SyncFrameContext(const SyncFrameContext&) = delete;
-    SyncFrameContext& operator=(const SyncFrameContext&) = delete;
-
-    Context& ctx() const { return ctx_; }
-    Handle<Coroutine> coro() const;
-
-    Value closure() const;
-
-    size_t arg_count() const;
-    Handle<Value> arg(size_t index) const;
-    HandleSpan<Value> args() const;
-
-    /// Sets the return slot of this function frame to the value `r`.
-    /// The value will be returned to the caller of this function once it returns.
-    void return_value(Value r);
-
-    /// Sets the panic slot of this function frame to the value `ex`.
-    /// Once the native function returns, the value will be thrown and stack unwinding will take place.
-    void panic(Exception ex);
-
-    /// Panics or returns a value, depending on the fallible's state.
-    template<typename T>
-    void return_or_panic(Fallible<T> fallible) {
-        if (fallible.has_exception()) {
-            panic(std::move(fallible).exception());
-        } else {
-            if constexpr (std::is_same_v<T, void>) {
-                return_value(Value::null());
-            } else {
-                return_value(std::move(fallible).value());
-            }
-        }
-    }
-
-private:
-    Context& ctx_;
-    Handle<Coroutine> coro_;
-    NotNull<SyncFrame*> frame_;
-    OutHandle<Value> return_value_;
-};
 
 class AsyncFrameContext final {
 public:
@@ -128,6 +83,12 @@ private:
 
 class ResumableFrameContext final {
 public:
+    enum WellKnownState {
+        START = 0,
+        END = -1,
+        CLEANUP = -2,
+    };
+
     explicit ResumableFrameContext(
         Context& ctx, Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
 
@@ -135,6 +96,7 @@ public:
     ResumableFrameContext& operator=(ResumableFrameContext&&) = delete;
 
     Context& ctx() const { return ctx_; }
+    Handle<Coroutine> coro() const;
     Value closure() const;
 
     size_t arg_count() const;
@@ -207,6 +169,40 @@ private:
     ResumableFrame* frame_ = nullptr;
 };
 
+class SyncFrameContext final {
+public:
+    explicit SyncFrameContext(ResumableFrameContext& parent)
+        : parent_(parent) {}
+
+    SyncFrameContext(const SyncFrameContext&) = delete;
+    SyncFrameContext& operator=(const SyncFrameContext&) = delete;
+
+    Context& ctx() const { return parent_.ctx(); }
+    Handle<Coroutine> coro() const { return parent_.coro(); }
+    Value closure() const { return parent_.closure(); }
+
+    size_t arg_count() const { return parent_.arg_count(); }
+    Handle<Value> arg(size_t index) const { return parent_.arg(index); }
+    HandleSpan<Value> args() const { return parent_.args(); }
+
+    /// Sets the return slot of this function frame to the value `r`.
+    /// The value will be returned to the caller of this function once it returns.
+    void return_value(Value r) { parent_.return_value(r); }
+
+    /// Sets the panic slot of this function frame to the value `ex`.
+    /// Once the native function returns, the value will be thrown and stack unwinding will take place.
+    void panic(Exception ex) { return parent_.panic(ex); }
+
+    /// Panics or returns a value, depending on the fallible's state.
+    template<typename T>
+    void return_or_panic(Fallible<T> fallible) {
+        parent_.return_or_panic(fallible);
+    }
+
+private:
+    ResumableFrameContext& parent_;
+};
+
 class NativeFunctionStorage final {
 private:
     static constexpr size_t buffer_size = 2 * sizeof(void*); // Adjust as necessary
@@ -275,14 +271,6 @@ public:
     /// different calling conventions (e.g. sync vs async) and different arguments.
     constexpr NativeFunctionType type() const { return type_; }
 
-    /// Invokes this function as a synchronous function.
-    /// \pre `type() == NativeFunctionType::Sync`.
-    void invoke_sync(SyncFrameContext& frame) {
-        TIRO_DEBUG_ASSERT(
-            type() == NativeFunctionType::Sync, "cannot call this function as a sync function");
-        return invoke_sync_(frame, buffer_);
-    }
-
     /// Invokes this function as an asynchronous function.
     /// \pre `type() == NativeFunctionType::Async`.
     void invoke_async(AsyncFrameContext frame) {
@@ -296,6 +284,7 @@ public:
     void invoke_resumable(ResumableFrameContext& frame) {
         TIRO_DEBUG_ASSERT(type() == NativeFunctionType::Resumable,
             "cannot call this function as a resumable function");
+
         return invoke_resumable_(frame, buffer_);
     }
 
@@ -305,8 +294,8 @@ private:
         using Func = remove_cvref_t<SyncFunction>;
         check_function_properties<Func>();
 
-        type_ = NativeFunctionType::Sync;
-        invoke_sync_ = invoke_sync_impl<Func>;
+        type_ = NativeFunctionType::Resumable;
+        invoke_resumable_ = invoke_sync_impl<Func>;
         new (&buffer_) Func(std::forward<SyncFunction>(func));
     }
 
@@ -332,8 +321,8 @@ private:
 
     template<auto Function>
     constexpr NativeFunctionStorage(ConstexprConstructorTag<NativeFunctionType::Sync, Function>)
-        : type_(NativeFunctionType::Sync)
-        , invoke_sync_(invoke_static_sync_impl<Function>)
+        : type_(NativeFunctionType::Resumable)
+        , invoke_resumable_(invoke_static_sync_impl<Function>)
         , buffer_() {}
 
     template<auto Function>
@@ -361,9 +350,9 @@ private:
     }
 
     template<typename Func>
-    static void invoke_sync_impl(SyncFrameContext& frame, void* buffer) {
+    static void invoke_sync_impl(ResumableFrameContext& frame, void* buffer) {
         Func* func = static_cast<Func*>(buffer);
-        (*func)(frame);
+        translate_to_sync(frame, [&](SyncFrameContext& sync) { (*func)(sync); });
     }
 
     template<typename Func>
@@ -379,8 +368,8 @@ private:
     }
 
     template<auto Func>
-    static void invoke_static_sync_impl(SyncFrameContext& frame, void*) {
-        Func(frame);
+    static void invoke_static_sync_impl(ResumableFrameContext& frame, void*) {
+        translate_to_sync(frame, [](SyncFrameContext& sync) { Func(sync); });
     }
 
     template<auto Func>
@@ -393,11 +382,26 @@ private:
         Func(frame);
     }
 
+    template<typename SyncFunc>
+    static void translate_to_sync(ResumableFrameContext& frame, SyncFunc&& func) {
+        // TODO: Opt out of cleanup via flags to get rid of cleanup state handling?
+        TIRO_DEBUG_ASSERT(frame.state() == ResumableFrameContext::START
+                              || frame.state() == ResumableFrameContext::CLEANUP,
+            "unexpected frame state when invoking a sync function");
+
+        if (frame.state() != ResumableFrameContext::START)
+            return; // Prevent cleanup call
+
+        SyncFrameContext sync(frame);
+        func(sync);
+        if (frame.state() != ResumableFrameContext::END)
+            frame.return_value(Value::null());
+    }
+
 private:
     NativeFunctionType type_;
     union {
         void (*invalid_)(); // needed for constexpr default constructor
-        void (*invoke_sync_)(SyncFrameContext& frame, void* buffer);
         void (*invoke_async_)(AsyncFrameContext frame, void* buffer);
         void (*invoke_resumable_)(ResumableFrameContext& frame, void* buffer);
     };

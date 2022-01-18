@@ -91,7 +91,6 @@ using NativeResumableFunctionPtr = void (*)(ResumableFrameContext&);
 
 struct CoroutineFrame;
 struct CodeFrame;
-struct SyncFrame;
 struct AsyncFrame;
 struct ResumableFrame;
 

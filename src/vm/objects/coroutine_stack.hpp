@@ -14,9 +14,8 @@ namespace tiro::vm {
 enum class FrameType : u8 {
     Code = 0,
     Async = 1,
-    Sync = 2,
-    Resumable = 3,
-    Catch = 4,
+    Resumable = 2,
+    Catch = 3,
 };
 
 std::string_view to_string(FrameType type);
@@ -140,24 +139,6 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
     }
 };
 
-/// Represents a call to a blocking native function.
-struct alignas(Value) SyncFrame : CoroutineFrame {
-    NativeFunction func;
-
-    SyncFrame(NativeFunction func_, const CoroutineFrameParams& params)
-        : CoroutineFrame(FrameType::Sync, params)
-        , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Sync,
-            "unexpected function type (should be sync)");
-    }
-
-    template<typename Tracer>
-    void trace(Tracer&& t) {
-        CoroutineFrame::trace(t);
-        t(func);
-    }
-};
-
 /// Represents a native function call that can suspend exactly once.
 ///
 /// Coroutine execution is stopped (the state changes to CoroutineState::Waiting) after
@@ -202,14 +183,15 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
 ///     START -> [any number of user transitions...] -> END -> CLEANUP
 ///
 /// TODO: More elegant way to cleanup resources other than an extra state?
+/// TODO: Unify with async frame
 ///
 /// Note: resumable frames currently use 0 or 1 temp value on the stack (not counting locals and arguments)
 /// to implement the return value of invoked functions.
 struct alignas(Value) ResumableFrame : CoroutineFrame {
     enum WellKnownState {
-        START = 0,
-        END = -1,
-        CLEANUP = -2,
+        START = ResumableFrameContext::START,
+        END = ResumableFrameContext::END,
+        CLEANUP = ResumableFrameContext::CLEANUP,
     };
 
     // The native function. Must be of type 'resumable'.
@@ -234,8 +216,9 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
     ResumableFrame(NativeFunction func_, const CoroutineFrameParams& params)
         : CoroutineFrame(FrameType::Resumable, params)
         , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Resumable,
-            "unexpected function type (should be resumable)");
+        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Resumable
+                              || func.function().type() == NativeFunctionType::Sync,
+            "unexpected function type (should be resumable or sync)");
     }
 
     template<typename Tracer>
@@ -356,10 +339,6 @@ public:
     /// There must be enough arguments already on the stack to satisfy the function template.
     bool push_user_frame(CodeFunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
 
-    /// Pushes a new call frame for the given sync function on the stack.
-    /// There must be enough arguments on the stack to satisfy the given function.
-    bool push_sync_frame(NativeFunction func, u32 argc, u8 flags);
-
     /// Pushes a new call frame for the given async function on the stack.
     /// There must be enough arguments on the stack to satisfy the given async function.
     bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
@@ -445,7 +424,6 @@ case FrameType::Tag:                     \
     break;
 
                 TIRO_TRACE(Code, CodeFrame)
-                TIRO_TRACE(Sync, SyncFrame)
                 TIRO_TRACE(Async, AsyncFrame)
                 TIRO_TRACE(Resumable, ResumableFrame)
                 TIRO_TRACE(Catch, CatchFrame)

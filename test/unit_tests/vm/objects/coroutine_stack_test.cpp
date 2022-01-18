@@ -9,11 +9,9 @@ namespace tiro::vm::test {
 static_assert(std::is_trivially_copyable_v<Value>);
 static_assert(std::is_trivially_destructible_v<Value>);
 
-static_assert(std::is_trivially_copyable_v<SyncFrame>);
 static_assert(std::is_trivially_copyable_v<CodeFrame>);
 static_assert(std::is_trivially_copyable_v<CatchFrame>);
 static_assert(std::is_trivially_copyable_v<ResumableFrame>);
-static_assert(std::is_trivially_destructible_v<SyncFrame>);
 static_assert(std::is_trivially_destructible_v<CodeFrame>);
 static_assert(std::is_trivially_destructible_v<CatchFrame>);
 static_assert(std::is_trivially_destructible_v<ResumableFrame>);
@@ -21,7 +19,6 @@ static_assert(std::is_trivially_destructible_v<ResumableFrame>);
 // Alignment of Frame could be higher than value, then we would have to pad.
 // It must not be lower.
 static_assert(alignof(CoroutineFrame) == alignof(Value));
-static_assert(alignof(SyncFrame) == alignof(Value));
 static_assert(alignof(CodeFrame) == alignof(Value));
 static_assert(alignof(CatchFrame) == alignof(Value));
 static_assert(alignof(ResumableFrame) == alignof(Value));
@@ -45,12 +42,6 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine-stack]")
     REQUIRE(sizeof(CodeFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
 
-    Local sync_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](SyncFrameContext&) {})));
-    SyncFrame sync_frame(*sync_func, CoroutineFrameParams{});
-    REQUIRE(sizeof(SyncFrame) % sizeof(Value) == 0);
-    REQUIRE(base_class_offset(&sync_frame) == 0);
-
     Local async_func = sc.local(NativeFunction::make(
         ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
     AsyncFrame async_frame(*async_func, CoroutineFrameParams{});
@@ -73,8 +64,8 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
 
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local sync_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::sync([](SyncFrameContext&) {})));
+    Local async_func = sc.local(NativeFunction::make(
+        ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
 
     alignas(Value) byte stack[1 << 10];
     byte* end = stack + (1 << 10);
@@ -89,8 +80,8 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
     };
 
     // Caller frame on top
-    SyncFrame* caller = new (alloc(sizeof(SyncFrame)))
-        SyncFrame(*sync_func, CoroutineFrameParams());
+    AsyncFrame* caller = new (alloc(sizeof(AsyncFrame)))
+        AsyncFrame(*async_func, CoroutineFrameParams());
     REQUIRE(caller->caller_offset == 0);
     REQUIRE(caller->caller() == nullptr);
 
@@ -100,9 +91,9 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
     // Callee frame after gap
     CoroutineFrameParams callee_params;
     callee_params.caller = caller;
-    SyncFrame* callee = new (alloc(sizeof(SyncFrame))) SyncFrame(*sync_func, callee_params);
+    AsyncFrame* callee = new (alloc(sizeof(AsyncFrame))) AsyncFrame(*async_func, callee_params);
 
-    REQUIRE(callee->caller_offset == sizeof(SyncFrame) + sizeof(Value));
+    REQUIRE(callee->caller_offset == sizeof(AsyncFrame) + sizeof(Value));
     REQUIRE(callee->caller() == caller);
 };
 

@@ -3,6 +3,7 @@
 #include "vm/error_utils.hpp"
 #include "vm/handles/scope.hpp"
 #include "vm/object_support/factory.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/array.hpp"
 
 namespace tiro::vm {

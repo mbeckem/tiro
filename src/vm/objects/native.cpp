@@ -55,48 +55,6 @@ NativeFunctionStorage NativeFunction::function() {
     return layout()->static_payload()->function;
 }
 
-SyncFrameContext::SyncFrameContext(
-    Context& ctx, Handle<Coroutine> coro, NotNull<SyncFrame*> frame, OutHandle<Value> return_value)
-    : ctx_(ctx)
-    , coro_(coro)
-    , frame_(frame)
-    , return_value_(return_value) {
-    TIRO_DEBUG_ASSERT(
-        frame == coro->stack().value().top_frame(), "function frame must be on top the of stack");
-}
-
-Handle<Coroutine> SyncFrameContext::coro() const {
-    return coro_;
-}
-
-Value SyncFrameContext::closure() const {
-    return frame_->func.closure();
-}
-
-size_t SyncFrameContext::arg_count() const {
-    return frame_->argc;
-}
-
-Handle<Value> SyncFrameContext::arg(size_t index) const {
-    TIRO_CHECK(index < arg_count(), "argument index {} is out of bounds for argument count {}",
-        index, arg_count());
-    return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame_, index));
-}
-
-HandleSpan<Value> SyncFrameContext::args() const {
-    return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame_));
-}
-
-void SyncFrameContext::return_value(Value r) {
-    return_value_.set(r);
-    frame_->flags &= ~FRAME_UNWINDING;
-}
-
-void SyncFrameContext::panic(Exception ex) {
-    return_value_.set(ex);
-    frame_->flags |= FRAME_UNWINDING;
-}
-
 AsyncFrameContext::AsyncFrameContext(
     Context& ctx, Handle<Coroutine> coro, NotNull<AsyncFrame*> frame)
     : ctx_(ctx)
@@ -189,6 +147,10 @@ ResumableFrameContext::ResumableFrameContext(
     , frame_(frame) {
     TIRO_DEBUG_ASSERT(
         frame_ == coro->stack().value().top_frame(), "function frame must be on top the of stack");
+}
+
+Handle<Coroutine> ResumableFrameContext::coro() const {
+    return coro_;
 }
 
 Value ResumableFrameContext::closure() const {
