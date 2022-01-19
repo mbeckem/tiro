@@ -193,10 +193,12 @@ int ResumableFrameContext::state() const {
 }
 
 void ResumableFrameContext::set_state(int state) {
+    TIRO_DEBUG_ASSERT(state != CLEANUP, "reserved cleanup state value must not be used");
     frame()->state = state;
 }
 
 void ResumableFrameContext::invoke(int next_state, Value func, Nullable<Tuple> arguments) {
+    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot invoke another function during cleanup");
     cont_.action = ResumableFrameContinuation::INVOKE;
     cont_.value.set(func);
     cont_.invoke_arguments.set(arguments);
@@ -215,12 +217,14 @@ Value ResumableFrameContext::invoke_return() {
 }
 
 void ResumableFrameContext::return_value(Value r) {
+    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot return a value during cleanup");
     cont_.action = ResumableFrameContinuation::RETURN;
     cont_.value.set(r);
     set_state(ResumableFrame::END);
 }
 
 void ResumableFrameContext::panic(Exception ex) {
+    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot return a value during cleanup");
     cont_.action = ResumableFrameContinuation::PANIC;
     cont_.value.set(ex);
     set_state(ResumableFrame::END);

@@ -148,6 +148,140 @@ tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_e
 TIRO_API void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_function_t func,
     size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
 
+/**
+ * The prototype of a native function that implements a resumable function.
+ * Resumable functions are the most versatile and most complex kind of functions in the native API.
+ * They may return or yield any number of times and may also call other tiro functions.
+ * Because of the cooperative nature of coroutines in tiro, they must be implemented as state machines.
+ *
+ * When a resumable function is invoked by the vm, a new call frame is created
+ * on the active coroutine's stack. This frame stores the function call's state (initially `TIRO_RESUMABLE_START`).
+ * The vm will continue to call the native function until it reaches the `TIRO_RESUMABLE_END` state either by
+ * performing a final return or by panicking.
+ * Until then, the function may manipulate its own state or invoke other functions by calling the frame's associated functions.
+ *
+ * When a resumable function has either returned or panicked, the native function will be called
+ * one last time with a special `TIRO_RESUMABLE_CLEANUP` state that allows it to release any acquired resources.
+ *
+ * \param vm
+ *  The virtual machine the function is executing on.
+ * \param frame
+ *  The function call frame. Use associated functions to manipulate the frame's state, to access
+ *  function call arguments, etc.
+ *
+ * TODO: yield?
+ */
+typedef void (*tiro_resumable_function_t)(tiro_vm_t vm, tiro_resumable_frame_t frame);
+
+/**
+ * Lists well known state values used by resumable functions.
+ */
+typedef enum tiro_resumable_state {
+    /** The initial state value. */
+    TIRO_RESUMABLE_START = 0,
+
+    /** Signals that the function has finished executing. */
+    TIRO_RESUMABLE_END = -1,
+
+    /**
+     * Special state value used during cleanup.
+     * Must not be used as a target state.
+     *
+     * Resumable functions are currently limited in what they can do during cleanup.
+     * The frame's state may no longer be altered, and the function may neither
+     * may not perform (another) final return, panic, yield or call to another function.
+     */
+    TIRO_RESUMABLE_CLEANUP = -2,
+} tiro_resumable_state_t;
+
+/**
+ * Returns the current state of the given frame.
+ * Returns 0 for invalid input arguments.
+ */
+TIRO_API int tiro_resumable_frame_state(tiro_resumable_frame_t frame);
+
+/**
+ * Sets the current state of the given frame.
+ * It is usually not necessary to invoke this function directly as changing the state
+ * is also implied by other functions like `tiro_resumable_frame_invoke` and `tiro_resumable_frame_return_value`.
+ *
+ * The calling native function should return after altering the state.
+ * The new state will be reflected when the native function is called for the next time.
+ *
+ * Note that a few states have special meaning (see `tiro_resumable_state_t`).
+ *
+ * \param frame The resumable call frame
+ * \param next_state The new state value
+ */
+void TIRO_API tiro_resumable_frame_set_state(
+    tiro_resumable_frame_t frame, int next_state, tiro_error_t* err);
+
+/**
+ * Returns the number of function call arguments present in the given frame.
+ * Returns 0 for invalid input arguments.
+ */
+TIRO_API size_t tiro_resumable_frame_argc(tiro_resumable_frame_t frame);
+
+/**
+ * Stores the function call argument with the given `index` into `result`.
+ * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the argument index is invalid.
+ */
+TIRO_API void tiro_resumable_frame_arg(
+    tiro_resumable_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err);
+
+/** Returns the closure value which was specified when the function was created. */
+TIRO_API void
+tiro_resumable_frame_closure(tiro_resumable_frame_t frame, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Signals the vm that the function `func` shall be invoked with the given arguments in `args`.
+ * `func` will be invoked after the native function returned to the vm.
+ * The native function will be called again when `func` has itself returned, and its return value
+ * will be accessible via `tiro_resumable_frame_invoke_return`.
+ *
+ * Calling this function implies a state change to `next_state`, which will be the frame's state
+ * when the native function is called again after `func`'s execution.
+ *
+ * NOTE: it is current not possible to handle a panic thrown by `func`.
+ * However, cleanup is possible using the `CLEANUP` state.
+ *
+ * \param frame The resumable call frame
+ * \param next_state The new state value
+ * \param func Must refer to a valid function
+ * \param args
+ *  Must be either `NULL` (no arguments), refer to a null value (same) or
+ *  a valid tuple (the function call arguments).
+ */
+TIRO_API void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next_state,
+    tiro_handle_t func, tiro_handle_t args, tiro_error_t* err);
+
+/**
+ * Stores the result of the last function call made via `tiro_resumable_frame_invoke`.
+ * Only returns a useful value when the native function is called again for the first time
+ * after calling `tiro_resumable_frame_invoke` and returning to the vm.
+ *
+ * \param frame The resumable call frame
+ * \param result Will be set to the function's return value.
+ */
+TIRO_API void tiro_resumable_frame_invoke_return(
+    tiro_resumable_frame_t frame, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Sets the return value for the given function call frame to the given `value`.
+ * The call frame's state is also set to `END` as a result of this call.
+ */
+TIRO_API void tiro_resumable_frame_return_value(
+    tiro_resumable_frame_t frame, tiro_handle_t value, tiro_error_t* err);
+
+/**
+ * Signals a panic from the given function call frame.
+ * The call frame's state is also set to `END` as a result of this call.
+ *
+ * TODO: Allow user defined exception objects instead of plain string?
+ */
+TIRO_API void tiro_resumable_frame_panic_msg(
+    tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err);
+
 #ifdef __cplusplus
 }
 #endif

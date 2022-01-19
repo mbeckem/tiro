@@ -167,7 +167,6 @@ inline tiro::vm::SyncFrameContext* to_internal(tiro_sync_frame_t frame) {
 
 // Never actually defined. Async frames have public type `tiro_async_frame` but will be
 // cast to their real type, which is `vm::AsyncFrameContext`.
-// This is fine in this case because the lifetime is stack based for sync function calls.
 struct tiro_async_frame;
 
 inline tiro_async_frame_t to_external(tiro::vm::AsyncFrameContext* frame) {
@@ -176,6 +175,18 @@ inline tiro_async_frame_t to_external(tiro::vm::AsyncFrameContext* frame) {
 
 inline tiro::vm::AsyncFrameContext* to_internal(tiro_async_frame_t frame) {
     return reinterpret_cast<tiro::vm::AsyncFrameContext*>(frame);
+}
+
+// Never actually defined. Resumable frames have public type `tiro_resumable_frame` but will be
+// cast to their real type, which is `vm::ResumableFrameContext`.
+struct tiro_resumable_frame;
+
+inline tiro_resumable_frame_t to_external(tiro::vm::ResumableFrameContext* frame) {
+    return reinterpret_cast<tiro_resumable_frame_t>(frame);
+}
+
+inline tiro::vm::ResumableFrameContext* to_internal(tiro_resumable_frame_t frame) {
+    return reinterpret_cast<tiro::vm::ResumableFrameContext*>(frame);
 }
 
 struct tiro_compiler {
