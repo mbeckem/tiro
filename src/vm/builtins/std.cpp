@@ -105,15 +105,6 @@ static void std_new_buffer(SyncFrameContext& frame) {
     frame.return_value(Buffer::make(ctx, *size, 0));
 }
 
-// TODO: Temporary API because we don't have syntax support for records yet.
-static void std_new_record(SyncFrameContext& frame) {
-    Context& ctx = frame.ctx();
-    auto maybe_array = frame.arg(0).try_cast<Array>();
-    if (!maybe_array)
-        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "new_record: argument must be a an array"));
-    frame.return_value(Record::make(ctx, maybe_array.handle()));
-}
-
 static void std_new_success(SyncFrameContext& frame) {
     frame.return_value(Result::make_success(frame.ctx(), frame.arg(0)));
 }
@@ -362,7 +353,6 @@ static const FunctionDesc functions[] = {
     FunctionDesc::plain(
         "new_string_builder"sv, 0, NativeFunctionStorage::static_sync<std_new_string_builder>()),
     FunctionDesc::plain("new_buffer"sv, 1, NativeFunctionStorage::static_sync<std_new_buffer>()),
-    FunctionDesc::plain("new_record"sv, 1, NativeFunctionStorage::static_sync<std_new_record>()),
 };
 
 Module create_std_module(Context& ctx) {

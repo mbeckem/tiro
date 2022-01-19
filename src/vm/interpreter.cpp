@@ -543,7 +543,6 @@ void BytecodeInterpreter::run() {
             break;
         }
         case BytecodeOp::Map: {
-            // FIXME overflow protection
             const u32 count = read_u32();
             auto target = read_local();
 
@@ -1011,9 +1010,6 @@ void Interpreter::run_until_block(Handle<Coroutine> coro) {
 }
 
 void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<CodeFrame*> frame) {
-    // TODO: Investigate performance impact. The additional object exists for convenient
-    // invariant (a coroutine is present, as is a valid stack). We could cache that instance
-    // in a lazily initialized optional.
     TIRO_DEBUG_ASSERT(child_ == nullptr, "must not have an active bytecode interpreter");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "the coroutine must be marked as running");

@@ -25,9 +25,9 @@ inline constexpr size_t
 safe_array_size(size_t instance_size, size_t element_size, size_t element_count) {
     size_t total = element_size;
     if (!checked_mul(total, element_count))
-        throw std::bad_alloc(); // TODO use tiro::Error
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_ALLOC, "array size too large");
     if (!checked_add(total, instance_size))
-        throw std::bad_alloc(); // TODO use tiro::Error
+        TIRO_ERROR_WITH_CODE(TIRO_ERROR_ALLOC, "array size too large");
     return total;
 }
 
