@@ -1075,9 +1075,15 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
 
     ScopeExit reset_regs = [&] { regs_.reset(); };
 
+    ResumableFrameContinuation cont{
+        /* action */ ResumableFrameContinuation::NONE,
+        /* value */ reg<Value>(Value::null()),
+        /* invoke_arguments */ reg<Nullable<Tuple>>(Null()),
+    };
+
     // Resume the function by invoking its native function pointer once.
     {
-        ResumableFrameContext native_frame(ctx(), coro, frame);
+        ResumableFrameContext native_frame(ctx(), coro, frame, cont);
         frame->func.function().invoke_resumable(native_frame);
 
         // Running is the usual state. Ready for std.dispatch and Waiting for std.yield_coroutine.
@@ -1093,32 +1099,28 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
             stack.pop_values(n);
     }
 
-    // Return or panic from function.
-    if (frame->state == ResumableFrame::END) {
-        if (frame->flags & FRAME_UNWINDING) {
-            // Safety: stack of current coroutine (and thus this frame) is rooted and does not move.
-            auto ex = MutHandle<Value>::from_raw_slot(&frame->return_value_or_exception);
-            return unwind(coro, ex->must_cast<Exception>());
-        }
+    switch (cont.action) {
+    case ResumableFrameContinuation::NONE:
+        return;
 
-        auto ret = reg(frame->return_value_or_exception);
+    case ResumableFrameContinuation::RETURN: {
+        TIRO_DEBUG_ASSERT(frame->state == ResumableFrame::END, "must be in end state");
         cleanup_frame(coro, frame);
-        return return_function(coro, *ret);
+        return return_function(coro, *cont.value);
+    }
+
+    case ResumableFrameContinuation::PANIC: {
+        TIRO_DEBUG_ASSERT(frame->state == ResumableFrame::END, "must be in end state");
+        return unwind(coro, cont.value->must_cast<Exception>());
     }
 
     // Resumable function requested to call another function.
     // This calls the provided function and leaves the current resumable function's state on the stack until later.
-    if (frame->flags & FRAME_RESUMABLE_INVOKE) {
-        auto func = reg(frame->invoke_func);
-        auto args = reg(frame->invoke_arguments);
-
-        frame->invoke_func = {};
-        frame->invoke_arguments = {};
-        frame->flags &= ~FRAME_RESUMABLE_INVOKE;
-
+    case ResumableFrameContinuation::INVOKE: {
         // XXX: Invalidates pointer to frame as the stack may resize!
-        u32 argc = push_function_args(ctx(), coro, args);
-        return call_function(coro, func, argc);
+        u32 argc = push_function_args(ctx(), coro, cont.invoke_arguments);
+        return call_function(coro, cont.value, argc);
+    }
     }
 }
 
@@ -1156,9 +1158,18 @@ void Interpreter::cleanup_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*>
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Resumable, "expected a resumable frame");
     [[maybe_unused]] auto old_state = coro->state();
 
-    // TODO: Nested panics during cleanup
+    Scope sc(ctx());
+    Local value = sc.local();
+    Local arguments = sc.local<Nullable<Tuple>>();
+    ResumableFrameContinuation cont{
+        /* action */ ResumableFrameContinuation::NONE,
+        /* value */ value.mut(),
+        /* invoke_arguments */ arguments.mut(),
+    };
+
+    // TODO: Nested panics during cleanup (action is ignored)
     frame->state = ResumableFrame::CLEANUP;
-    ResumableFrameContext native_frame(ctx(), coro, frame);
+    ResumableFrameContext native_frame(ctx(), coro, frame, cont);
     frame->func.function().invoke_resumable(native_frame);
     TIRO_DEBUG_ASSERT(coro->state() == old_state, "illegal modification of the coroutine's state");
 }

@@ -140,13 +140,16 @@ NotNull<AsyncFrame*> AsyncFrameContext::frame() const {
     return TIRO_NN(frame_);
 }
 
-ResumableFrameContext::ResumableFrameContext(
-    Context& ctx, Handle<Coroutine> coro, NotNull<ResumableFrame*> frame)
+ResumableFrameContext::ResumableFrameContext(Context& ctx, Handle<Coroutine> coro,
+    NotNull<ResumableFrame*> frame, ResumableFrameContinuation& cont)
     : ctx_(ctx)
     , coro_(coro)
-    , frame_(frame) {
+    , frame_(frame)
+    , cont_(cont) {
     TIRO_DEBUG_ASSERT(
         frame_ == coro->stack().value().top_frame(), "function frame must be on top the of stack");
+    TIRO_DEBUG_ASSERT(cont_.action == ResumableFrameContinuation::NONE,
+        "resumable frame continuation was initialized incorrectly");
 }
 
 Handle<Coroutine> ResumableFrameContext::coro() const {
@@ -194,10 +197,9 @@ void ResumableFrameContext::set_state(int state) {
 }
 
 void ResumableFrameContext::invoke(int next_state, Value func, Nullable<Tuple> arguments) {
-    auto rf = frame();
-    rf->invoke_func = func;
-    rf->invoke_arguments = arguments;
-    rf->flags |= FRAME_RESUMABLE_INVOKE;
+    cont_.action = ResumableFrameContinuation::INVOKE;
+    cont_.value.set(func);
+    cont_.invoke_arguments.set(arguments);
     set_state(next_state);
 }
 
@@ -213,16 +215,14 @@ Value ResumableFrameContext::invoke_return() {
 }
 
 void ResumableFrameContext::return_value(Value r) {
-    auto rf = frame();
-    rf->return_value_or_exception = r;
-    rf->flags &= ~FRAME_UNWINDING;
+    cont_.action = ResumableFrameContinuation::RETURN;
+    cont_.value.set(r);
     set_state(ResumableFrame::END);
 }
 
 void ResumableFrameContext::panic(Exception ex) {
-    auto rf = frame();
-    rf->return_value_or_exception = ex;
-    rf->flags |= FRAME_UNWINDING;
+    cont_.action = ResumableFrameContinuation::PANIC;
+    cont_.value.set(ex);
     set_state(ResumableFrame::END);
 }
 

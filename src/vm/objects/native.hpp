@@ -81,6 +81,31 @@ private:
     AsyncFrame* frame_ = nullptr;    // Reset to null if already resumed!
 };
 
+struct ResumableFrameContinuation {
+    enum Action {
+        NONE,   // No action
+        RETURN, // Final return from resumable function
+        PANIC,  // Panic from resumable function
+        INVOKE, // Invoke another function
+    };
+
+    // The continuation action to perform after the native function returned.
+    Action action = NONE;
+
+    // Action
+    // - None: ignored
+    // - Return: return value
+    // - Panic: exception
+    // - Invoke: function to invoke
+    MutHandle<Value> value;
+
+    // Only if action is invoke: function arguments
+    MutHandle<Nullable<Tuple>> invoke_arguments;
+
+    ResumableFrameContinuation(const ResumableFrameContinuation&) = delete;
+    ResumableFrameContinuation& operator=(const ResumableFrameContinuation&) = delete;
+};
+
 class ResumableFrameContext final {
 public:
     enum WellKnownState {
@@ -89,8 +114,8 @@ public:
         CLEANUP = -2,
     };
 
-    explicit ResumableFrameContext(
-        Context& ctx, Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
+    explicit ResumableFrameContext(Context& ctx, Handle<Coroutine> coro,
+        NotNull<ResumableFrame*> frame, ResumableFrameContinuation& cont);
 
     ResumableFrameContext(ResumableFrameContext&&) = delete;
     ResumableFrameContext& operator=(ResumableFrameContext&&) = delete;
@@ -167,6 +192,7 @@ private:
     Context& ctx_;
     Handle<Coroutine> coro_;
     ResumableFrame* frame_ = nullptr;
+    ResumableFrameContinuation& cont_;
 };
 
 class SyncFrameContext final {

@@ -32,7 +32,7 @@ enum FrameFlags : u8 {
     /// Indicates that the function is currently unwinding, i.e. an exception is in flight.
     /// NOTE:
     ///     - code frame: when the bit is set, `current_exception` will contain the in-flight exception value.
-    ///     - native frames: signals that the value must be thrown
+    ///     - async native frames: signals that the value must be thrown
     ///     - catch frame: exception was caught and stored in `exception`.
     FRAME_UNWINDING = 1 << 1,
 
@@ -45,9 +45,6 @@ enum FrameFlags : u8 {
 
     /// Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
     FRAME_ASYNC_RESUMED = 1 << 3,
-
-    /// Signals that the resumable function requests to invoke another function.
-    FRAME_RESUMABLE_INVOKE = 1 << 2,
 };
 
 /// Common constructor parameters for coroutine frames.
@@ -199,19 +196,6 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
     // The native function. Must be of type 'resumable'.
     NativeFunction func;
 
-    // Either null (function not done yet), the function's return value or an exception (panic).
-    // The meaning of this value depends on the frame's flags.
-    // TODO: can be optimized away because it does not need to persist between calls.
-    Value return_value_or_exception = Value::null();
-
-    // Function to be invoked next or null.
-    // TODO: can be optimized away because it does not need to persist between calls.
-    Value invoke_func = Value::null();
-
-    // Function arguments for invoke_func, or null.
-    // TODO: can be optimized away because it does not need to persist between calls.
-    Nullable<Tuple> invoke_arguments;
-
     // The current state of this function call.
     int state = START;
 
@@ -227,9 +211,6 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
     void trace(Tracer&& t) {
         CoroutineFrame::trace(t);
         t(func);
-        t(return_value_or_exception);
-        t(invoke_func);
-        t(invoke_arguments);
     }
 };
 
