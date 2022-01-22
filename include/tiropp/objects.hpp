@@ -73,6 +73,47 @@ enum class value_kind : int {
     invalid = TIRO_KIND_INVALID,
 };
 
+namespace detail {
+
+template<typename T>
+struct type_to_value_kind;
+
+#define TIRO_MAP_TYPE(Type)                                  \
+    template<>                                               \
+    struct type_to_value_kind<Type> {                        \
+        static constexpr value_kind kind = value_kind::Type; \
+    };
+
+TIRO_MAP_TYPE(null);
+TIRO_MAP_TYPE(boolean);
+TIRO_MAP_TYPE(integer);
+TIRO_MAP_TYPE(float_);
+TIRO_MAP_TYPE(string);
+TIRO_MAP_TYPE(function);
+TIRO_MAP_TYPE(tuple);
+TIRO_MAP_TYPE(record);
+TIRO_MAP_TYPE(array);
+TIRO_MAP_TYPE(result);
+TIRO_MAP_TYPE(exception);
+TIRO_MAP_TYPE(coroutine);
+TIRO_MAP_TYPE(module);
+TIRO_MAP_TYPE(native);
+TIRO_MAP_TYPE(type);
+
+#undef TIRO_MAP_TYPE
+
+template<typename T>
+constexpr value_kind kind_of() {
+    return type_to_value_kind<T>::kind;
+}
+
+template<typename T>
+constexpr value_kind kind_of(T*) {
+    return kind_of<T>();
+}
+
+} // namespace detail
+
 /// Returns the string representation of the given value kind.
 /// The returned string is allocated in static storage.
 inline const char* to_string(value_kind k) {
@@ -157,6 +198,17 @@ public:
     value_kind kind() const {
         detail::check_handles(raw_vm(), *this);
         return static_cast<value_kind>(tiro_value_kind(raw_vm(), raw_handle()));
+    }
+
+    /// Returns true if this value is of the target type.
+    template<typename T>
+    bool is() const {
+        static_assert(std::is_base_of_v<handle, T>, "target type must be derived from handle.");
+        if constexpr (std::is_same_v<T, handle>) {
+            return true;
+        } else {
+            return kind() == detail::kind_of<T>();
+        }
     }
 
     /// Converts this value to the target type.
@@ -267,7 +319,7 @@ inline bool same(vm& v, const handle& a, const handle& b) {
 class null final : public handle {
 public:
     explicit null(handle h)
-        : handle(check_kind, std::move(h), value_kind::null) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     null(const null&) = default;
     null(null&&) noexcept = default;
@@ -288,7 +340,7 @@ inline null make_null(vm& v) {
 class boolean final : public handle {
 public:
     explicit boolean(handle h)
-        : handle(check_kind, std::move(h), value_kind::boolean) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     boolean(const boolean&) = default;
     boolean(boolean&&) noexcept = default;
@@ -315,7 +367,7 @@ inline boolean make_boolean(vm& v, bool value) {
 class integer final : public handle {
 public:
     explicit integer(handle h)
-        : handle(check_kind, std::move(h), value_kind::integer) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     integer(const integer&) = default;
     integer(integer&&) noexcept = default;
@@ -342,7 +394,7 @@ inline integer make_integer(vm& v, int64_t value) {
 class float_ final : public handle {
 public:
     explicit float_(handle h)
-        : handle(check_kind, std::move(h), value_kind::float_) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     float_(const float_&) = default;
     float_(float_&&) noexcept = default;
@@ -369,7 +421,7 @@ inline float_ make_float(vm& v, double value) {
 class string final : public handle {
 public:
     explicit string(handle h)
-        : handle(check_kind, std::move(h), value_kind::string) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     string(const string&) = default;
     string(string&&) noexcept = default;
@@ -407,7 +459,7 @@ inline string make_string(vm& v, std::string_view value) {
 class function final : public handle {
 public:
     explicit function(handle h)
-        : handle(check_kind, std::move(h), value_kind::function) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     function(const function&) = default;
     function(function&&) noexcept = default;
@@ -420,7 +472,7 @@ public:
 class tuple final : public handle {
 public:
     explicit tuple(handle h)
-        : handle(check_kind, std::move(h), value_kind::tuple) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     tuple(const tuple&) = default;
     tuple(tuple&&) noexcept = default;
@@ -462,7 +514,7 @@ inline tuple make_tuple(vm& v, size_t size) {
 class record final : public handle {
 public:
     explicit record(handle h)
-        : handle(check_kind, std::move(h), value_kind::record) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     record(const record&) = default;
     record(record&&) noexcept = default;
@@ -498,7 +550,7 @@ inline record make_record(vm& v, const array& keys);
 class array final : public handle {
 public:
     explicit array(handle h)
-        : handle(check_kind, std::move(h), value_kind::array) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     array(const array&) = default;
     array(array&&) noexcept = default;
@@ -557,7 +609,7 @@ inline array make_array(vm& v, size_t initial_capacity = 0) {
 class result final : public handle {
 public:
     explicit result(handle h)
-        : handle(check_kind, std::move(h), value_kind::result) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     result(const result&) = default;
     result(result&&) noexcept = default;
@@ -614,7 +666,7 @@ inline result make_error(vm& v, const handle& err) {
 class exception final : public handle {
 public:
     explicit exception(handle h)
-        : handle(check_kind, std::move(h), value_kind::exception) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     exception(const exception&) = default;
     exception(exception&&) noexcept = default;
@@ -629,13 +681,22 @@ public:
         tiro_exception_message(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
         return string(std::move(result));
     }
+
+    /// The exception's stack trace.
+    /// Either `null` or a string value.
+    handle trace() const {
+        handle result(raw_vm());
+        detail::check_handles(raw_vm(), *this, result);
+        tiro_exception_trace(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
+        return result;
+    }
 };
 
 /// Refers to a coroutine.
 class coroutine final : public handle {
 public:
     explicit coroutine(handle h)
-        : handle(check_kind, std::move(h), value_kind::coroutine) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     coroutine(const coroutine&) = default;
     coroutine(coroutine&&) noexcept = default;
@@ -745,7 +806,7 @@ inline coroutine make_coroutine(vm& v, const function& func) {
 class module final : public handle {
 public:
     explicit module(handle h)
-        : handle(check_kind, std::move(h), value_kind::module) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     module(const module&) = default;
     module(module&&) noexcept = default;
@@ -785,7 +846,7 @@ inline module make_module(
 class native final : public handle {
 public:
     explicit native(handle h)
-        : handle(check_kind, std::move(h), value_kind::native) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     native(const native&) = default;
     native(native&&) noexcept = default;
@@ -829,7 +890,7 @@ public:
 class type final : public handle {
 public:
     explicit type(handle h)
-        : handle(check_kind, std::move(h), value_kind::type) {}
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
 
     type(const type&) = default;
     type(type&&) noexcept = default;

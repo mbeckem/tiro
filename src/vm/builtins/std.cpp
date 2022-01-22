@@ -171,7 +171,7 @@ static void std_panic(SyncFrameContext& frame) {
         message = sc.local(builder->to_string(ctx));
     }
 
-    frame.panic(Exception::make(ctx, message));
+    frame.panic(Exception::make(ctx, message, /* skip this frame */ 1));
 }
 
 static void std_to_utf8(SyncFrameContext& frame) {

@@ -5,6 +5,7 @@
 #include "vm/fwd.hpp"
 #include "vm/handles/handle.hpp"
 #include "vm/objects/coroutine.hpp"
+#include "vm/objects/nullable.hpp"
 #include "vm/objects/value.hpp"
 
 #include <array>
@@ -158,6 +159,9 @@ public:
     /// If the coroutine completed, the result can be obtained by calling coro->result().
     void run(Handle<Coroutine> coro);
 
+    /// Returns the currently running coroutine (or null).
+    Nullable<Coroutine> current_coroutine();
+
     template<typename Tracer>
     inline void trace(Tracer&& tracer);
 
@@ -264,6 +268,9 @@ private:
     // Enforce that no recursive calls to the interpreter can happen.
     bool running_ = false;
 
+    // References the coroutine that is currently running, or null.
+    Nullable<Coroutine> current_;
+
     // Lifeline for the garbage collector.
     BytecodeInterpreter* child_ = nullptr;
 
@@ -276,10 +283,9 @@ private:
 
 template<typename Tracer>
 void Interpreter::trace(Tracer&& tracer) {
-    if (child_) {
+    tracer(current_);
+    if (child_)
         child_->trace(tracer);
-    }
-
     regs_.trace(tracer);
 }
 

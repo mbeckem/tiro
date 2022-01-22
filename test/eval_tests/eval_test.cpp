@@ -7,10 +7,16 @@ namespace tiro::eval_tests {
 
 static const std::string_view test_module_name = "test";
 
+static vm_settings create_vm_settings(int flags) {
+    vm_settings settings;
+    settings.enable_panic_stack_traces = flags & eval_test::enable_panic_stack_traces;
+    return settings;
+}
+
 eval_test::eval_test(eval_spec spec, int flags)
     : spec_(std::move(spec))
     , flags_(flags)
-    , vm_()
+    , vm_(create_vm_settings(flags))
     , result_(compile_sources(spec_.sources, flags)) {
     vm_.load_std();
     vm_.load(result_.mod);
@@ -144,7 +150,10 @@ result eval_call::run() {
 
 handle eval_call::returns_value() {
     auto res = run();
-    REQUIRE(res.is_success());
+    if (!res.is_success()) {
+        auto ex = res.error().as<tiro::exception>();
+        FAIL("exception: " << ex.message().value());
+    }
     return res.value();
 }
 

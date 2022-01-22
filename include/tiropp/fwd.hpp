@@ -28,6 +28,8 @@ class function;
 class tuple;
 class record;
 class array;
+class result;
+class exception;
 class coroutine;
 class module;
 class native;

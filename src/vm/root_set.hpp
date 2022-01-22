@@ -8,6 +8,7 @@
 #include "vm/handles/scope.hpp"
 #include "vm/interpreter.hpp"
 #include "vm/modules/registry.hpp"
+#include "vm/objects/nullable.hpp"
 #include "vm/objects/value.hpp"
 #include "vm/type_system.hpp"
 

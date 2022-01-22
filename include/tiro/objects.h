@@ -270,11 +270,20 @@ tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_
 
 /**
  * Retrieves the message from the exception in `instance` and writes it into `result`.
- * When this call is successful, `result` will reference a string.
+ * If this call is successful, `result` will reference a string.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is no exception.
  */
 TIRO_API void tiro_exception_message(
     tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Retrieves the exception's call stack trace and writes it into `result`.
+ * If this call is successful, `result` will reference a string (if stack traces are enabled
+ * and one could be retrieved) or null otherwise.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is no exception.
+ */
+TIRO_API void
+tiro_exception_trace(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Constructs a new coroutine that will execute the given function.

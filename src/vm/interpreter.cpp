@@ -940,8 +940,12 @@ void Interpreter::run(Handle<Coroutine> coro) {
     TIRO_DEBUG_ASSERT(!running_, "the interpreter is already running");
 
     running_ = true;
-    ScopeExit reset_running = [&] { running_ = false; };
-    ScopeExit reset_regs = [&] { regs_.reset(); };
+    current_ = *coro;
+    ScopeExit reset_running = [&] {
+        running_ = false;
+        current_ = Null();
+        regs_.reset();
+    };
 
     TIRO_DEBUG_ASSERT(!coro->is_null(), "invalid coroutine");
     TIRO_DEBUG_ASSERT(!coro->stack().is_null(), "coroutine must have a valid stack");
@@ -957,6 +961,10 @@ void Interpreter::run(Handle<Coroutine> coro) {
         TIRO_DEBUG_ASSERT(!coro->result().is_null(), "completed coroutines must have a result");
         coro->stack(Nullable<CoroutineStack>());
     }
+}
+
+Nullable<Coroutine> Interpreter::current_coroutine() {
+    return current_;
 }
 
 void Interpreter::run_until_block(Handle<Coroutine> coro) {

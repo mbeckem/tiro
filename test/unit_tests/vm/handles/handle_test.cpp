@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 
 #include "vm/handles/handle.hpp"
+#include "vm/objects/nullable.hpp"
 #include "vm/objects/primitives.hpp"
 
 namespace tiro::vm::test {

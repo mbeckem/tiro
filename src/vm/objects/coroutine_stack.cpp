@@ -6,6 +6,34 @@
 
 namespace tiro::vm {
 
+namespace {
+
+// Safe frame handle that is not affected by heap moves.
+class FrameHandle final {
+public:
+    FrameHandle(Handle<CoroutineStack> stack, CoroutineFrame* frame)
+        : stack_(stack)
+        , offset_(stack_->frame_to_offset(frame)) {}
+
+    Handle<CoroutineStack> stack() const { return stack_; }
+
+    CoroutineFrame* get() const { return stack_->offset_to_frame(offset_); }
+    CoroutineFrame* operator->() const { return get(); }
+    CoroutineFrame& operator*() const {
+        auto f = get();
+        TIRO_DEBUG_ASSERT(f, "invalid frame");
+        return *f;
+    }
+
+    explicit operator bool() const { return get() != nullptr; }
+
+private:
+    Handle<CoroutineStack> stack_;
+    u32 offset_;
+};
+
+} // namespace
+
 std::string_view to_string(FrameType type) {
     switch (type) {
     case FrameType::Code:
@@ -187,6 +215,47 @@ u32 CoroutineStack::stack_used() {
 u32 CoroutineStack::stack_available() {
     Layout* data = layout();
     return static_cast<u32>(data->end - data->top);
+}
+
+void CoroutineStack::walk(
+    Context& ctx, Handle<CoroutineStack> stack, FunctionRef<void(Handle<String> name)> callback) {
+    Scope sc(ctx);
+    Local<String> name = sc.local<String>(defer_init);
+
+    FrameHandle frame(stack, stack->top_frame());
+    while (frame) {
+        switch (frame->type) {
+        case FrameType::Code:
+            name = static_cast<CodeFrame*>(frame.get())->tmpl.name();
+            break;
+        case FrameType::Resumable:
+            name = static_cast<ResumableFrame*>(frame.get())->func.name();
+            break;
+        case FrameType::Async:
+            name = static_cast<AsyncFrame*>(frame.get())->func.name();
+            break;
+        case FrameType::Catch:
+            name = ctx.get_interned_string("<catch panic>");
+            break;
+        }
+
+        callback(name);
+        frame = FrameHandle(stack, frame->caller());
+    }
+}
+
+u32 CoroutineStack::frame_to_offset(CoroutineFrame* frame) {
+    if (!frame)
+        return std::numeric_limits<u32>::max();
+
+    return static_cast<u32>(reinterpret_cast<byte*>(frame) - layout()->data);
+}
+
+CoroutineFrame* CoroutineStack::offset_to_frame(u32 offset) {
+    if (offset == std::numeric_limits<u32>::max())
+        return nullptr;
+
+    return reinterpret_cast<CoroutineFrame*>(layout()->data + offset);
 }
 
 Value* CoroutineStack::args_begin(NotNull<CoroutineFrame*> frame) {

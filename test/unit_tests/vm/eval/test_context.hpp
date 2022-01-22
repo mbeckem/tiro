@@ -51,7 +51,11 @@ private:
 
 class TestContext final {
 public:
-    explicit TestContext(std::string_view source);
+    enum Flags {
+        ENABLE_PANIC_STACK_TRACES = 1 << 0,
+    };
+
+    explicit TestContext(std::string_view source, int flags = 0);
 
     // Returns the exported function with that name.
     TestHandle<Value> get_export(std::string_view function_name);

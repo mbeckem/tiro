@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_OBJECTS_COROUTINE_STACK_HPP
 #define TIRO_VM_OBJECTS_COROUTINE_STACK_HPP
 
+#include "common/adt/function_ref.hpp"
 #include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "vm/fwd.hpp"
@@ -8,6 +9,7 @@
 #include "vm/object_support/layout.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/native.hpp"
+#include "vm/objects/nullable.hpp"
 
 namespace tiro::vm {
 
@@ -399,6 +401,18 @@ public:
     u32 stack_available();
 
     Layout* layout() const { return access_heap<Layout>(); }
+
+    /// Walks the current stack from top to bottom (most recent function first) and invokes
+    /// the given callback for every call frame with the name of the called function.
+    /// Note: the stack must not be modified while walk() is executing (e.g. no frames or values pushed).
+    static void walk(Context& ctx, Handle<CoroutineStack> stack,
+        FunctionRef<void(Handle<String> name)> callback);
+
+    // Transforms frame pointers to opaque offsets and back.
+    // This is needed because the stack may move and
+    // raw pointers to frames on it will not remain stable.
+    u32 frame_to_offset(CoroutineFrame* frame);
+    CoroutineFrame* offset_to_frame(u32 offset);
 
 private:
     friend LayoutTraits<Layout>;

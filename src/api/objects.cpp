@@ -675,6 +675,21 @@ void tiro_exception_message(
     });
 }
 
+void tiro_exception_trace(
+    tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !instance || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto maybe_exception = to_internal(instance).try_cast<vm::Exception>();
+        if (!maybe_exception)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto exception_handle = maybe_exception.handle();
+        to_internal(result).set(exception_handle->trace());
+    });
+}
+
 void tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t arguments,
     tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {

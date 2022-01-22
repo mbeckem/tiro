@@ -4,6 +4,7 @@
 #include "common/adt/span.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/traits.hpp"
+#include "vm/objects/types.hpp"
 #include "vm/objects/value.hpp"
 
 namespace tiro::vm {

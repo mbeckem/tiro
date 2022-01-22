@@ -28,7 +28,7 @@ struct eval_spec {
         : sources(std::move(sources_)) {}
 };
 
-class compile_error : std::exception {
+class compile_error : public std::exception {
 public:
     explicit compile_error(api_errc code, std::string message)
         : code_(code)
@@ -53,6 +53,7 @@ public:
         enable_ast = 1 << 1,
         enable_ir = 1 << 2,
         enable_bytecode = 1 << 3,
+        enable_panic_stack_traces = 1 << 4,
     };
 
     explicit eval_test(eval_spec spec, int flags = 0);

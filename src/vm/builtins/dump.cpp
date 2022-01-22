@@ -444,9 +444,11 @@ void DumpHelper::dump_value(Value value) {
     case ValueType::Coroutine:
         dump_struct(type_name).field("name", value.must_cast<Coroutine>().name()).finish();
         break;
-    case ValueType::Exception:
-        dump_struct(type_name).field("message", value.must_cast<Exception>().message()).finish();
+    case ValueType::Exception: {
+        auto ex = value.must_cast<Exception>();
+        dump_struct(type_name).field("message", ex.message()).field("trace", ex.trace()).finish();
         break;
+    }
     case ValueType::Result: {
         auto result = value.must_cast<Result>();
         dump_struct(type_name)

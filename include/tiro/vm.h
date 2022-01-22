@@ -56,6 +56,16 @@ typedef struct tiro_vm_settings {
      * \param userdata The userdata pointer set in this settings instance.
      */
     void (*print_stdout)(tiro_string_t message, void* userdata);
+
+    /**
+     * Set this to true to enable capturing of the current call stack trace when an exception
+     * is created during a panic.
+     * Capturing stack traces has a significant performance impact because many call frames on the
+     * call stack have to be visited.
+     *
+     * Defaults to `false`.
+     */
+    bool enable_panic_stack_trace;
 } tiro_vm_settings_t;
 
 /**

@@ -24,6 +24,7 @@ target_sources(tiro_objects
         module.hpp
         native.cpp
         native.hpp
+        nullable.hpp
         primitives.cpp
         primitives.hpp
         public_types.cpp

@@ -28,6 +28,24 @@ TEST_CASE("Exceptions should be constructible from format strings", "[exception]
     REQUIRE(starts_with(exception->message().view(), "Test 123!"));
 }
 
+TEST_CASE("Exceptions should not capture a stack trace by default", "[exception]") {
+    Context ctx;
+    Scope sc(ctx);
+
+    Local exception = sc.local(TIRO_FORMAT_EXCEPTION(ctx, "Test"));
+    REQUIRE(exception->trace().is_null());
+}
+
+TEST_CASE("Exceptions cannot capture a stack trace when no coroutine is running", "[exception]") {
+    ContextSettings settings;
+    settings.enable_panic_stack_traces = true;
+    Context ctx(settings);
+    Scope sc(ctx);
+
+    Local exception = sc.local(TIRO_FORMAT_EXCEPTION(ctx, "Test"));
+    REQUIRE(exception->trace().is_null());
+}
+
 TEST_CASE("Fallible<T> can contain exceptions", "[exception]") {
     Context ctx;
     Scope sc(ctx);
