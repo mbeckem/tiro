@@ -9,6 +9,7 @@ add_executable(api_tests
 
     tiropp_compiler_test.cpp
     tiropp_error_test.cpp
+    tiropp_functions_test.cpp
     tiropp_native_type_test.cpp
     tiropp_objects_test.cpp
     tiropp_vm_test.cpp

@@ -11,6 +11,7 @@
 #include "tiro/compiler.h"
 #include "tiro/def.h"
 #include "tiro/error.h"
+#include "tiro/functions.h"
 #include "tiro/objects.h"
 #include "tiro/version.h"
 #include "tiro/vm.h"

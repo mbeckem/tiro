@@ -1,5 +1,5 @@
-#ifndef TIROPP_API_H_INCLUDED
-#define TIROPP_API_H_INCLUDED
+#ifndef TIROPP_API_HPP_INCLUDED
+#define TIROPP_API_HPP_INCLUDED
 
 #include "tiropp/compiler.hpp"
 #include "tiropp/def.hpp"
@@ -10,4 +10,4 @@
 #include "tiropp/version.hpp"
 #include "tiropp/vm.hpp"
 
-#endif // TIROPP_API_H_INCLUDED
+#endif // TIROPP_API_HPP_INCLUDED
