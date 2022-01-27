@@ -20,7 +20,6 @@ public:
     Registers() = default;
 
     // Allocates a new register slot and returns a handle into it.
-    // Registers are reset (by calling `reset()`) before every instruction is exected.
     template<typename T = Value>
     MutHandle<WrappedType<T>> alloc(const T& initial = T()) {
         Value* slot = alloc_slot();
