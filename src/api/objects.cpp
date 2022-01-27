@@ -696,11 +696,10 @@ void tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t argumen
         if (!vm || !func || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-        if (tiro_value_kind(vm, func) != TIRO_KIND_FUNCTION)
+        auto maybe_func = to_internal(func).try_cast<vm::Function>();
+        if (!maybe_func)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
 
-        vm::Context& ctx = vm->ctx;
-        auto func_handle = to_internal(func);
         auto args_handle = to_internal_maybe(arguments);
         auto result_handle = to_internal(result);
 
@@ -710,7 +709,9 @@ void tiro_make_coroutine(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t argumen
                 return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
         }
 
-        result_handle.set(ctx.make_coroutine(func_handle, args_handle.try_cast<vm::Tuple>()));
+        vm::Context& ctx = vm->ctx;
+        result_handle.set(
+            ctx.make_coroutine(maybe_func.handle(), args_handle.try_cast<vm::Tuple>()));
     });
 }
 
