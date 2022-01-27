@@ -175,6 +175,8 @@ typedef void (*tiro_resumable_function_t)(tiro_vm_t vm, tiro_resumable_frame_t f
 
 /**
  * Lists well known state values used by resumable functions.
+ *
+ * All positive integers can be used freely by the application.
  */
 typedef enum tiro_resumable_state {
     /** The initial state value. */
@@ -236,8 +238,8 @@ tiro_resumable_frame_closure(tiro_resumable_frame_t frame, tiro_handle_t result,
 /**
  * Signals the vm that the function `func` shall be invoked with the given arguments in `args`.
  * `func` will be invoked after the native function returned to the vm.
- * The native function will be called again when `func` has itself returned, and its return value
- * will be accessible via `tiro_resumable_frame_invoke_return`.
+ * The current native function will be called again when `func` has itself returned, and its return value
+ * will be accessible via `tiro_resumable_frame_invoke_return(...)`.
  *
  * Calling this function implies a state change to `next_state`, which will be the frame's state
  * when the native function is called again after `func`'s execution.
@@ -245,12 +247,14 @@ tiro_resumable_frame_closure(tiro_resumable_frame_t frame, tiro_handle_t result,
  * NOTE: it is current not possible to handle a panic thrown by `func`.
  * However, cleanup is possible using the `CLEANUP` state.
  *
+ * NOTE: it is currently not possible to call another function during cleanup.
+ *
  * \param frame The resumable call frame
  * \param next_state The new state value
  * \param func Must refer to a valid function
  * \param args
- *  Must be either `NULL` (no arguments), refer to a null value (same) or
- *  a valid tuple (the function call arguments).
+ *      Must be either `NULL` (no arguments), refer to a null value (same) or
+ *      a valid tuple (the function call arguments).
  */
 TIRO_API void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next_state,
     tiro_handle_t func, tiro_handle_t args, tiro_error_t* err);
@@ -269,6 +273,8 @@ TIRO_API void tiro_resumable_frame_invoke_return(
 /**
  * Sets the return value for the given function call frame to the given `value`.
  * The call frame's state is also set to `END` as a result of this call.
+ *
+ * NOTE: it is currently not possible to return a value during cleanup.
  */
 TIRO_API void tiro_resumable_frame_return_value(
     tiro_resumable_frame_t frame, tiro_handle_t value, tiro_error_t* err);
@@ -277,10 +283,25 @@ TIRO_API void tiro_resumable_frame_return_value(
  * Signals a panic from the given function call frame.
  * The call frame's state is also set to `END` as a result of this call.
  *
+ * NOTE: it is currently not possible to panic during cleanup.
+ *
  * TODO: Allow user defined exception objects instead of plain string?
  */
 TIRO_API void tiro_resumable_frame_panic_msg(
     tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err);
+
+/**
+ * Constructs a new function object with the given name that will invoke the native function `func` when called.
+ * `argc` is the number of arguments required for calling `func`. `closure` may be an arbitrary value
+ * that will be passed to the function on every invocation.
+ *
+ * On success, the new function will be stored in `result`.
+ * Returns `TIRO_BAD_TYPE` if `name` is not a string. Returns `TIRO_BAD_ARG` if the the requested number of parameters
+ * is too large. The current maximum is `1024`.
+ */
+TIRO_API void
+tiro_make_resumable_function(tiro_vm_t vm, tiro_handle_t name, tiro_resumable_function_t func,
+    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
 
 #ifdef __cplusplus
 }

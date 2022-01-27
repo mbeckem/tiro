@@ -2,11 +2,15 @@
 
 #include "tiro/functions.h"
 
+#include "vm/objects/function.hpp"
+#include "vm/objects/native.hpp"
+
 using namespace tiro;
 using namespace tiro::api;
 
 static vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func);
 static vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func);
+static vm::NativeFunctionStorage wrap_function(tiro_resumable_function_t resumable_func);
 
 template<typename FunctionPtr>
 static void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr func, size_t argc,
@@ -137,10 +141,7 @@ int tiro_resumable_frame_state(tiro_resumable_frame_t frame) {
 void tiro_resumable_frame_set_state(
     tiro_resumable_frame_t frame, int next_state, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!frame)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-        if (next_state == TIRO_RESUMABLE_CLEANUP)
+        if (!frame || next_state == TIRO_RESUMABLE_CLEANUP)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         to_internal(frame)->set_state(next_state);
@@ -162,16 +163,89 @@ void tiro_resumable_frame_closure(
 }
 
 void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next_state, tiro_handle_t func,
-    tiro_handle_t args, tiro_error_t* err);
+    tiro_handle_t args, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!frame || !func || next_state == TIRO_RESUMABLE_CLEANUP)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto maybe_func = to_internal(func).try_cast<vm::Function>();
+        if (!maybe_func)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto maybe_args = to_internal_maybe(args);
+        if (maybe_args) {
+            auto args_handle = maybe_args.handle();
+            if (!args_handle->is<vm::Null>() && args_handle->is<vm::Tuple>())
+                return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        }
+
+        auto raw_func = *maybe_func.handle();
+        auto raw_args = [&]() -> vm::Nullable<vm::Tuple> {
+            auto maybe_tuple = maybe_args.try_cast<vm::Tuple>();
+            if (!maybe_tuple)
+                return vm::Null();
+            return *maybe_tuple.handle();
+        }();
+        internal_frame->invoke(next_state, raw_func, raw_args);
+    });
+}
 
 void tiro_resumable_frame_invoke_return(
-    tiro_resumable_frame_t frame, tiro_handle_t result, tiro_error_t* err);
+    tiro_resumable_frame_t frame, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->invoke_return());
+    });
+}
 
 void tiro_resumable_frame_return_value(
-    tiro_resumable_frame_t frame, tiro_handle_t value, tiro_error_t* err);
+    tiro_resumable_frame_t frame, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!frame || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto internal_value = to_internal(value);
+        internal_frame->return_value(*internal_value);
+    });
+}
 
 void tiro_resumable_frame_panic_msg(
-    tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err);
+    tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!frame || !valid_string(message))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
+
+        auto message_view = to_internal(message);
+
+        // TODO: Ensure that function always goes into panic mode, even if the following throws!
+        auto& ctx = internal_frame->ctx();
+        vm::Scope sc(ctx);
+        vm::Local message_string = sc.local(vm::String::make(ctx, message_view));
+        internal_frame->panic(vm::Exception::make(ctx, message_string));
+    });
+}
+
+TIRO_API void
+tiro_make_resumable_function(tiro_vm_t vm, tiro_handle_t name, tiro_resumable_function_t func,
+    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
+    return make_native_function(vm, name, func, argc, closure, result, err);
+}
 
 vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func) {
     struct Function {
@@ -196,6 +270,18 @@ vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func) {
     };
 
     return vm::NativeFunctionStorage::async(Function{async_func});
+}
+
+vm::NativeFunctionStorage wrap_function(tiro_resumable_function_t resumable_func) {
+    struct Function {
+        tiro_resumable_function_t func;
+
+        void operator()(vm::ResumableFrameContext& frame) {
+            func(vm_from_context(frame.ctx()), to_external(&frame));
+        }
+    };
+
+    return vm::NativeFunctionStorage::resumable(Function{resumable_func});
 }
 
 template<typename FunctionPtr>

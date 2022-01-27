@@ -208,7 +208,8 @@ void ResumableFrameContext::invoke(int next_state, Value func, Nullable<Tuple> a
 Value ResumableFrameContext::invoke_return() {
     auto rf = frame();
     auto stack = coro_->stack().value();
-    TIRO_DEBUG_ASSERT(stack.top_frame() == rf, "current frame must be the top frame");
+    if (TIRO_UNLIKELY(stack.top_frame() != rf))
+        TIRO_ERROR("the current resumable frame must be the top frame");
 
     u32 values = stack.top_value_count();
     TIRO_DEBUG_ASSERT(

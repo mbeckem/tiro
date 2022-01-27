@@ -4,6 +4,7 @@
 #include "vm/object_support/factory.hpp"
 #include "vm/objects/coroutine.hpp"
 #include "vm/objects/module.hpp"
+#include "vm/objects/native.hpp"
 
 #include <algorithm>
 
@@ -201,5 +202,17 @@ std::string_view to_string(MagicFunction::Which which) {
 
     TIRO_UNREACHABLE("Invalid magic function type");
 }
+
+Function::Function(BoundMethod func)
+    : Function(static_cast<Value>(func)) {}
+
+Function::Function(CodeFunction func)
+    : Function(static_cast<Value>(func)) {}
+
+Function::Function(MagicFunction func)
+    : Function(static_cast<Value>(func)) {}
+
+Function::Function(NativeFunction func)
+    : Function(static_cast<Value>(func)) {}
 
 } // namespace tiro::vm
