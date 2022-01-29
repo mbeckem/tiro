@@ -155,13 +155,13 @@ TIRO_API void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_as
  * Because of the cooperative nature of coroutines in tiro, they must be implemented as state machines.
  *
  * When a resumable function is invoked by the vm, a new call frame is created
- * on the active coroutine's stack. This frame stores the function call's state (initially `TIRO_RESUMABLE_START`).
- * The vm will continue to call the native function until it reaches the `TIRO_RESUMABLE_END` state either by
+ * on the active coroutine's stack. This frame stores the function call's state (initially `TIRO_RESUMABLE_STATE_START`).
+ * The vm will continue to call the native function until it reaches the `TIRO_RESUMABLE_STATE_END` state either by
  * performing a final return or by panicking.
  * Until then, the function may manipulate its own state or invoke other functions by calling the frame's associated functions.
  *
  * When a resumable function has either returned or panicked, the native function will be called
- * one last time with a special `TIRO_RESUMABLE_CLEANUP` state that allows it to release any acquired resources.
+ * one last time with a special `TIRO_RESUMABLE_STATE_CLEANUP` state that allows it to release any acquired resources.
  *
  * \param vm
  *  The virtual machine the function is executing on.
@@ -180,10 +180,10 @@ typedef void (*tiro_resumable_function_t)(tiro_vm_t vm, tiro_resumable_frame_t f
  */
 typedef enum tiro_resumable_state {
     /** The initial state value. */
-    TIRO_RESUMABLE_START = 0,
+    TIRO_RESUMABLE_STATE_START = 0,
 
     /** Signals that the function has finished executing. */
-    TIRO_RESUMABLE_END = -1,
+    TIRO_RESUMABLE_STATE_END = -1,
 
     /**
      * Special state value used during cleanup.
@@ -193,30 +193,8 @@ typedef enum tiro_resumable_state {
      * The frame's state may no longer be altered, and the function may neither
      * may not perform (another) final return, panic, yield or call to another function.
      */
-    TIRO_RESUMABLE_CLEANUP = -2,
+    TIRO_RESUMABLE_STATE_CLEANUP = -2,
 } tiro_resumable_state_t;
-
-/**
- * Returns the current state of the given frame.
- * Returns 0 for invalid input arguments.
- */
-TIRO_API int tiro_resumable_frame_state(tiro_resumable_frame_t frame);
-
-/**
- * Sets the current state of the given frame.
- * It is usually not necessary to invoke this function directly as changing the state
- * is also implied by other functions like `tiro_resumable_frame_invoke` and `tiro_resumable_frame_return_value`.
- *
- * The calling native function should return after altering the state.
- * The new state will be reflected when the native function is called for the next time.
- *
- * Note that a few states have special meaning (see `tiro_resumable_state_t`).
- *
- * \param frame The resumable call frame
- * \param next_state The new state value
- */
-void TIRO_API tiro_resumable_frame_set_state(
-    tiro_resumable_frame_t frame, int next_state, tiro_error_t* err);
 
 /**
  * Returns the number of function call arguments present in the given frame.
@@ -234,6 +212,28 @@ TIRO_API void tiro_resumable_frame_arg(
 /** Returns the closure value which was specified when the function was created. */
 TIRO_API void
 tiro_resumable_frame_closure(tiro_resumable_frame_t frame, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Returns the current state of the given frame.
+ * Returns 0 for invalid input arguments.
+ */
+TIRO_API int tiro_resumable_frame_state(tiro_resumable_frame_t frame);
+
+/**
+ * Sets the current state of the given frame.
+ * It is usually not necessary to invoke this function directly as changing the state
+ * is also implied by other functions like `tiro_resumable_frame_invoke` and `tiro_resumable_frame_return_value`.
+ *
+ * The calling native function should return after altering the state.
+ * The new state will be active when the native function is called for the next time.
+ *
+ * Note that a few states have special meaning (see `tiro_resumable_state_t`).
+ *
+ * \param frame The resumable call frame
+ * \param next_state The new state value
+ */
+void TIRO_API tiro_resumable_frame_set_state(
+    tiro_resumable_frame_t frame, int next_state, tiro_error_t* err);
 
 /**
  * Signals the vm that the function `func` shall be invoked with the given arguments in `args`.
@@ -260,7 +260,7 @@ TIRO_API void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next
     tiro_handle_t func, tiro_handle_t args, tiro_error_t* err);
 
 /**
- * Stores the result of the last function call made via `tiro_resumable_frame_invoke`.
+ * Returns the result of the last function call made via `tiro_resumable_frame_invoke`.
  * Only returns a useful value when the native function is called again for the first time
  * after calling `tiro_resumable_frame_invoke` and returning to the vm.
  *

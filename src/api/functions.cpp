@@ -129,25 +129,6 @@ void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_funct
     return make_native_function(vm, name, func, argc, closure, result, err);
 }
 
-int tiro_resumable_frame_state(tiro_resumable_frame_t frame) {
-    return entry_point(nullptr, 0, [&]() -> int {
-        if (!frame)
-            return 0;
-
-        return to_internal(frame)->state();
-    });
-}
-
-void tiro_resumable_frame_set_state(
-    tiro_resumable_frame_t frame, int next_state, tiro_error_t* err) {
-    return entry_point(err, [&]() {
-        if (!frame || next_state == TIRO_RESUMABLE_CLEANUP)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
-
-        to_internal(frame)->set_state(next_state);
-    });
-}
-
 size_t tiro_resumable_frame_argc(tiro_resumable_frame_t frame) {
     return get_argc(frame);
 }
@@ -162,14 +143,33 @@ void tiro_resumable_frame_closure(
     return get_closure(frame, result, err);
 }
 
+int tiro_resumable_frame_state(tiro_resumable_frame_t frame) {
+    return entry_point(nullptr, 0, [&]() -> int {
+        if (!frame)
+            return 0;
+
+        return to_internal(frame)->state();
+    });
+}
+
+void tiro_resumable_frame_set_state(
+    tiro_resumable_frame_t frame, int next_state, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!frame || next_state == TIRO_RESUMABLE_STATE_CLEANUP)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        to_internal(frame)->set_state(next_state);
+    });
+}
+
 void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next_state, tiro_handle_t func,
     tiro_handle_t args, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!frame || !func || next_state == TIRO_RESUMABLE_CLEANUP)
+        if (!frame || !func || next_state == TIRO_RESUMABLE_STATE_CLEANUP)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto maybe_func = to_internal(func).try_cast<vm::Function>();
@@ -213,7 +213,7 @@ void tiro_resumable_frame_return_value(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto internal_value = to_internal(value);
@@ -228,7 +228,7 @@ void tiro_resumable_frame_panic_msg(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_CLEANUP)
+        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto message_view = to_internal(message);

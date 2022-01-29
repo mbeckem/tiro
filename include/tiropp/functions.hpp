@@ -176,6 +176,164 @@ function make_async_function(vm& v, const string& name, size_t argc, const handl
     return function(std::move(result));
 }
 
+// TODO docs
+class resumable_frame final {
+public:
+    /// Lists well known state values used by resumable functions.
+    ///
+    /// All positive integers can be used freely by the application.
+    enum frame_state : int {
+        /// The initial state value.
+        start = TIRO_RESUMABLE_STATE_START,
+
+        /// Signals that the function has finished executing.
+        end = TIRO_RESUMABLE_STATE_END,
+
+        /// Special state value used during cleanup.
+        /// Must not be used as a target state.
+        ///
+        /// Resumable functions are currently limited in what they can do during cleanup.
+        /// The frame's state may no longer be altered, and the function may neither
+        /// may not perform (another) final return, panic, yield or call to another function.
+        cleanup = TIRO_RESUMABLE_STATE_CLEANUP,
+    };
+
+    resumable_frame(tiro_vm_t raw_vm, tiro_resumable_frame_t raw_frame)
+        : raw_vm_(raw_vm)
+        , raw_frame_(raw_frame) {}
+
+    resumable_frame(const resumable_frame&) = delete;
+    resumable_frame& operator=(const resumable_frame&) = delete;
+
+    /// Returns the number of arguments passed to this function call.
+    size_t argc() const { return tiro_resumable_frame_argc(raw_frame_); }
+
+    /// Returns the argument at the given index (`0 <= index < argc`).
+    handle arg(size_t index) const {
+        handle result(raw_vm_);
+        detail::check_handles(raw_vm_, result);
+        tiro_resumable_frame_arg(raw_frame_, index, result.raw_handle(), error_adapter());
+        return result;
+    }
+
+    /// Returns the closure value referenced by this function (if any).
+    handle closure() const {
+        handle result(raw_vm_);
+        detail::check_handles(raw_vm_, result);
+        tiro_resumable_frame_closure(raw_frame_, result.raw_handle(), error_adapter());
+        return result;
+    }
+
+    /// Returns the current state of this frame.
+    int state() const { return tiro_resumable_frame_state(raw_frame_); }
+
+    /// Sets the current state of this frame.
+    /// It is usually not necessary to invoke this function directly as changing the state
+    /// is also implied by other methods like `invoke()` and `return_value()`.
+    ///
+    /// The calling native function should return after altering the state.
+    /// The new state will be active when the native function is called for the next time.
+    ///
+    /// Note that a few states have special meaning (see `resumable_frame_state`).
+    ///
+    /// \param next_state The new state value
+    void set_state(int next_state) {
+        tiro_resumable_frame_set_state(raw_frame_, next_state, error_adapter());
+    }
+
+    /// Signals the vm that the function `func` shall be invoked with the given arguments in `args`.
+    /// `func` will be invoked after the native function returned to the vm.
+    /// The current native function will be called again when `func` has itself returned, and its return value
+    /// will be accessible via `invoke_return()`.
+    ///
+    /// Calling this function implies a state change to `next_state`, which will be the frame's state
+    /// when the native function is called again after `func`'s execution.
+    ///
+    /// NOTE: it is current not possible to handle a panic thrown by `func`.
+    /// However, cleanup is possible using the `CLEANUP` state.
+    ///
+    /// NOTE: it is currently not possible to call another function during cleanup.
+    ///
+    /// \param next_state The new state value
+    /// \param func The target function to invoke
+    /// \param args The call arguments
+    void invoke(int next_state, const function& func, const tuple& args) {
+        detail::check_handles(raw_vm_, func, args);
+        tiro_resumable_frame_invoke(
+            raw_frame_, next_state, func.raw_handle(), args.raw_handle(), error_adapter());
+    }
+
+    /// Like above, but calls the given function without any arguments.
+    void invoke(int next_state, const function& func) {
+        detail::check_handles(raw_vm_, func);
+        tiro_resumable_frame_invoke(
+            raw_frame_, next_state, func.raw_handle(), nullptr, error_adapter());
+    }
+
+    /// Returns the result of the last function call made via `invoke()`.
+    /// Only returns a useful value when the native function is called again for the first time
+    /// after calling `invoke()` and returning to the vm.
+    handle invoke_return() const {
+        handle result(raw_vm_);
+        detail::check_handles(raw_vm_, result);
+        tiro_resumable_frame_invoke_return(raw_frame_, result.raw_handle(), error_adapter());
+        return result;
+    }
+
+    /// Sets the return value for the given function call frame to the given `value`.
+    /// The call frame's state is also set to `END` as a result of this call.
+    ///
+    /// NOTE: it is currently not possible to return a value during cleanup.
+    ///
+    void return_value(const handle& value) {
+        detail::check_handles(raw_vm_, value);
+        tiro_resumable_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
+    }
+
+    /// Signals a panic from the given function call frame.
+    /// The call frame's state is also set to `END` as a result of this call.
+    ///
+    /// NOTE: it is currently not possible to panic during cleanup.
+    ///
+    /// TODO: Allow user defined exception objects instead of plain string?
+    void panic_msg(std::string_view message) {
+        tiro_resumable_frame_panic_msg(raw_frame_, detail::to_raw(message), error_adapter());
+    }
+
+    tiro_vm_t raw_vm() const { return raw_vm_; }
+
+    tiro_resumable_frame_t raw_frame() const { return raw_frame_; }
+
+private:
+    // Both are unowned.
+    tiro_vm_t raw_vm_;
+    tiro_resumable_frame_t raw_frame_;
+};
+
+// TODO docs
+template<auto Function>
+function make_resumable_function(vm& v, const string& name, size_t argc, const handle& closure) {
+    constexpr tiro_resumable_function_t func = [](tiro_vm_t raw_vm,
+                                                   tiro_resumable_frame_t raw_frame) {
+        try {
+            vm& inner_v = vm::unsafe_from_raw_vm(raw_vm);
+            resumable_frame frame(raw_vm, raw_frame);
+            (void) Function(inner_v, frame);
+        } catch (const std::exception& e) {
+            std::string_view message(e.what());
+            tiro_resumable_frame_panic_msg(raw_frame, detail::to_raw(message), nullptr);
+        } catch (...) {
+            tiro_resumable_frame_panic_msg(raw_frame, detail::to_raw("unknown exception"), nullptr);
+        }
+    };
+
+    handle result(v.raw_vm());
+    detail::check_handles(v.raw_vm(), name, closure, result);
+    tiro_make_resumable_function(v.raw_vm(), name.raw_handle(), func, argc, closure.raw_handle(),
+        result.raw_handle(), error_adapter());
+    return function(std::move(result));
+}
+
 } // namespace tiro
 
 #endif // TIROPP_FUNCTIONS_HPP_INCLUDED
