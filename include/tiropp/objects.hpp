@@ -742,7 +742,8 @@ public:
 
         detail::check_handles(raw_vm(), *this);
         tiro_coroutine_set_callback(raw_vm(), raw_handle(), &wrapper_type::invoke,
-            &wrapper_type::cleanup, wrapper.release(), error_adapter());
+            &wrapper_type::cleanup, wrapper.get(), error_adapter());
+        wrapper.release();
     }
 
     /// Starts this coroutine's execution.
