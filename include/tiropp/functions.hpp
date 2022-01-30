@@ -176,7 +176,9 @@ function make_async_function(vm& v, const string& name, size_t argc, const handl
     return function(std::move(result));
 }
 
-// TODO docs
+/// Represents the call frame of a resumable function call.
+/// References to an instance of this class are only valid from within the native function implementing
+/// the resumable function call.
 class resumable_frame final {
 public:
     /// Lists well known state values used by resumable functions.
