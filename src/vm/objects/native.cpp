@@ -148,8 +148,39 @@ ResumableFrameContext::ResumableFrameContext(Context& ctx, Handle<Coroutine> cor
     , cont_(cont) {
     TIRO_DEBUG_ASSERT(
         frame_ == coro->stack().value().top_frame(), "function frame must be on top the of stack");
-    TIRO_DEBUG_ASSERT(cont_.action == ResumableFrameContinuation::NONE,
+    TIRO_DEBUG_ASSERT(cont_.action() == ResumableFrameContinuation::NONE,
         "resumable frame continuation was initialized incorrectly");
+}
+
+void ResumableFrameContinuation::do_ret(Value v) {
+    action_ = RETURN;
+    regs_[0].set(v);
+}
+
+void ResumableFrameContinuation::do_panic(Exception ex) {
+    action_ = PANIC;
+    regs_[0].set(ex);
+}
+
+void ResumableFrameContinuation::do_invoke(Function func, Nullable<Tuple> args) {
+    action_ = INVOKE;
+    regs_[0].set(func);
+    regs_[1].set(args);
+}
+
+ResumableFrameContinuation::RetData ResumableFrameContinuation::ret_data() const {
+    TIRO_DEBUG_ASSERT(action_ == RETURN, "not a return action");
+    return {regs_[0]};
+}
+
+ResumableFrameContinuation::PanicData ResumableFrameContinuation::panic_data() const {
+    TIRO_DEBUG_ASSERT(action_ == PANIC, "not a panic action");
+    return {regs_[0].must_cast<Exception>()};
+}
+
+ResumableFrameContinuation::InvokeData ResumableFrameContinuation::invoke_data() const {
+    TIRO_DEBUG_ASSERT(action_ == INVOKE, "not an invoke action");
+    return {regs_[0].must_cast<Function>(), regs_[1].must_cast<Nullable<Tuple>>()};
 }
 
 Handle<Coroutine> ResumableFrameContext::coro() const {
@@ -178,14 +209,14 @@ size_t ResumableFrameContext::local_count() const {
     return frame()->locals;
 }
 
-Handle<Value> ResumableFrameContext::local(size_t index) const {
+MutHandle<Value> ResumableFrameContext::local(size_t index) const {
     TIRO_CHECK(index < local_count(), "local index {} is out of bounds for local count {}", index,
         local_count());
-    return Handle<Value>::from_raw_slot(CoroutineStack::local(frame(), index));
+    return MutHandle<Value>::from_raw_slot(CoroutineStack::local(frame(), index));
 }
 
-HandleSpan<Value> ResumableFrameContext::locals() const {
-    return HandleSpan<Value>::from_raw_slots(CoroutineStack::locals(frame()));
+MutHandleSpan<Value> ResumableFrameContext::locals() const {
+    return MutHandleSpan<Value>::from_raw_slots(CoroutineStack::locals(frame()));
 }
 
 int ResumableFrameContext::state() const {
@@ -193,15 +224,11 @@ int ResumableFrameContext::state() const {
 }
 
 void ResumableFrameContext::set_state(int state) {
-    TIRO_DEBUG_ASSERT(state != CLEANUP, "reserved cleanup state value must not be used");
     frame()->state = state;
 }
 
-void ResumableFrameContext::invoke(int next_state, Value func, Nullable<Tuple> arguments) {
-    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot invoke another function during cleanup");
-    cont_.action = ResumableFrameContinuation::INVOKE;
-    cont_.value.set(func);
-    cont_.invoke_arguments.set(arguments);
+void ResumableFrameContext::invoke(int next_state, Function func, Nullable<Tuple> arguments) {
+    cont_.do_invoke(func, arguments);
     set_state(next_state);
 }
 
@@ -218,16 +245,12 @@ Value ResumableFrameContext::invoke_return() {
 }
 
 void ResumableFrameContext::return_value(Value r) {
-    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot return a value during cleanup");
-    cont_.action = ResumableFrameContinuation::RETURN;
-    cont_.value.set(r);
+    cont_.do_ret(r);
     set_state(ResumableFrame::END);
 }
 
 void ResumableFrameContext::panic(Exception ex) {
-    TIRO_DEBUG_ASSERT(state() != CLEANUP, "cannot return a value during cleanup");
-    cont_.action = ResumableFrameContinuation::PANIC;
-    cont_.value.set(ex);
+    cont_.do_panic(ex);
     set_state(ResumableFrame::END);
 }
 

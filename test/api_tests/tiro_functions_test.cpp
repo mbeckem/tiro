@@ -101,7 +101,7 @@ TEST_CASE("Native sync function invocation should succeed", "[api]") {
                 context->called++;
 
                 // Retrieve and verify function arguments.
-                REQUIRE(tiro_sync_frame_argc(frame) == 2);
+                REQUIRE(tiro_sync_frame_arg_count(frame) == 2);
                 tiro::handle arg_1 = tiro::make_null(vm);
                 tiro::handle arg_2 = tiro::make_null(vm);
                 tiro_sync_frame_arg(frame, 0, arg_1.raw_handle(), tiro::error_adapter());
@@ -225,7 +225,7 @@ TEST_CASE("Sync frame functions should fail for invalid input", "[api]") {
     tiro::vm vm;
 
     SECTION("Invalid frame for argc") {
-        size_t argc = tiro_sync_frame_argc(nullptr);
+        size_t argc = tiro_sync_frame_arg_count(nullptr);
         REQUIRE(argc == 0);
     }
 
@@ -361,7 +361,7 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
                 context->called++;
 
                 // Retrieve and verify function arguments.
-                REQUIRE(tiro_async_frame_argc(frame) == 2);
+                REQUIRE(tiro_async_frame_arg_count(frame) == 2);
                 tiro::handle arg_1 = tiro::make_null(vm);
                 tiro::handle arg_2 = tiro::make_null(vm);
                 tiro_async_frame_arg(frame, 0, arg_1.raw_handle(), tiro::error_adapter());
@@ -518,7 +518,7 @@ TEST_CASE("Async frame functions should fail for invalid input.", "[api]") {
     }
 
     SECTION("Invalid frame for argc") {
-        size_t argc = tiro_async_frame_argc(nullptr);
+        size_t argc = tiro_async_frame_arg_count(nullptr);
         REQUIRE(argc == 0);
     }
 
@@ -551,46 +551,63 @@ TEST_CASE(
     tiro::handle name = tiro::make_string(vm, "func");
     tiro::handle closure = tiro::make_null(vm);
 
+    tiro_resumable_frame_desc_t desc{};
+    desc.name = name.raw_handle();
+    desc.arg_count = 0;
+    desc.local_count = 0;
+    desc.closure = closure.raw_handle();
+    desc.func = dummy_resumable_func;
+
     SECTION("Invalid vm") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(nullptr, name.raw_handle(), dummy_resumable_func, 0,
-            closure.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_resumable_function(nullptr, &desc, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid name (null handle)") {
+        desc.name = nullptr;
+
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(vm.raw_vm(), nullptr, dummy_resumable_func, 0,
-            closure.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_resumable_function(vm.raw_vm(), &desc, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid name (not a string)") {
         tiro::handle number = tiro::make_integer(vm, 123);
+        desc.name = number.raw_handle();
+
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(vm.raw_vm(), number.raw_handle(), dummy_resumable_func, 0,
-            closure.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_resumable_function(vm.raw_vm(), &desc, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_TYPE);
     }
 
     SECTION("Invalid result handle") {
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), dummy_resumable_func, 0,
-            closure.raw_handle(), nullptr, error_observer(errc));
+        tiro_make_resumable_function(vm.raw_vm(), &desc, nullptr, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Invalid function pointer") {
+        desc.func = nullptr;
+
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), nullptr, 0,
-            closure.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_resumable_function(vm.raw_vm(), &desc, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 
     SECTION("Parameter count too large") {
+        desc.arg_count = 1025;
+
         tiro_errc_t errc = TIRO_OK;
-        tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), dummy_resumable_func, 1025,
-            closure.raw_handle(), result.raw_handle(), error_observer(errc));
+        tiro_make_resumable_function(vm.raw_vm(), &desc, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Locals count too large") {
+        desc.local_count = (1 << 14) + 1;
+
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_resumable_function(vm.raw_vm(), &desc, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }
@@ -602,15 +619,24 @@ TEST_CASE("Native resumable function construction should succeed when valid argu
     tiro::handle closure = tiro::make_tuple(vm, 3);
     tiro::handle result = tiro::make_null(vm);
 
+    tiro_resumable_frame_desc_t desc{};
+    desc.name = name.raw_handle();
+    desc.arg_count = 0;
+    desc.local_count = 0;
+    desc.closure = closure.raw_handle();
+    desc.func = dummy_resumable_func;
+
     SECTION("With closure") {
-        tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), dummy_resumable_func, 0,
-            closure.raw_handle(), result.raw_handle(), tiro::error_adapter());
+        tiro_make_resumable_function(
+            vm.raw_vm(), &desc, result.raw_handle(), tiro::error_adapter());
         REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_FUNCTION);
     }
 
     SECTION("Closure is optional") {
-        tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), dummy_resumable_func, 0,
-            nullptr, result.raw_handle(), tiro::error_adapter());
+        desc.closure = nullptr;
+
+        tiro_make_resumable_function(
+            vm.raw_vm(), &desc, result.raw_handle(), tiro::error_adapter());
         REQUIRE(tiro_value_kind(vm.raw_vm(), result.raw_handle()) == TIRO_KIND_FUNCTION);
     }
 }
@@ -642,7 +668,7 @@ TEST_CASE("Native resumable function invocation should succeed", "[api]") {
                 return tiro_resumable_frame_set_state(
                     frame, ctx.panic ? 456 : 123, tiro::error_adapter());
             case 123: {
-                int argc = tiro_resumable_frame_argc(frame);
+                int argc = tiro_resumable_frame_arg_count(frame);
                 REQUIRE(argc == 2);
 
                 tiro::handle x = tiro::make_null(vm);
@@ -667,7 +693,6 @@ TEST_CASE("Native resumable function invocation should succeed", "[api]") {
                 return tiro_resumable_frame_panic_msg(
                     frame, tiro_cstr("custom panic message"), tiro::error_adapter());
             case TIRO_RESUMABLE_STATE_END:
-            case TIRO_RESUMABLE_STATE_CLEANUP:
                 return;
             }
         } catch (...) {
@@ -685,8 +710,13 @@ TEST_CASE("Native resumable function invocation should succeed", "[api]") {
     closure.set(0, tiro::make_integer(vm, 7));
 
     tiro::handle func = tiro::make_null(vm);
-    tiro_make_resumable_function(vm.raw_vm(), name.raw_handle(), native_func, 2,
-        closure.raw_handle(), func.raw_handle(), tiro::error_adapter());
+
+    tiro_resumable_frame_desc_t desc{};
+    desc.name = name.raw_handle();
+    desc.func = native_func;
+    desc.arg_count = 2;
+    desc.closure = closure.raw_handle();
+    tiro_make_resumable_function(vm.raw_vm(), &desc, func.raw_handle(), tiro::error_adapter());
 
     tiro::tuple args = tiro::make_tuple(vm, 2);
     args.set(0, tiro::make_integer(vm, 10));

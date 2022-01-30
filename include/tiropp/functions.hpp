@@ -25,7 +25,7 @@ public:
     sync_frame& operator=(const sync_frame&) = delete;
 
     /// Returns the number of arguments passed to this function call.
-    size_t argc() const { return tiro_sync_frame_argc(raw_frame_); }
+    size_t arg_count() const { return tiro_sync_frame_arg_count(raw_frame_); }
 
     /// Returns the argument at the given index (`0 <= index < argc`).
     handle arg(size_t index) const {
@@ -109,7 +109,7 @@ public:
     async_frame& operator=(async_frame&&) noexcept = default;
 
     /// Returns the number of arguments passed to this function call.
-    size_t argc() const { return tiro_async_frame_argc(raw_frame_); }
+    size_t arg_count() const { return tiro_async_frame_arg_count(raw_frame_); }
 
     /// Returns the argument at the given index (`0 <= index < argc`).
     handle arg(size_t index) const {
@@ -188,14 +188,6 @@ public:
 
         /// Signals that the function has finished executing.
         end = TIRO_RESUMABLE_STATE_END,
-
-        /// Special state value used during cleanup.
-        /// Must not be used as a target state.
-        ///
-        /// Resumable functions are currently limited in what they can do during cleanup.
-        /// The frame's state may no longer be altered, and the function may neither
-        /// may not perform (another) final return, panic, yield or call to another function.
-        cleanup = TIRO_RESUMABLE_STATE_CLEANUP,
     };
 
     resumable_frame(tiro_vm_t raw_vm, tiro_resumable_frame_t raw_frame)
@@ -206,7 +198,7 @@ public:
     resumable_frame& operator=(const resumable_frame&) = delete;
 
     /// Returns the number of arguments passed to this function call.
-    size_t argc() const { return tiro_resumable_frame_argc(raw_frame_); }
+    size_t arg_count() const { return tiro_resumable_frame_arg_count(raw_frame_); }
 
     /// Returns the argument at the given index (`0 <= index < argc`).
     handle arg(size_t index) const {
@@ -222,6 +214,23 @@ public:
         detail::check_handles(raw_vm_, result);
         tiro_resumable_frame_closure(raw_frame_, result.raw_handle(), error_adapter());
         return result;
+    }
+
+    /// Returns the number of local values available to the function frame.
+    size_t local_count() const { return tiro_resumable_frame_local_count(raw_frame_); }
+
+    /// Returns the current value of the local slot with the given index.
+    handle local(size_t index) const {
+        handle result(raw_vm_);
+        detail::check_handles(raw_vm_, result);
+        tiro_resumable_frame_local(raw_frame_, index, result.raw_handle(), error_adapter());
+        return result;
+    }
+
+    /// Sets the current value of the local slot with the given index to `value`.
+    void set_local(size_t index, const handle& value) {
+        detail::check_handles(raw_vm_, value);
+        tiro_resumable_frame_set_local(raw_frame_, index, value.raw_handle(), error_adapter());
     }
 
     /// Returns the current state of this frame.
@@ -248,11 +257,6 @@ public:
     ///
     /// Calling this function implies a state change to `next_state`, which will be the frame's state
     /// when the native function is called again after `func`'s execution.
-    ///
-    /// NOTE: it is current not possible to handle a panic thrown by `func`.
-    /// However, cleanup is possible using the `CLEANUP` state.
-    ///
-    /// NOTE: it is currently not possible to call another function during cleanup.
     ///
     /// \param next_state The new state value
     /// \param func The target function to invoke
@@ -283,8 +287,6 @@ public:
     /// Sets the return value for the given function call frame to the given `value`.
     /// The call frame's state is also set to `END` as a result of this call.
     ///
-    /// NOTE: it is currently not possible to return a value during cleanup.
-    ///
     void return_value(const handle& value) {
         detail::check_handles(raw_vm_, value);
         tiro_resumable_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
@@ -292,8 +294,6 @@ public:
 
     /// Signals a panic from the given function call frame.
     /// The call frame's state is also set to `END` as a result of this call.
-    ///
-    /// NOTE: it is currently not possible to panic during cleanup.
     ///
     /// TODO: Allow user defined exception objects instead of plain string?
     void panic_msg(std::string_view message) {
@@ -310,9 +310,10 @@ private:
     tiro_resumable_frame_t raw_frame_;
 };
 
-// TODO docs
+/// Creates a new resumable function with the given parameters.
 template<auto Function>
-function make_resumable_function(vm& v, const string& name, size_t argc, const handle& closure) {
+function make_resumable_function(
+    vm& v, const string& name, size_t argc, size_t locals, const handle& closure) {
     constexpr tiro_resumable_function_t func = [](tiro_vm_t raw_vm,
                                                    tiro_resumable_frame_t raw_frame) {
         try {
@@ -329,8 +330,14 @@ function make_resumable_function(vm& v, const string& name, size_t argc, const h
 
     handle result(v.raw_vm());
     detail::check_handles(v.raw_vm(), name, closure, result);
-    tiro_make_resumable_function(v.raw_vm(), name.raw_handle(), func, argc, closure.raw_handle(),
-        result.raw_handle(), error_adapter());
+
+    tiro_resumable_frame_desc_t desc{};
+    desc.name = name.raw_handle();
+    desc.arg_count = argc;
+    desc.local_count = locals;
+    desc.closure = closure.raw_handle();
+    desc.func = func;
+    tiro_make_resumable_function(v.raw_vm(), &desc, result.raw_handle(), error_adapter());
     return function(std::move(result));
 }
 

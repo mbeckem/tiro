@@ -30,6 +30,7 @@ enum FrameFlags : u8 {
     FRAME_POP_ONE_MORE = 1 << 0,
 
     /// Indicates that the function is currently unwinding, i.e. an exception is in flight.
+    ///
     /// NOTE:
     ///     - code frame: when the bit is set, `current_exception` will contain the in-flight exception value.
     ///     - async native frames: signals that the value must be thrown
@@ -168,7 +169,7 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
     }
 };
 
-/// Represents a native function call that can be suspend any number of times.
+/// Represents a native function call that can suspend any number of times.
 ///
 /// Functions of resumable type may invoke other tiro functions: they do not need
 /// to be leaves in the call stack, making them more powerful than sync and async functions.
@@ -178,19 +179,14 @@ struct alignas(Value) AsyncFrame : CoroutineFrame {
 /// a later time or they may call another tiro function and be automatically resumed
 /// once that function call completes.
 ///
-/// The lifecycle of a resumable function frame is as follows:
-///     START -> [any number of user transitions...] -> END -> CLEANUP
-///
-/// TODO: More elegant way to cleanup resources other than an extra state?
 /// TODO: Unify with async frame
 ///
-/// Note: resumable frames currently use 0 or 1 temp value on the stack (not counting locals and arguments)
+/// Note: resumable frames currently use 0 or 1 temp value on the stack (not counting locals nor arguments)
 /// to implement the return value of invoked functions.
 struct alignas(Value) ResumableFrame : CoroutineFrame {
     enum WellKnownState {
         START = ResumableFrameContext::START,
         END = ResumableFrameContext::END,
-        CLEANUP = ResumableFrameContext::CLEANUP,
     };
 
     // The native function. Must be of type 'resumable'.

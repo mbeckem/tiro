@@ -23,7 +23,7 @@ extern "C" {
  * \param vm
  *      The virtual machine the function is executing on.
  * \param frame
- *      The function call frame. Use `tiro_sync_frame_arg` and `tiro_sync_frame_argc` to access the function
+ *      The function call frame. Use `tiro_sync_frame_arg` and `tiro_sync_frame_arg_count` to access the function
  *      call arguments. Call `tiro_sync_frame_result` to set the return value (it defaults to null if not set).
  *      The closure is also available by calling `tiro_sync_frame_closure`.
  *      The frame value is only valid for the duration of the function call.
@@ -34,7 +34,7 @@ typedef void (*tiro_sync_function_t)(tiro_vm_t vm, tiro_sync_frame_t frame);
  * Returns the number of function call arguments present in the given frame.
  * Returns 0 for invalid input arguments.
  */
-TIRO_API size_t tiro_sync_frame_argc(tiro_sync_frame_t frame);
+TIRO_API size_t tiro_sync_frame_arg_count(tiro_sync_frame_t frame);
 
 /**
  * Stores the function call argument with the given `index` into `result`.
@@ -84,7 +84,7 @@ TIRO_API void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_syn
  * \param vm
  *      The virtual machine the function is executing on.
  * \param frame
- *      The function call frame. Use `tiro_async_frame_arg` and `tiro_async_frame_argc` to access the function
+ *      The function call frame. Use `tiro_async_frame_arg` and `tiro_async_frame_arg_count` to access the function
  *      call arguments. Call `tiro_async_frame_return_value` to set the return value (it defaults to null if not set).
  *      The closure is also available by calling `tiro_async_frame_closure`.
  *
@@ -108,7 +108,7 @@ TIRO_API void tiro_async_frame_free(tiro_async_frame_t frame);
 TIRO_API tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame);
 
 /** Returns the number of function call arguments received by this frame. Returns 0 on error. */
-TIRO_API size_t tiro_async_frame_argc(tiro_async_frame_t frame);
+TIRO_API size_t tiro_async_frame_arg_count(tiro_async_frame_t frame);
 
 /**
  * Retrieves the function call argument at the specified index and stores it into `result`.
@@ -184,30 +184,56 @@ typedef enum tiro_resumable_state {
 
     /** Signals that the function has finished executing. */
     TIRO_RESUMABLE_STATE_END = -1,
-
-    /**
-     * Special state value used during cleanup.
-     * Must not be used as a target state.
-     *
-     * Resumable functions are currently limited in what they can do during cleanup.
-     * The frame's state may no longer be altered, and the function may neither
-     * may not perform (another) final return, panic, yield or call to another function.
-     */
-    TIRO_RESUMABLE_STATE_CLEANUP = -2,
 } tiro_resumable_state_t;
 
 /**
  * Returns the number of function call arguments present in the given frame.
  * Returns 0 for invalid input arguments.
  */
-TIRO_API size_t tiro_resumable_frame_argc(tiro_resumable_frame_t frame);
+TIRO_API size_t tiro_resumable_frame_arg_count(tiro_resumable_frame_t frame);
 
 /**
  * Stores the function call argument with the given `index` into `result`.
  * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the argument index is invalid.
+ *
+ * NOTE: this could return a handle directly, provided that the handle
+ * is only used while the frame pointer is valid.
  */
 TIRO_API void tiro_resumable_frame_arg(
     tiro_resumable_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Returns the number of local values available in the given frame.
+ * Returns 0 for invalid input arguments.
+ */
+TIRO_API size_t tiro_resumable_frame_local_count(tiro_resumable_frame_t frame);
+
+/**
+ * Stores the frame's local value with the given `index` into `result`.
+ * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the local index is invalid.
+ *
+ * Local values are private to a function frame (i.e. the current function execution)
+ * and persist between calls to the implementing native function.
+ * They can be used to transport values between yields or nested function calls.
+ *
+ * NOTE: this could return a mutable handle directly, provided that the handle
+ * is only used while the frame pointer is valid.
+ */
+TIRO_API void tiro_resumable_frame_local(
+    tiro_resumable_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Stores the given value into the local value slot with the given `index`.
+ * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the local index is invalid.
+ *
+ * Local values are private to a function frame (i.e. the current function execution)
+ * and persist between calls to the implementing native function.
+ * They can be used to transport values between yields or nested function calls.
+ *
+ * NOTE: this function would not be necessary if get_local returned a handle.
+ */
+TIRO_API void tiro_resumable_frame_set_local(
+    tiro_resumable_frame_t frame, size_t index, tiro_handle_t value, tiro_error_t* err);
 
 /** Returns the closure value which was specified when the function was created. */
 TIRO_API void
@@ -244,11 +270,6 @@ void TIRO_API tiro_resumable_frame_set_state(
  * Calling this function implies a state change to `next_state`, which will be the frame's state
  * when the native function is called again after `func`'s execution.
  *
- * NOTE: it is current not possible to handle a panic thrown by `func`.
- * However, cleanup is possible using the `CLEANUP` state.
- *
- * NOTE: it is currently not possible to call another function during cleanup.
- *
  * \param frame The resumable call frame
  * \param next_state The new state value
  * \param func Must refer to a valid function
@@ -273,8 +294,6 @@ TIRO_API void tiro_resumable_frame_invoke_return(
 /**
  * Sets the return value for the given function call frame to the given `value`.
  * The call frame's state is also set to `END` as a result of this call.
- *
- * NOTE: it is currently not possible to return a value during cleanup.
  */
 TIRO_API void tiro_resumable_frame_return_value(
     tiro_resumable_frame_t frame, tiro_handle_t value, tiro_error_t* err);
@@ -283,25 +302,49 @@ TIRO_API void tiro_resumable_frame_return_value(
  * Signals a panic from the given function call frame.
  * The call frame's state is also set to `END` as a result of this call.
  *
- * NOTE: it is currently not possible to panic during cleanup.
- *
  * TODO: Allow user defined exception objects instead of plain string?
  */
 TIRO_API void tiro_resumable_frame_panic_msg(
     tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err);
 
+/** Represents construction parameters for a resumable function. */
+typedef struct tiro_resumable_frame_desc {
+    /**
+     * The function name. Must be set to a valid string.
+     */
+    tiro_handle_t name;
+
+    /**
+     * The number of function parameters (0 by default).
+     * The maximum number of function arguments is limited to a reasonable amount (currently `1024`).
+     */
+    size_t arg_count;
+
+    /**
+     * The number of locals usable by a function frame.
+     * The maximum number of function locals is limited to a reasonable amount (currently `2 ** 14`).
+     */
+    size_t local_count;
+
+    /**
+     * An arbitrary value (may be NULL) that will be passed to the function (via the frame) on each invocation.
+     * The value is shared by all call frames created for this function.
+     */
+    tiro_handle_t closure;
+
+    /**
+     * The native function pointer that implements the resumable function.
+     */
+    tiro_resumable_function_t func;
+} tiro_resumable_frame_desc_t;
+
 /**
- * Constructs a new function object with the given name that will invoke the native function `func` when called.
- * `argc` is the number of arguments required for calling `func`. `closure` may be an arbitrary value
- * that will be passed to the function on every invocation.
+ * Constructs a new function object with the given description.
  *
  * On success, the new function will be stored in `result`.
- * Returns `TIRO_BAD_TYPE` if `name` is not a string. Returns `TIRO_BAD_ARG` if the the requested number of parameters
- * is too large. The current maximum is `1024`.
  */
-TIRO_API void
-tiro_make_resumable_function(tiro_vm_t vm, tiro_handle_t name, tiro_resumable_function_t func,
-    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
+TIRO_API void tiro_make_resumable_function(
+    tiro_vm_t vm, const tiro_resumable_frame_desc_t* desc, tiro_handle_t result, tiro_error_t* err);
 
 #ifdef __cplusplus
 }

@@ -244,6 +244,7 @@ TEST_CASE("Trivial resumable functions should be invocable", "[native_functions]
         case ResumableFrame::START:
             return frame.return_value(SmallInteger::make(3));
         }
+        FAIL("invalid state");
     };
 
     Context ctx;
@@ -273,7 +274,7 @@ TEST_CASE("Resumable functions should be able to call other functions", "[native
         switch (frame.state()) {
         case ResumableFrame::START: {
             Scope sc(ctx);
-            auto func = frame.arg(0);
+            auto func = frame.arg(0).must_cast<Function>();
             auto num = sc.local(HeapInteger::make(ctx, 100));
             auto args = sc.local(Tuple::make(ctx, {num}));
 
@@ -284,7 +285,6 @@ TEST_CASE("Resumable functions should be able to call other functions", "[native
             auto result = frame.invoke_return();
             REQUIRE(result.is<Integer>());
             REQUIRE(result.must_cast<Integer>().value() == 202);
-            expected_state = ResumableFrame::CLEANUP;
             return frame.return_value(result);
         }
         }
@@ -313,6 +313,73 @@ TEST_CASE("Resumable functions should be able to call other functions", "[native
     REQUIRE(value->must_cast<SmallInteger>().value() == 202);
 }
 
+TEST_CASE("Resumable function locals should be initialized to null", "[native_functions]") {
+    static constexpr u32 locals = 123;
+
+    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+        REQUIRE(frame.local_count() == locals);
+
+        for (u32 i = 0; i < locals; ++i) {
+            auto local = frame.local(i);
+            REQUIRE(local->type() == ValueType::Null);
+        }
+
+        switch (frame.state()) {
+        case ResumableFrame::START:
+            return frame.return_value(SmallInteger::make(3));
+        }
+        FAIL("invalid state");
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(NativeFunction::make(
+        ctx, name, {}, 0, locals, NativeFunctionStorage::resumable(native_func)));
+
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->unchecked_value());
+    REQUIRE(value->must_cast<SmallInteger>().value() == 3);
+}
+
+TEST_CASE("Resumable function locals persist between calls to the native function",
+    "[native_functions]") {
+    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+        auto& ctx = frame.ctx();
+        auto local = frame.local(0);
+        switch (frame.state()) {
+        case ResumableFrame::START:
+            local.set(ctx.get_integer(123));
+            return frame.set_state(1);
+        case 1:
+            local.set(ctx.get_integer(local.must_cast<Integer>()->value() * 2));
+            return frame.set_state(2);
+        case 2:
+            return frame.return_value(*local);
+        }
+        FAIL("invalid state");
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(
+        NativeFunction::make(ctx, name, {}, 0, 1, NativeFunctionStorage::resumable(native_func)));
+
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->unchecked_value());
+    REQUIRE(value->must_cast<SmallInteger>().value() == 246);
+}
+
+/*
+
+TODO: Cleanup (i.e. executing code when the function panicked to cleanup resources deterministically)
+is currently not implemented
+
 TEST_CASE("Resumable functions should be able to perform cleanup", "[native_functions]") {
     int cleanup_called = 0;
     auto native_func = [&cleanup_called](ResumableFrameContext& frame) {
@@ -335,5 +402,7 @@ TEST_CASE("Resumable functions should be able to perform cleanup", "[native_func
     REQUIRE(result->is_success());
     REQUIRE(cleanup_called == 1);
 }
+
+*/
 
 } // namespace tiro::vm::test

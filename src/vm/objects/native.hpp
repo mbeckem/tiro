@@ -14,6 +14,7 @@
 
 #include "tiro/objects.h"
 
+#include <array>
 #include <functional>
 #include <new>
 
@@ -81,29 +82,54 @@ private:
     AsyncFrame* frame_ = nullptr;    // Reset to null if already resumed!
 };
 
-struct ResumableFrameContinuation {
+class ResumableFrameContinuation final {
+public:
     enum Action {
         NONE,   // No action
-        RETURN, // Final return from resumable function
+        RETURN, // Return from resumable function
         PANIC,  // Panic from resumable function
         INVOKE, // Invoke another function
     };
 
+    struct RetData {
+        Handle<Value> value;
+    };
+
+    struct PanicData {
+        Handle<Exception> exception;
+    };
+
+    struct InvokeData {
+        Handle<Function> func;
+        Handle<Nullable<Tuple>> args;
+    };
+
+    using Registers = std::array<MutHandle<Value>, 2>;
+
+    // The instance needs a few registers as persistent storage
+    // to prevent dangling values due to garbage collection.
+    // The registers may only be modified from within this instance
+    // and must remain valid for as long as the continuation instance is being used.
+    ResumableFrameContinuation(const Registers& regs)
+        : regs_(regs) {}
+
     // The continuation action to perform after the native function returned.
-    Action action = NONE;
+    Action action() const { return action_; }
 
-    // Action
-    // - None: ignored
-    // - Return: return value
-    // - Panic: exception
-    // - Invoke: function to invoke
-    MutHandle<Value> value;
+    void do_ret(Value v);
+    void do_panic(Exception ex);
+    void do_invoke(Function func, Nullable<Tuple> args);
 
-    // Only if action is invoke: function arguments
-    MutHandle<Nullable<Tuple>> invoke_arguments;
+    RetData ret_data() const;
+    PanicData panic_data() const;
+    InvokeData invoke_data() const;
 
     ResumableFrameContinuation(const ResumableFrameContinuation&) = delete;
     ResumableFrameContinuation& operator=(const ResumableFrameContinuation&) = delete;
+
+private:
+    Action action_ = NONE;
+    Registers regs_;
 };
 
 class ResumableFrameContext final {
@@ -111,7 +137,6 @@ public:
     enum WellKnownState {
         START = 0,
         END = -1,
-        CLEANUP = -2,
     };
 
     explicit ResumableFrameContext(Context& ctx, Handle<Coroutine> coro,
@@ -129,8 +154,8 @@ public:
     HandleSpan<Value> args() const;
 
     size_t local_count() const;
-    Handle<Value> local(size_t index) const;
-    HandleSpan<Value> locals() const;
+    MutHandle<Value> local(size_t index) const;
+    MutHandleSpan<Value> locals() const;
 
     /// Returns the current state of this frame.
     int state() const;
@@ -149,7 +174,7 @@ public:
     ///
     /// The native function should return immediately without performing any other action on this frame.
     /// It will be resumed with the configured state once `func` returned or panicked. (TODO: panic)
-    void invoke(int next_state, Value func, Nullable<Tuple> arguments);
+    void invoke(int next_state, Function func, Nullable<Tuple> arguments);
 
     /// Returns the return value of the last function invocation performed by `invoke`.
     /// Should only be used after the function is being resumed after `invoke`.
@@ -229,6 +254,8 @@ private:
     ResumableFrameContext& parent_;
 };
 
+/// TODO: There should eventually be only a single function type at this layer,
+/// with translation happening at the construction site.
 class NativeFunctionStorage final {
 private:
     static constexpr size_t buffer_size = 2 * sizeof(void*); // Adjust as necessary
@@ -410,13 +437,8 @@ private:
 
     template<typename SyncFunc>
     static void translate_to_sync(ResumableFrameContext& frame, SyncFunc&& func) {
-        // TODO: Opt out of cleanup via flags to get rid of cleanup state handling?
-        TIRO_DEBUG_ASSERT(frame.state() == ResumableFrameContext::START
-                              || frame.state() == ResumableFrameContext::CLEANUP,
+        TIRO_DEBUG_ASSERT(frame.state() == ResumableFrameContext::START,
             "unexpected frame state when invoking a sync function");
-
-        if (frame.state() != ResumableFrameContext::START)
-            return; // Prevent cleanup call
 
         SyncFrameContext sync(frame);
         func(sync);

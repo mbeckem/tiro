@@ -104,13 +104,14 @@ bool CoroutineStack::push_user_frame(
 bool CoroutineStack::push_async_frame(NativeFunction func, u32 argc, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= argc, "not enough arguments on the stack");
     TIRO_DEBUG_ASSERT(argc >= func.params(), "not enough arguments to the call the given function");
+    TIRO_DEBUG_ASSERT(func.locals() == 0, "async frames may not have locals");
     return push_frame<AsyncFrame>(flags, argc, 0, func);
 }
 
 bool CoroutineStack::push_resumable_frame(NativeFunction func, u32 argc, u8 flags) {
     TIRO_DEBUG_ASSERT(top_value_count() >= argc, "not enough arguments on the stack");
     TIRO_DEBUG_ASSERT(argc >= func.params(), "not enough arguments to the call the given function");
-    return push_frame<ResumableFrame>(flags, argc, 0, func);
+    return push_frame<ResumableFrame>(flags, argc, func.locals(), func);
 }
 
 bool CoroutineStack::push_catch_frame(u32 argc, u8 flags) {
@@ -312,7 +313,15 @@ CoroutineStack::push_frame(u8 flags, u32 argc, u32 locals, Params&&... additiona
     params.caller = top_frame();
 
     Frame* frame = new (storage) Frame(std::forward<Params>(additional_frame_params)..., params);
-    std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, data->undef);
+    if (locals > 0) {
+        Value init;
+        if constexpr (std::is_same_v<CodeFrame, Frame>) {
+            init = data->undef;
+        } else {
+            // Init to null
+        }
+        std::uninitialized_fill_n(reinterpret_cast<Value*>(frame + 1), locals, init);
+    }
     data->top_frame = frame;
     return frame;
 }

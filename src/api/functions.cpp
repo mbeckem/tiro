@@ -2,11 +2,15 @@
 
 #include "tiro/functions.h"
 
+#include "vm/modules/verify.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/native.hpp"
 
 using namespace tiro;
 using namespace tiro::api;
+
+// Internally argc is uint32_t, this must always be smaller than 2 ** 32.
+static constexpr size_t max_argc = 1024;
 
 static vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func);
 static vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func);
@@ -25,7 +29,7 @@ static void get_arg(Frame frame, size_t index, tiro_handle_t result, tiro_error_
 template<typename Frame>
 void get_closure(Frame frame, tiro_handle_t result, tiro_error_t* err);
 
-size_t tiro_sync_frame_argc(tiro_sync_frame_t frame) {
+size_t tiro_sync_frame_arg_count(tiro_sync_frame_t frame) {
     return get_argc(frame);
 }
 
@@ -83,7 +87,7 @@ tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame) {
     });
 }
 
-size_t tiro_async_frame_argc(tiro_async_frame_t frame) {
+size_t tiro_async_frame_arg_count(tiro_async_frame_t frame) {
     return get_argc(frame);
 }
 
@@ -129,13 +133,52 @@ void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_funct
     return make_native_function(vm, name, func, argc, closure, result, err);
 }
 
-size_t tiro_resumable_frame_argc(tiro_resumable_frame_t frame) {
+size_t tiro_resumable_frame_arg_count(tiro_resumable_frame_t frame) {
     return get_argc(frame);
 }
 
 void tiro_resumable_frame_arg(
     tiro_resumable_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err) {
     return get_arg(frame, index, result, err);
+}
+
+size_t tiro_resumable_frame_local_count(tiro_resumable_frame_t frame) {
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!frame)
+            return 0;
+
+        return to_internal(frame)->local_count();
+    });
+}
+
+void tiro_resumable_frame_local(
+    tiro_resumable_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (index >= internal_frame->local_count())
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        auto result_handle = to_internal(result);
+        result_handle.set(internal_frame->local(index));
+    });
+}
+
+void tiro_resumable_frame_set_local(
+    tiro_resumable_frame_t frame, size_t index, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        if (index >= internal_frame->local_count())
+            return TIRO_REPORT(err, TIRO_ERROR_OUT_OF_BOUNDS);
+
+        auto internal_value = to_internal(value);
+        internal_frame->local(index).set(internal_value);
+    });
 }
 
 void tiro_resumable_frame_closure(
@@ -155,7 +198,7 @@ int tiro_resumable_frame_state(tiro_resumable_frame_t frame) {
 void tiro_resumable_frame_set_state(
     tiro_resumable_frame_t frame, int next_state, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!frame || next_state == TIRO_RESUMABLE_STATE_CLEANUP)
+        if (!frame)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         to_internal(frame)->set_state(next_state);
@@ -165,12 +208,10 @@ void tiro_resumable_frame_set_state(
 void tiro_resumable_frame_invoke(tiro_resumable_frame_t frame, int next_state, tiro_handle_t func,
     tiro_handle_t args, tiro_error_t* err) {
     return entry_point(err, [&]() {
-        if (!frame || !func || next_state == TIRO_RESUMABLE_STATE_CLEANUP)
+        if (!frame || !func)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
 
         auto maybe_func = to_internal(func).try_cast<vm::Function>();
         if (!maybe_func)
@@ -213,9 +254,6 @@ void tiro_resumable_frame_return_value(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
-
         auto internal_value = to_internal(value);
         internal_frame->return_value(*internal_value);
     });
@@ -228,9 +266,6 @@ void tiro_resumable_frame_panic_msg(
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         auto internal_frame = to_internal(frame);
-        if (internal_frame->state() == TIRO_RESUMABLE_STATE_CLEANUP)
-            return TIRO_REPORT(err, TIRO_ERROR_BAD_STATE);
-
         auto message_view = to_internal(message);
 
         // TODO: Ensure that function always goes into panic mode, even if the following throws!
@@ -241,10 +276,31 @@ void tiro_resumable_frame_panic_msg(
     });
 }
 
-TIRO_API void
-tiro_make_resumable_function(tiro_vm_t vm, tiro_handle_t name, tiro_resumable_function_t func,
-    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
-    return make_native_function(vm, name, func, argc, closure, result, err);
+TIRO_API void tiro_make_resumable_function(tiro_vm_t vm, const tiro_resumable_frame_desc_t* desc,
+    tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&]() {
+        if (!vm || !desc || !desc->name || !desc->func || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        if (desc->arg_count > max_argc)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        if (desc->local_count > vm::max_locals)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_name = to_internal(desc->name).try_cast<vm::String>();
+        if (!maybe_name)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto name_handle = maybe_name.handle();
+        auto maybe_closure = to_internal_maybe(desc->closure);
+        auto result_handle = to_internal(result);
+
+        result_handle.set(vm::NativeFunction::make(ctx, name_handle, maybe_closure,
+            static_cast<u32>(desc->arg_count), desc->local_count, wrap_function(desc->func)));
+    });
 }
 
 vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func) {
@@ -291,8 +347,6 @@ void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr func, si
         if (!vm || !name || !func || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
-        // Internally argc is uint32_t, this must always be smaller than 2 ** 32.
-        static constexpr size_t max_argc = 1024;
         if (argc > max_argc)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 

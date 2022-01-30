@@ -180,8 +180,6 @@ private:
     void run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
     void run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame);
 
-    void cleanup_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
-
     // Invokes a function object with `argc` arguments. This function implements
     // the Call instruction.
     //

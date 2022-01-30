@@ -41,28 +41,29 @@ grow_stack_impl(Context& ctx, Handle<Coroutine> coro, FunctionRef<bool(Coroutine
 
     // Slow path: must allocate a new stack and transfer everything.
     Scope sc(ctx);
-    Local old_stack = sc.local(current_stack(coro));
-    Local new_stack = sc.local<CoroutineStack>(defer_init);
-
+    Local stack = sc.local(current_stack(coro));
     TIRO_DEBUG_ASSERT(
-        object_size(*old_stack) <= CoroutineStack::max_size, "existing stack is too large");
+        object_size(*stack) <= CoroutineStack::max_size, "existing stack is too large");
 
     // This should only do a single iteration in almost all circumstances, since the required memory
     // is typically very small (e.g. enough space for a function frame, or for a few values on the stack).
     // We don't have a precise measurement to predict the required size, though.
+    // NOTE: we would avoid needless repeated resizes (and stack copies) if the coroutine stack
+    // methods that add frames would also communicate required size instead of just returning 'false'.
     do {
-        u32 next_size = static_cast<u32>(object_size(*old_stack));
+        u32 next_size = static_cast<u32>(object_size(*stack));
         if (TIRO_UNLIKELY(!checked_mul<u32>(next_size, 2)))
             TIRO_ERROR("overflow in stack size computation");
 
         if (TIRO_UNLIKELY(next_size > CoroutineStack::max_size))
             TIRO_ERROR("stack overflow");
 
-        new_stack = CoroutineStack::grow(ctx, old_stack, next_size);
-    } while (!cond(*new_stack));
+        stack = CoroutineStack::grow(ctx, stack, next_size);
+        TIRO_DEBUG_ASSERT(object_size(*stack) >= next_size, "coroutine stack must grow");
+    } while (!cond(*stack));
 
-    coro->stack(*new_stack);
-    return *new_stack;
+    coro->stack(*stack);
+    return *stack;
 }
 
 // Grows the stack to ensure that there are at least `required_value_capacity` free value
@@ -1074,12 +1075,7 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
         frame->state != ResumableFrame::END, "resumable function must not be in end state");
 
     ScopeExit reset_regs = [&] { regs_.reset(); };
-
-    ResumableFrameContinuation cont{
-        /* action */ ResumableFrameContinuation::NONE,
-        /* value */ reg<Value>(Value::null()),
-        /* invoke_arguments */ reg<Nullable<Tuple>>(Null()),
-    };
+    ResumableFrameContinuation cont({regs_.alloc(), regs_.alloc()});
 
     // Resume the function by invoking its native function pointer once.
     {
@@ -1099,27 +1095,25 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
             stack.pop_values(n);
     }
 
-    switch (cont.action) {
+    switch (cont.action()) {
     case ResumableFrameContinuation::NONE:
         return;
 
     case ResumableFrameContinuation::RETURN: {
-        TIRO_DEBUG_ASSERT(frame->state == ResumableFrame::END, "must be in end state");
-        cleanup_frame(coro, frame);
-        return return_function(coro, *cont.value);
+        return return_function(coro, *cont.ret_data().value);
     }
 
     case ResumableFrameContinuation::PANIC: {
-        TIRO_DEBUG_ASSERT(frame->state == ResumableFrame::END, "must be in end state");
-        return unwind(coro, cont.value->must_cast<Exception>());
+        return unwind(coro, *cont.panic_data().exception);
     }
 
     // Resumable function requested to call another function.
     // This calls the provided function and leaves the current resumable function's state on the stack until later.
     case ResumableFrameContinuation::INVOKE: {
         // XXX: Invalidates pointer to frame as the stack may resize!
-        u32 argc = push_function_args(ctx(), coro, cont.invoke_arguments);
-        return call_function(coro, cont.value, argc);
+        auto invoke = cont.invoke_data();
+        u32 argc = push_function_args(ctx(), coro, invoke.args);
+        return call_function(coro, invoke.func, argc);
     }
     }
 }
@@ -1151,27 +1145,6 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame) 
     auto stack = current_stack(coro);
     TIRO_DEBUG_ASSERT(stack.top_value_count() > 0, "missing return value on the stack");
     return return_function(coro, Result::make_success(ctx(), Handle<Value>(stack.top_value())));
-}
-
-void Interpreter::cleanup_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame) {
-    TIRO_DEBUG_ASSERT(frame == current_stack(coro).top_frame(), "expected the topmost frame");
-    TIRO_DEBUG_ASSERT(frame->type == FrameType::Resumable, "expected a resumable frame");
-    [[maybe_unused]] auto old_state = coro->state();
-
-    Scope sc(ctx());
-    Local value = sc.local();
-    Local arguments = sc.local<Nullable<Tuple>>();
-    ResumableFrameContinuation cont{
-        /* action */ ResumableFrameContinuation::NONE,
-        /* value */ value.mut(),
-        /* invoke_arguments */ arguments.mut(),
-    };
-
-    // TODO: Nested panics during cleanup (action is ignored)
-    frame->state = ResumableFrame::CLEANUP;
-    ResumableFrameContext native_frame(ctx(), coro, frame, cont);
-    frame->func.function().invoke_resumable(native_frame);
-    TIRO_DEBUG_ASSERT(coro->state() == old_state, "illegal modification of the coroutine's state");
 }
 
 void Interpreter::call_function(Handle<Coroutine> coro, Handle<Value> function, u32 argc) {
@@ -1327,16 +1300,16 @@ void Interpreter::unwind(Handle<Coroutine> coro, Exception unsafe_ex) {
     coro->state(CoroutineState::Done);
 }
 
-bool Interpreter::unwind_into(
-    Handle<Coroutine> coro, NotNull<CoroutineFrame*> frame, MutHandle<Exception> ex) {
+bool Interpreter::unwind_into([[maybe_unused]] Handle<Coroutine> coro,
+    NotNull<CoroutineFrame*> frame, MutHandle<Exception> ex) {
     switch (frame->type) {
     case FrameType::Async:
         // Async functions cannot catch panics at the moment
         return false;
 
     case FrameType::Resumable:
-        // Resumable functions may perform cleanup but cannot handle (i.e. catch) panics
-        cleanup_frame(coro, static_not_null_cast<ResumableFrame*>(frame));
+        // TODO: Allow to catch panics from called functions, this can be used
+        // to remove the special catch frame
         return false;
 
     case FrameType::Code:
