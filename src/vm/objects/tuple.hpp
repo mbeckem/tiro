@@ -16,14 +16,18 @@ class Tuple final : public HeapValue {
 public:
     using Layout = FixedSlotsLayout<Value>;
 
+    /// Creates a new tuple of the given size, with all entries initialized to null.
     static Tuple make(Context& ctx, size_t size);
 
-    // FIXME: HandleSpan is unsafe here if not used from stack storage. Verify.
+    /// Returns a new tuple by copying the current values in `initial_values`.
     static Tuple make(Context& ctx, HandleSpan<Value> initial_values);
 
-    // size must be greater >= initial_values.size()
+    /// Returns a new tuple of the requested `size` by copying the current values in `initial_values`
+    /// and initializing the remaining elements to null.
+    /// \pre `size >= initial_values.size()`
     static Tuple make(Context& ctx, HandleSpan<Value> initial_values, size_t size);
 
+    /// Returns a new tuple by copying the given values.
     static Tuple make(Context& ctx, std::initializer_list<Handle<Value>> values);
 
     explicit Tuple(Value v)
