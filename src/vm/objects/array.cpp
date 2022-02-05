@@ -169,9 +169,9 @@ static void array_clear_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc array_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<array_size_impl>()),
-    FunctionDesc::method("append"sv, 2, NativeFunctionStorage::static_sync<array_append_impl>()),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionStorage::static_sync<array_clear_impl>()),
+    FunctionDesc::method("size"sv, 1, array_size_impl),
+    FunctionDesc::method("append"sv, 2, array_append_impl),
+    FunctionDesc::method("clear"sv, 1, array_clear_impl),
 };
 
 constexpr TypeDesc array_type_desc{"Array"sv, array_methods};

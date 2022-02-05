@@ -106,11 +106,11 @@ static void set_remove_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc set_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<set_size_impl>()),
-    FunctionDesc::method("contains"sv, 2, NativeFunctionStorage::static_sync<set_contains_impl>()),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionStorage::static_sync<set_clear_impl>()),
-    FunctionDesc::method("insert"sv, 2, NativeFunctionStorage::static_sync<set_insert_impl>()),
-    FunctionDesc::method("remove"sv, 2, NativeFunctionStorage::static_sync<set_remove_impl>()),
+    FunctionDesc::method("size"sv, 1, set_size_impl),
+    FunctionDesc::method("contains"sv, 2, set_contains_impl),
+    FunctionDesc::method("clear"sv, 1, set_clear_impl),
+    FunctionDesc::method("insert"sv, 2, set_insert_impl),
+    FunctionDesc::method("remove"sv, 2, set_remove_impl),
 };
 
 constexpr TypeDesc set_type_desc{"Set"sv, set_methods};

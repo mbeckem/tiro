@@ -42,18 +42,12 @@ TEST_CASE("Function frames should have the correct layout", "[coroutine-stack]")
     REQUIRE(sizeof(CodeFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&user_frame) == 0);
 
-    Local async_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
-    AsyncFrame async_frame(*async_func, CoroutineFrameParams{});
-    REQUIRE(sizeof(AsyncFrame) % sizeof(Value) == 0);
-    REQUIRE(base_class_offset(&async_frame) == 0);
-
     CatchFrame catch_frame(CoroutineFrameParams{});
     REQUIRE(sizeof(CatchFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&catch_frame) == 0);
 
-    Local resumable_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::resumable([](ResumableFrameContext&) {})));
+    Local resumable_func = sc.local(
+        NativeFunction::resumable([](ResumableFrameContext&) {}).make(ctx));
     ResumableFrame resumable_frame(*resumable_func, CoroutineFrameParams{});
     REQUIRE(sizeof(ResumableFrame) % sizeof(Value) == 0);
     REQUIRE(base_class_offset(&resumable_frame) == 0);
@@ -63,9 +57,7 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
     Context ctx;
 
     Scope sc(ctx);
-    Local name = sc.local(String::make(ctx, "Test"));
-    Local async_func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, 0, NativeFunctionStorage::async([](AsyncFrameContext) {})));
+    Local async_func = sc.local(NativeFunction::async([](AsyncFrameContext&) {}).make(ctx));
 
     alignas(Value) byte stack[1 << 10];
     byte* end = stack + (1 << 10);
@@ -80,8 +72,8 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
     };
 
     // Caller frame on top
-    AsyncFrame* caller = new (alloc(sizeof(AsyncFrame)))
-        AsyncFrame(*async_func, CoroutineFrameParams());
+    ResumableFrame* caller = new (alloc(sizeof(ResumableFrame)))
+        ResumableFrame(*async_func, CoroutineFrameParams());
     REQUIRE(caller->caller_offset == 0);
     REQUIRE(caller->caller() == nullptr);
 
@@ -91,9 +83,10 @@ TEST_CASE("Function frames compute their caller correctly", "[coroutine-stack]")
     // Callee frame after gap
     CoroutineFrameParams callee_params;
     callee_params.caller = caller;
-    AsyncFrame* callee = new (alloc(sizeof(AsyncFrame))) AsyncFrame(*async_func, callee_params);
+    ResumableFrame* callee = new (alloc(sizeof(ResumableFrame)))
+        ResumableFrame(*async_func, callee_params);
 
-    REQUIRE(callee->caller_offset == sizeof(AsyncFrame) + sizeof(Value));
+    REQUIRE(callee->caller_offset == sizeof(ResumableFrame) + sizeof(Value));
     REQUIRE(callee->caller() == caller);
 };
 

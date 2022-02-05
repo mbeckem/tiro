@@ -11,7 +11,7 @@ static NativeFunction dummy_function(Context& ctx) {
 
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "dummy_function"));
-    return NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::sync(callback));
+    return NativeFunction::sync(callback).name(name).make(ctx);
 }
 
 TEST_CASE("Coroutine tokens should be cached", "[coroutine]") {

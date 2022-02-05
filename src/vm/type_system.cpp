@@ -27,14 +27,25 @@ public:
         return add_method(desc.name, desc.params, desc.func, desc.flags);
     }
 
-    TypeBuilder& add_method(std::string_view name, u32 argc, const NativeFunctionStorage& func,
+    TypeBuilder& add_method(std::string_view name, u32 argc, const FunctionPtr& func,
         /* MethodDesc::Flags */ int flags) {
         Scope sc(ctx_);
         Local member_name = sc.local(ctx_.get_symbol(name));
         Local member_str = sc.local(member_name->name());
-        Local member_value = sc.local<Value>(
-            NativeFunction::make(ctx_, member_str, {}, argc, 0, func));
 
+        auto builder = [&] {
+            switch (func.type) {
+            case FunctionPtrType::Sync:
+                return NativeFunction::sync(func.sync);
+            case FunctionPtrType::Async:
+                return NativeFunction::async(func.async);
+            case FunctionPtrType::Resumable:
+                return NativeFunction::resumable(func.resumable.func, func.resumable.locals);
+            }
+            TIRO_UNREACHABLE("invalid function type");
+        };
+
+        Local member_value = sc.local<Value>(builder().name(member_str).params(argc).make(ctx_));
         if (flags & FunctionDesc::InstanceMethod) {
             member_value = Method::make(ctx_, member_value);
         }

@@ -109,9 +109,8 @@ static void exception_trace_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc exception_methods[] = {
-    FunctionDesc::method(
-        "message"sv, 1, NativeFunctionStorage::static_sync<exception_message_impl>()),
-    FunctionDesc::method("trace"sv, 1, NativeFunctionStorage::static_sync<exception_trace_impl>()),
+    FunctionDesc::method("message"sv, 1, exception_message_impl),
+    FunctionDesc::method("trace"sv, 1, exception_trace_impl),
 };
 
 constexpr TypeDesc exception_type_desc{"Exception"sv, exception_methods};

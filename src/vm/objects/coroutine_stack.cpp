@@ -38,8 +38,6 @@ std::string_view to_string(FrameType type) {
     switch (type) {
     case FrameType::Code:
         return "Code";
-    case FrameType::Async:
-        return "Async";
     case FrameType::Resumable:
         return "Resumable";
     case FrameType::Catch:
@@ -55,8 +53,6 @@ size_t frame_size(const CoroutineFrame* frame) {
     switch (frame->type) {
     case FrameType::Code:
         return sizeof(CodeFrame);
-    case FrameType::Async:
-        return sizeof(AsyncFrame);
     case FrameType::Resumable:
         return sizeof(ResumableFrame);
     case FrameType::Catch:
@@ -99,13 +95,6 @@ bool CoroutineStack::push_user_frame(
     const u32 params = tmpl.params();
     const u32 locals = tmpl.locals();
     return push_frame<CodeFrame>(flags, params, locals, tmpl, closure);
-}
-
-bool CoroutineStack::push_async_frame(NativeFunction func, u32 argc, u8 flags) {
-    TIRO_DEBUG_ASSERT(top_value_count() >= argc, "not enough arguments on the stack");
-    TIRO_DEBUG_ASSERT(argc >= func.params(), "not enough arguments to the call the given function");
-    TIRO_DEBUG_ASSERT(func.locals() == 0, "async frames may not have locals");
-    return push_frame<AsyncFrame>(flags, argc, 0, func);
 }
 
 bool CoroutineStack::push_resumable_frame(NativeFunction func, u32 argc, u8 flags) {
@@ -231,9 +220,6 @@ void CoroutineStack::walk(
             break;
         case FrameType::Resumable:
             name = static_cast<ResumableFrame*>(frame.get())->func.name();
-            break;
-        case FrameType::Async:
-            name = static_cast<AsyncFrame*>(frame.get())->func.name();
             break;
         case FrameType::Catch:
             name = ctx.get_interned_string("<catch panic>");

@@ -307,52 +307,46 @@ static constexpr MathConstant math_constants[] = {
     {"INFINITY", std::numeric_limits<f64>::infinity()},
 };
 
-static const FunctionDesc functions[] = {
+static constexpr FunctionDesc functions[] = {
     // I/O
-    FunctionDesc::plain(
-        "print"sv, 0, NativeFunctionStorage::static_sync<std_print>(), FunctionDesc::Variadic),
-    FunctionDesc::plain("debug_repr", 1, NativeFunctionStorage::static_sync<std_debug_repr>()),
-    FunctionDesc::plain(
-        "loop_timestamp"sv, 0, NativeFunctionStorage::static_sync<std_loop_timestamp>()),
-    FunctionDesc::plain("to_utf8"sv, 1, NativeFunctionStorage::static_sync<std_to_utf8>()),
+    FunctionDesc::plain("print"sv, 0, std_print, FunctionDesc::Variadic),
+    FunctionDesc::plain("debug_repr", 1, std_debug_repr),
+    FunctionDesc::plain("loop_timestamp"sv, 0, std_loop_timestamp),
+    FunctionDesc::plain("to_utf8"sv, 1, std_to_utf8),
 
     // Math
-    FunctionDesc::plain("abs"sv, 1, NativeFunctionStorage::static_sync<std_abs>()),
-    FunctionDesc::plain("pow"sv, 2, NativeFunctionStorage::static_sync<std_pow>()),
-    FunctionDesc::plain("log"sv, 1, NativeFunctionStorage::static_sync<std_log>()),
-    FunctionDesc::plain("sqrt"sv, 1, NativeFunctionStorage::static_sync<std_sqrt>()),
-    FunctionDesc::plain("round"sv, 1, NativeFunctionStorage::static_sync<std_round>()),
-    FunctionDesc::plain("ceil"sv, 1, NativeFunctionStorage::static_sync<std_ceil>()),
-    FunctionDesc::plain("floor"sv, 1, NativeFunctionStorage::static_sync<std_floor>()),
-    FunctionDesc::plain("sin"sv, 1, NativeFunctionStorage::static_sync<std_sin>()),
-    FunctionDesc::plain("cos"sv, 1, NativeFunctionStorage::static_sync<std_cos>()),
-    FunctionDesc::plain("tan"sv, 1, NativeFunctionStorage::static_sync<std_tan>()),
-    FunctionDesc::plain("asin"sv, 1, NativeFunctionStorage::static_sync<std_asin>()),
-    FunctionDesc::plain("acos"sv, 1, NativeFunctionStorage::static_sync<std_acos>()),
-    FunctionDesc::plain("atan"sv, 1, NativeFunctionStorage::static_sync<std_atan>()),
+    FunctionDesc::plain("abs"sv, 1, std_abs),
+    FunctionDesc::plain("pow"sv, 2, std_pow),
+    FunctionDesc::plain("log"sv, 1, std_log),
+    FunctionDesc::plain("sqrt"sv, 1, std_sqrt),
+    FunctionDesc::plain("round"sv, 1, std_round),
+    FunctionDesc::plain("ceil"sv, 1, std_ceil),
+    FunctionDesc::plain("floor"sv, 1, std_floor),
+    FunctionDesc::plain("sin"sv, 1, std_sin),
+    FunctionDesc::plain("cos"sv, 1, std_cos),
+    FunctionDesc::plain("tan"sv, 1, std_tan),
+    FunctionDesc::plain("asin"sv, 1, std_asin),
+    FunctionDesc::plain("acos"sv, 1, std_acos),
+    FunctionDesc::plain("atan"sv, 1, std_atan),
 
     // Utilities
-    FunctionDesc::plain("type_of"sv, 1, NativeFunctionStorage::static_sync<std_type_of>()),
+    FunctionDesc::plain("type_of"sv, 1, std_type_of),
 
     // Error handling
-    FunctionDesc::plain("success"sv, 1, NativeFunctionStorage::static_sync<std_new_success>()),
-    FunctionDesc::plain("error"sv, 1, NativeFunctionStorage::static_sync<std_new_error>()),
-    FunctionDesc::plain("panic"sv, 1, NativeFunctionStorage::static_sync<std_panic>()),
+    FunctionDesc::plain("success"sv, 1, std_new_success),
+    FunctionDesc::plain("error"sv, 1, std_new_error),
+    FunctionDesc::plain("panic"sv, 1, std_panic),
 
     // Coroutines
-    FunctionDesc::plain("launch"sv, 1, NativeFunctionStorage::static_sync<std_launch>()),
-    FunctionDesc::plain(
-        "current_coroutine"sv, 0, NativeFunctionStorage::static_sync<std_current_coroutine>()),
-    FunctionDesc::plain(
-        "coroutine_token"sv, 0, NativeFunctionStorage::static_sync<std_coroutine_token>()),
-    FunctionDesc::plain(
-        "yield_coroutine"sv, 0, NativeFunctionStorage::static_sync<std_yield_coroutine>()),
-    FunctionDesc::plain("dispatch"sv, 0, NativeFunctionStorage::static_sync<std_dispatch>()),
+    FunctionDesc::plain("launch"sv, 1, std_launch),
+    FunctionDesc::plain("current_coroutine"sv, 0, std_current_coroutine),
+    FunctionDesc::plain("coroutine_token"sv, 0, std_coroutine_token),
+    FunctionDesc::plain("yield_coroutine"sv, 0, std_yield_coroutine),
+    FunctionDesc::plain("dispatch"sv, 0, std_dispatch),
 
     // Constructor functions (TODO)
-    FunctionDesc::plain(
-        "new_string_builder"sv, 0, NativeFunctionStorage::static_sync<std_new_string_builder>()),
-    FunctionDesc::plain("new_buffer"sv, 1, NativeFunctionStorage::static_sync<std_new_buffer>()),
+    FunctionDesc::plain("new_string_builder"sv, 0, std_new_string_builder),
+    FunctionDesc::plain("new_buffer"sv, 1, std_new_buffer),
 };
 
 Module create_std_module(Context& ctx) {
@@ -383,7 +377,7 @@ Module create_std_module(Context& ctx) {
     for (const auto& fn : functions) {
         TIRO_DEBUG_ASSERT((fn.flags & FunctionDesc::InstanceMethod) == 0,
             "Instance methods not supported as module members.");
-        builder.add_function(fn.name, fn.params, {}, fn.func);
+        builder.add_function(fn.name, fn.params, fn.func);
     }
 
     return builder.build();

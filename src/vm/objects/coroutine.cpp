@@ -146,7 +146,8 @@ Coroutine CoroutineToken::coroutine() {
 }
 
 bool CoroutineToken::valid() {
-    return same(coroutine().current_token());
+    auto coro = coroutine();
+    return same(coro.current_token());
 }
 
 bool CoroutineToken::resume(Context& ctx, Handle<CoroutineToken> token) {
@@ -168,7 +169,7 @@ static void coroutine_name_impl(SyncFrameContext& frame) {
 }
 
 static const FunctionDesc coroutine_methods[] = {
-    FunctionDesc::method("name"sv, 1, NativeFunctionStorage::static_sync<coroutine_name_impl>()),
+    FunctionDesc::method("name"sv, 1, coroutine_name_impl),
 };
 
 const TypeDesc coroutine_type_desc{"Coroutine"sv, coroutine_methods};
@@ -190,12 +191,9 @@ static void coroutine_token_resume_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc coroutine_token_methods[] = {
-    FunctionDesc::method(
-        "coroutine"sv, 1, NativeFunctionStorage::static_sync<coroutine_token_coroutine_impl>()),
-    FunctionDesc::method(
-        "valid"sv, 1, NativeFunctionStorage::static_sync<coroutine_token_valid_impl>()),
-    FunctionDesc::method(
-        "resume"sv, 1, NativeFunctionStorage::static_sync<coroutine_token_resume_impl>()),
+    FunctionDesc::method("coroutine"sv, 1, coroutine_token_coroutine_impl),
+    FunctionDesc::method("valid"sv, 1, coroutine_token_valid_impl),
+    FunctionDesc::method("resume"sv, 1, coroutine_token_resume_impl),
 };
 
 constexpr TypeDesc coroutine_token_type_desc{"CoroutineToken"sv, coroutine_token_methods};

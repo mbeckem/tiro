@@ -455,14 +455,11 @@ static void string_slice_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc string_methods[] = {
-    FunctionDesc::method(
-        "contains"sv, 2, NativeFunctionStorage::static_sync<string_contains_impl>()),
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_size_impl>()),
-    FunctionDesc::method(
-        "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_first_impl>()),
-    FunctionDesc::method(
-        "slice_last"sv, 2, NativeFunctionStorage::static_sync<string_slice_last_impl>()),
-    FunctionDesc::method("slice"sv, 3, NativeFunctionStorage::static_sync<string_slice_impl>()),
+    FunctionDesc::method("contains"sv, 2, string_contains_impl),
+    FunctionDesc::method("size"sv, 1, string_size_impl),
+    FunctionDesc::method("slice_first"sv, 2, string_slice_first_impl),
+    FunctionDesc::method("slice_last"sv, 2, string_slice_last_impl),
+    FunctionDesc::method("slice"sv, 3, string_slice_impl),
 };
 
 constexpr TypeDesc string_type_desc{"String"sv, string_methods};
@@ -508,17 +505,12 @@ static void string_slice_to_string_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc string_slice_methods[] = {
-    FunctionDesc::method(
-        "contains"sv, 2, NativeFunctionStorage::static_sync<string_slice_contains_impl>()),
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<string_slice_size_impl>()),
-    FunctionDesc::method(
-        "slice_first"sv, 2, NativeFunctionStorage::static_sync<string_slice_slice_first_impl>()),
-    FunctionDesc::method(
-        "slice_last"sv, 2, NativeFunctionStorage::static_sync<string_slice_slice_last_impl>()),
-    FunctionDesc::method(
-        "slice"sv, 3, NativeFunctionStorage::static_sync<string_slice_slice_impl>()),
-    FunctionDesc::method(
-        "to_string"sv, 1, NativeFunctionStorage::static_sync<string_slice_to_string_impl>()),
+    FunctionDesc::method("contains"sv, 2, string_slice_contains_impl),
+    FunctionDesc::method("size"sv, 1, string_slice_size_impl),
+    FunctionDesc::method("slice_first"sv, 2, string_slice_slice_first_impl),
+    FunctionDesc::method("slice_last"sv, 2, string_slice_slice_last_impl),
+    FunctionDesc::method("slice"sv, 3, string_slice_slice_impl),
+    FunctionDesc::method("to_string"sv, 1, string_slice_to_string_impl),
 };
 
 constexpr TypeDesc string_slice_type_desc{"StringSlice"sv, string_slice_methods};
@@ -572,18 +564,12 @@ static void string_builder_to_string_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc string_builder_methods[] = {
-    FunctionDesc::method("append"sv, 1,
-        NativeFunctionStorage::static_sync<string_builder_append_impl>(), FunctionDesc::Variadic),
-    FunctionDesc::method(
-        "append_byte"sv, 2, NativeFunctionStorage::static_sync<string_builder_append_byte_impl>()),
-    FunctionDesc::method(
-        "clear"sv, 1, NativeFunctionStorage::static_sync<string_builder_clear_impl>()),
-    FunctionDesc::method(
-        "contains"sv, 2, NativeFunctionStorage::static_sync<string_builder_contains_impl>()),
-    FunctionDesc::method(
-        "size"sv, 1, NativeFunctionStorage::static_sync<string_builder_size_impl>()),
-    FunctionDesc::method(
-        "to_string"sv, 1, NativeFunctionStorage::static_sync<string_builder_to_string_impl>()),
+    FunctionDesc::method("append"sv, 1, string_builder_append_impl, FunctionDesc::Variadic),
+    FunctionDesc::method("append_byte"sv, 2, string_builder_append_byte_impl),
+    FunctionDesc::method("clear"sv, 1, string_builder_clear_impl),
+    FunctionDesc::method("contains"sv, 2, string_builder_contains_impl),
+    FunctionDesc::method("size"sv, 1, string_builder_size_impl),
+    FunctionDesc::method("to_string"sv, 1, string_builder_to_string_impl),
 };
 
 constexpr TypeDesc string_builder_type_desc{"StringBuilder"sv, string_builder_methods};

@@ -12,9 +12,10 @@ using namespace tiro::api;
 // Internally argc is uint32_t, this must always be smaller than 2 ** 32.
 static constexpr size_t max_argc = 1024;
 
-static vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func);
-static vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func);
-static vm::NativeFunctionStorage wrap_function(tiro_resumable_function_t resumable_func);
+static vm::NativeFunction::Builder
+get_builder(tiro_resumable_function_t resumable_func, u32 locals);
+static vm::NativeFunction::Builder get_builder(tiro_async_function_t func);
+static vm::NativeFunction::Builder get_builder(tiro_sync_function_t func);
 
 template<typename FunctionPtr>
 static void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr func, size_t argc,
@@ -298,37 +299,18 @@ TIRO_API void tiro_make_resumable_function(tiro_vm_t vm, const tiro_resumable_fr
         auto maybe_closure = to_internal_maybe(desc->closure);
         auto result_handle = to_internal(result);
 
-        result_handle.set(vm::NativeFunction::make(ctx, name_handle, maybe_closure,
-            static_cast<u32>(desc->arg_count), desc->local_count, wrap_function(desc->func)));
+        auto builder = get_builder(desc->func, static_cast<u32>(desc->local_count));
+        builder.name(name_handle);
+        builder.params(static_cast<u32>(desc->arg_count));
+        if (maybe_closure)
+            builder.closure(maybe_closure.handle());
+
+        result_handle.set(builder.make(ctx));
     });
 }
 
-vm::NativeFunctionStorage wrap_function(tiro_sync_function_t sync_func) {
-    struct Function {
-        tiro_sync_function_t func;
-
-        void operator()(vm::SyncFrameContext& frame) {
-            func(vm_from_context(frame.ctx()), to_external(&frame));
-        }
-    };
-
-    return vm::NativeFunctionStorage::sync(Function{sync_func});
-}
-
-vm::NativeFunctionStorage wrap_function(tiro_async_function_t async_func) {
-    struct Function {
-        tiro_async_function_t func;
-
-        void operator()(vm::AsyncFrameContext frame) {
-            auto dynamic_frame = std::make_unique<vm::AsyncFrameContext>(std::move(frame));
-            func(vm_from_context(frame.ctx()), to_external(dynamic_frame.release()));
-        }
-    };
-
-    return vm::NativeFunctionStorage::async(Function{async_func});
-}
-
-vm::NativeFunctionStorage wrap_function(tiro_resumable_function_t resumable_func) {
+static vm::NativeFunction::Builder
+get_builder(tiro_resumable_function_t resumable_func, u32 locals) {
     struct Function {
         tiro_resumable_function_t func;
 
@@ -337,7 +319,36 @@ vm::NativeFunctionStorage wrap_function(tiro_resumable_function_t resumable_func
         }
     };
 
-    return vm::NativeFunctionStorage::resumable(Function{resumable_func});
+    return vm::NativeFunction::resumable(Function{resumable_func}, locals);
+}
+
+static vm::NativeFunction::Builder get_builder(tiro_async_function_t func) {
+    struct Function {
+        tiro_async_function_t func;
+
+        void operator()(vm::AsyncFrameContext& frame) {
+            (void) frame;
+            TIRO_NOT_IMPLEMENTED(); // TODO
+            /*
+            auto dynamic_frame = std::make_unique<vm::AsyncFrameContext>(std::move(frame));
+            func(vm_from_context(frame.ctx()), to_external(dynamic_frame.release()));
+            */
+        }
+    };
+
+    return vm::NativeFunction::async(Function{func});
+}
+
+static vm::NativeFunction::Builder get_builder(tiro_sync_function_t func) {
+    struct Function {
+        tiro_sync_function_t func;
+
+        void operator()(vm::SyncFrameContext& frame) {
+            func(vm_from_context(frame.ctx()), to_external(&frame));
+        }
+    };
+
+    return vm::NativeFunction::sync(Function{func});
 }
 
 template<typename FunctionPtr>
@@ -360,8 +371,12 @@ void make_native_function(tiro_vm_t vm, tiro_handle_t name, FunctionPtr func, si
         auto maybe_closure = to_internal_maybe(closure);
         auto result_handle = to_internal(result);
 
-        result_handle.set(vm::NativeFunction::make(
-            ctx, name_handle, maybe_closure, static_cast<u32>(argc), 0, wrap_function(func)));
+        auto builder = get_builder(func);
+        builder.name(name_handle);
+        if (maybe_closure)
+            builder.closure(maybe_closure.handle());
+        builder.params(static_cast<u32>(argc));
+        result_handle.set(builder.make(ctx));
     });
 }
 

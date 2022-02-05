@@ -176,7 +176,6 @@ private:
     // Note: frame points into the coroutine's current stack and will be invalidated
     // by stack growth during the the interpretation of the function frame.
     void run_frame(Handle<Coroutine> coro, NotNull<CodeFrame*> frame);
-    void run_frame(Handle<Coroutine> coro, NotNull<AsyncFrame*> frame);
     void run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> frame);
     void run_frame(Handle<Coroutine> coro, NotNull<CatchFrame*> frame);
 

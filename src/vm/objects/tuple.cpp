@@ -103,7 +103,7 @@ static void tuple_size_impl(SyncFrameContext& frame) {
 }
 
 static const FunctionDesc tuple_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<tuple_size_impl>()),
+    FunctionDesc::method("size"sv, 1, tuple_size_impl),
 };
 
 const TypeDesc tuple_type_desc{"Tuple"sv, tuple_methods};

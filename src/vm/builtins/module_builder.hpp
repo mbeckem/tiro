@@ -3,9 +3,9 @@
 
 #include "vm/handles/handle.hpp"
 #include "vm/handles/scope.hpp"
+#include "vm/object_support/type_desc.hpp"
 #include "vm/objects/function.hpp"
 #include "vm/objects/module.hpp"
-#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
 
@@ -19,9 +19,8 @@ public:
     // `name` must stay valid, i.e. not point into the garbage collected heap.
     ModuleBuilder& add_member(std::string_view name, Handle<Value> member);
 
-    // `name` must stay valid, i.e. not point into the garbage collected heap.
-    ModuleBuilder& add_function(std::string_view name, u32 argc, MaybeHandle<Tuple> values,
-        const NativeFunctionStorage& func);
+    // `func.name` must stay valid, i.e. not point into the garbage collected heap.
+    ModuleBuilder& add_function(std::string_view name, u32 argc, const FunctionPtr& ptr);
 
     Module build();
 

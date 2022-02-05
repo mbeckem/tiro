@@ -898,15 +898,12 @@ static void hash_table_remove_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc hash_table_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<hash_table_size_impl>()),
-    FunctionDesc::method(
-        "contains"sv, 2, NativeFunctionStorage::static_sync<hash_table_contains_impl>()),
-    FunctionDesc::method("keys"sv, 1, NativeFunctionStorage::static_sync<hash_table_keys_impl>()),
-    FunctionDesc::method(
-        "values"sv, 1, NativeFunctionStorage::static_sync<hash_table_values_impl>()),
-    FunctionDesc::method("clear"sv, 1, NativeFunctionStorage::static_sync<hash_table_clear_impl>()),
-    FunctionDesc::method(
-        "remove"sv, 2, NativeFunctionStorage::static_sync<hash_table_remove_impl>()),
+    FunctionDesc::method("size"sv, 1, hash_table_size_impl),
+    FunctionDesc::method("contains"sv, 2, hash_table_contains_impl),
+    FunctionDesc::method("keys"sv, 1, hash_table_keys_impl),
+    FunctionDesc::method("values"sv, 1, hash_table_values_impl),
+    FunctionDesc::method("clear"sv, 1, hash_table_clear_impl),
+    FunctionDesc::method("remove"sv, 2, hash_table_remove_impl),
 };
 
 constexpr TypeDesc hash_table_type_desc{"Map"sv, hash_table_methods};

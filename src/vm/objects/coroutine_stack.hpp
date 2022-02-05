@@ -15,9 +15,8 @@ namespace tiro::vm {
 
 enum class FrameType : u8 {
     Code = 0,
-    Async = 1,
-    Resumable = 2,
-    Catch = 3,
+    Resumable,
+    Catch,
 };
 
 std::string_view to_string(FrameType type);
@@ -33,19 +32,12 @@ enum FrameFlags : u8 {
     ///
     /// NOTE:
     ///     - code frame: when the bit is set, `current_exception` will contain the in-flight exception value.
-    ///     - async native frames: signals that the value must be thrown
     ///     - catch frame: exception was caught and stored in `exception`.
     FRAME_UNWINDING = 1 << 1,
 
     /// Set if the "catch" frame already initiated the wrapped function call.
     FRAME_CATCH_STARTED = 1 << 2,
 
-    /// Set if an async function has has it's initialiting function called.
-    /// This is only valid for frames of type `AsyncFrame`.
-    FRAME_ASYNC_CALLED = 1 << 2,
-
-    /// Signals that an async function was resumed. This is only valid for frames of type `AsyncFrame`.
-    FRAME_ASYNC_RESUMED = 1 << 3,
 };
 
 /// Common constructor parameters for coroutine frames.
@@ -139,36 +131,6 @@ struct alignas(Value) CodeFrame : CoroutineFrame {
     }
 };
 
-/// Represents a native function call that can suspend exactly once.
-///
-/// Coroutine execution is stopped (the state changes to CoroutineState::Waiting) after
-/// the async function has been initiated. It is the async function's responsibility
-/// to set the return value in this frame and to resume the coroutine (state CoroutineState::Ready).
-///
-/// The async function may complete immediately. In that case, coroutine resumption is still postponed
-/// to the next iteration of the main loop to avoid problems due to unexpected control flow.
-struct alignas(Value) AsyncFrame : CoroutineFrame {
-    NativeFunction func;
-
-    // Either null (function not done yet), the function's return value or an exception (panic).
-    // The meaning of this value depends on the frame's flags.
-    Value return_value_or_exception = Value::null();
-
-    AsyncFrame(NativeFunction func_, const CoroutineFrameParams& params)
-        : CoroutineFrame(FrameType::Async, params)
-        , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Async,
-            "unexpected function type (should be async)");
-    }
-
-    template<typename Tracer>
-    void trace(Tracer&& t) {
-        CoroutineFrame::trace(t);
-        t(func);
-        t(return_value_or_exception);
-    }
-};
-
 /// Represents a native function call that can suspend any number of times.
 ///
 /// Functions of resumable type may invoke other tiro functions: they do not need
@@ -197,11 +159,7 @@ struct alignas(Value) ResumableFrame : CoroutineFrame {
 
     ResumableFrame(NativeFunction func_, const CoroutineFrameParams& params)
         : CoroutineFrame(FrameType::Resumable, params)
-        , func(func_) {
-        TIRO_DEBUG_ASSERT(func.function().type() == NativeFunctionType::Resumable
-                              || func.function().type() == NativeFunctionType::Sync,
-            "unexpected function type (should be resumable or sync)");
-    }
+        , func(func_) {}
 
     template<typename Tracer>
     void trace(Tracer&& t) {
@@ -318,10 +276,6 @@ public:
     /// There must be enough arguments already on the stack to satisfy the function template.
     bool push_user_frame(CodeFunctionTemplate tmpl, Nullable<Environment> closure, u8 flags);
 
-    /// Pushes a new call frame for the given async function on the stack.
-    /// There must be enough arguments on the stack to satisfy the given async function.
-    bool push_async_frame(NativeFunction func, u32 argc, u8 flags);
-
     /// Pushes a new call frame for the given resumable function on the stack.
     /// There must be enough arguments on the stack to satisfy the given resumable function.
     bool push_resumable_frame(NativeFunction func, u32 argc, u8 flags);
@@ -415,7 +369,6 @@ case FrameType::Tag:                     \
     break;
 
                 TIRO_TRACE(Code, CodeFrame)
-                TIRO_TRACE(Async, AsyncFrame)
                 TIRO_TRACE(Resumable, ResumableFrame)
                 TIRO_TRACE(Catch, CatchFrame)
 

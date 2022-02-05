@@ -72,7 +72,7 @@ static void class_name_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc type_methods[] = {
-    FunctionDesc::method("name"sv, 1, NativeFunctionStorage::static_sync<class_name_impl>()),
+    FunctionDesc::method("name"sv, 1, class_name_impl),
 };
 
 constexpr TypeDesc type_type_desc{"Type"sv, type_methods};

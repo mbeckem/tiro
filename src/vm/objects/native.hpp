@@ -20,68 +20,6 @@
 
 namespace tiro::vm {
 
-enum class NativeFunctionType {
-    Invalid,
-    Sync,
-    Async,
-    Resumable,
-};
-
-std::string_view to_string(NativeFunctionType type);
-
-class AsyncFrameContext final {
-public:
-    explicit AsyncFrameContext(Context& ctx, Handle<Coroutine> coro, NotNull<AsyncFrame*> frame);
-    AsyncFrameContext(AsyncFrameContext&&) noexcept;
-    ~AsyncFrameContext();
-
-    AsyncFrameContext(const AsyncFrameContext&) = delete;
-    AsyncFrameContext& operator=(const AsyncFrameContext&) = delete;
-    AsyncFrameContext& operator=(AsyncFrameContext&&) = delete;
-
-    Context& ctx() const { return ctx_; }
-
-    Value closure() const;
-
-    size_t arg_count() const;
-    Handle<Value> arg(size_t index) const;
-    HandleSpan<Value> args() const;
-
-    /// Sets the return slot of this function frame to the value `r`.
-    /// The value will be returned to the caller of this function once it returns.
-    void return_value(Value r);
-
-    /// Sets the panic slot of this function frame to the value `ex`.
-    /// Once the native function returns, the value will be thrown and stack unwinding will take place.
-    void panic(Exception ex);
-
-    /// Panics or returns a value, depending on the fallible's state.
-    template<typename T>
-    void return_or_panic(Fallible<T> fallible) {
-        if (fallible.has_exception()) {
-            panic(std::move(fallible).exception());
-        } else {
-            if constexpr (std::is_same_v<T, void>) {
-                return_value(Value::null());
-            } else {
-                return_value(std::move(fallible).value());
-            }
-        }
-    }
-
-private:
-    // Schedules the coroutine for execution (after setting the return value).
-    void resume();
-
-    Handle<Coroutine> coroutine() const;
-    NotNull<AsyncFrame*> frame() const;
-
-private:
-    Context& ctx_;
-    Value* coro_external_ = nullptr; // Reset to null if frame was moved!
-    AsyncFrame* frame_ = nullptr;    // Reset to null if already resumed!
-};
-
 class ResumableFrameContinuation final {
 public:
     enum Action {
@@ -89,6 +27,7 @@ public:
         RETURN, // Return from resumable function
         PANIC,  // Panic from resumable function
         INVOKE, // Invoke another function
+        YIELD,  // Put coroutine into waiting state until resumed
     };
 
     struct RetData {
@@ -119,6 +58,7 @@ public:
     void do_ret(Value v);
     void do_panic(Exception ex);
     void do_invoke(Function func, Nullable<Tuple> args);
+    void do_yield();
 
     RetData ret_data() const;
     PanicData panic_data() const;
@@ -144,6 +84,8 @@ public:
 
     ResumableFrameContext(ResumableFrameContext&&) = delete;
     ResumableFrameContext& operator=(ResumableFrameContext&&) = delete;
+
+    const ResumableFrameContinuation& cont() const { return cont_; }
 
     Context& ctx() const { return ctx_; }
     Handle<Coroutine> coro() const;
@@ -173,7 +115,7 @@ public:
     /// - `arguments` must be either null or a tuple of arguments appropriate for `func`
     ///
     /// The native function should return immediately without performing any other action on this frame.
-    /// It will be resumed with the configured state once `func` returned or panicked. (TODO: panic)
+    /// It will be resumed with the given state once `func` returned or panicked. (TODO: panic)
     void invoke(int next_state, Function func, Nullable<Tuple> arguments);
 
     /// Returns the return value of the last function invocation performed by `invoke`.
@@ -181,6 +123,16 @@ public:
     ///
     /// TODO: Make panic handling possible
     Value invoke_return();
+
+    /// Retrieves a valid resume token.
+    /// Should be used in combination with `yield()`.
+    CoroutineToken resume_token();
+
+    /// Pauses the calling coroutine once the native function returns.
+    /// The coroutine remains paused until it is being resumed by a valid resume token.
+    /// The native function should return immediately without performing any other action on this frame.
+    /// Once the coroutine has been resumed, this frame will become active again with the given state.
+    void yield(int next_state);
 
     /// Sets the return slot of this function frame to the value `r`.
     /// The value will be returned to the caller of this function once it returns.
@@ -254,141 +206,133 @@ private:
     ResumableFrameContext& parent_;
 };
 
-/// TODO: There should eventually be only a single function type at this layer,
-/// with translation happening at the construction site.
-class NativeFunctionStorage final {
+class AsyncFrameContext final {
+public:
+    enum Local {
+        // The local slot used to transport the async return value (if any)
+        LOCAL_RESULT = 0,
+
+        // The local slot used to transprot the async panic (if any)
+        LOCAL_PANIC,
+
+        LOCALS_COUNT,
+    };
+
+    enum State {
+        // Start state
+        STATE_START = 0,
+
+        // State after resume from yield, return or throw the result
+        STATE_RESUME = 1,
+    };
+
+    explicit AsyncFrameContext(ResumableFrameContext& parent)
+        : parent_(parent) {}
+
+    AsyncFrameContext(const AsyncFrameContext&) = delete;
+    AsyncFrameContext& operator=(const AsyncFrameContext&) = delete;
+
+    Context& ctx() const { return parent_.ctx(); }
+
+    Value closure() const { return parent_.closure(); }
+
+    size_t arg_count() const { return parent_.arg_count(); }
+    Handle<Value> arg(size_t index) const { return parent_.arg(index); }
+    HandleSpan<Value> args() const { return parent_.args(); }
+
+    void return_value(Value r) { parent_.return_value(r); }
+    void panic(Exception ex) { parent_.panic(ex); }
+
+    AsyncResumeToken resume_token();
+    void yield() { parent_.yield(AsyncFrameContext::STATE_RESUME); }
+
+    template<typename T>
+    void return_or_panic(Fallible<T> fallible) {
+        parent_.return_or_panic(fallible);
+    }
+
+private:
+    ResumableFrameContext& parent_;
+};
+
+class AsyncResumeToken final {
+public:
+    explicit AsyncResumeToken(UniqueExternal<CoroutineToken> token);
+    ~AsyncResumeToken();
+
+    AsyncResumeToken(AsyncResumeToken&& other) noexcept;
+    AsyncResumeToken& operator=(AsyncResumeToken&& other) noexcept;
+
+    void return_value(Value r);
+
+    void panic(Exception ex);
+
+private:
+    void complete(Value v, bool panic);
+
+    Context& get_ctx();
+
+    Coroutine get_coro();
+
+    /// XXX: points to the coroutine stack, do not store the pointer
+    /// for long (gc may run or stack may reallocate).
+    NotNull<ResumableFrame*> get_frame(Handle<Coroutine> coro);
+
+private:
+    UniqueExternal<CoroutineToken> token_;
+};
+
+class NativeFunctionHolder final {
 private:
     static constexpr size_t buffer_size = 2 * sizeof(void*); // Adjust as necessary
 
-    template<NativeFunctionType type>
-    struct ConstructorTag {};
+    struct DynamicConstructor {};
 
-    template<NativeFunctionType type, auto Function>
-    struct ConstexprConstructorTag {};
+    template<auto Function>
+    struct ConstexprConstructor {};
 
 public:
-    constexpr NativeFunctionStorage()
-        : type_(NativeFunctionType::Invalid)
-        , invalid_()
+    template<typename Function>
+    static NativeFunctionHolder wrap(Function&& func) {
+        return NativeFunctionHolder(DynamicConstructor(), std::forward<Function>(func));
+    }
+
+    template<auto Function>
+    constexpr static NativeFunctionHolder wrap_static() {
+        return NativeFunctionHolder(ConstexprConstructor<Function>());
+    }
+
+    /// Constructs an invalid instance.
+    /// Needed for default-constructure requirement in current object layout implementation.
+    constexpr NativeFunctionHolder()
+        : invoke_(nullptr)
         , buffer_() {}
 
-    constexpr NativeFunctionStorage(const NativeFunctionStorage&) = default;
-    constexpr NativeFunctionStorage& operator=(const NativeFunctionStorage&) = default;
+    constexpr NativeFunctionHolder(const NativeFunctionHolder&) = default;
+    constexpr NativeFunctionHolder& operator=(const NativeFunctionHolder&) = default;
 
-    /// Represents a native function that will be called in a synchronous fashion.
-    /// The function should place the function return value in the provided frame.
-    /// Only use this approach for simple, nonblocking functions!
-    template<typename Function>
-    static NativeFunctionStorage sync(Function&& func) {
-        return NativeFunctionStorage(
-            ConstructorTag<NativeFunctionType::Sync>(), std::forward<Function>(func));
-    }
-
-    /// Similar to `sync()`, but accepts a compile time function pointer (or function like object) to invoke.
-    template<auto Function>
-    constexpr static NativeFunctionStorage static_sync() {
-        return NativeFunctionStorage(ConstexprConstructorTag<NativeFunctionType::Sync, Function>());
-    }
-
-    /// Represents a native function that can be called to perform some async operation.
-    /// The coroutine will yield and wait until it is resumed by the async operation.
-    template<typename Function>
-    static NativeFunctionStorage async(Function&& func) {
-        return NativeFunctionStorage(
-            ConstructorTag<NativeFunctionType::Async>(), std::forward<Function>(func));
-    }
-
-    /// Similar to `async()`, but accepts a compile time function pointer (or function like object) to invoke.
-    template<auto Function>
-    constexpr static NativeFunctionStorage static_async() {
-        return NativeFunctionStorage(
-            ConstexprConstructorTag<NativeFunctionType::Async, Function>());
-    }
-
-    /// Represents a native function that can be called as a resumable function.
-    /// The coroutine can yield and resume any number of times.
-    template<typename Function>
-    static NativeFunctionStorage resumable(Function&& func) {
-        return NativeFunctionStorage(
-            ConstructorTag<NativeFunctionType::Resumable>(), std::forward<Function>(func));
-    }
-
-    /// Similar to `resumable()`, but accepts a compile time function pointer (or function like object) to invoke.
-    template<auto Function>
-    constexpr static NativeFunctionStorage static_resumable() {
-        return NativeFunctionStorage(
-            ConstexprConstructorTag<NativeFunctionType::Resumable, Function>());
-    }
-
-    /// Returns the type of the native function. Native functions of different types expect
-    /// different calling conventions (e.g. sync vs async) and different arguments.
-    constexpr NativeFunctionType type() const { return type_; }
-
-    /// Invokes this function as an asynchronous function.
-    /// \pre `type() == NativeFunctionType::Async`.
-    void invoke_async(AsyncFrameContext frame) {
-        TIRO_DEBUG_ASSERT(
-            type() == NativeFunctionType::Async, "cannot call this function as an async function");
-        return invoke_async_(std::move(frame), buffer_);
-    }
+    /// Returns true if this instance stores a valid function pointer.
+    bool valid() const { return invoke_ != nullptr; }
 
     /// Invokes this function as a resumable function.
-    /// \pre `type() == NativeFunctionType::Resumable`.
-    void invoke_resumable(ResumableFrameContext& frame) {
-        TIRO_DEBUG_ASSERT(type() == NativeFunctionType::Resumable,
-            "cannot call this function as a resumable function");
-
-        return invoke_resumable_(frame, buffer_);
+    /// \pre `valid()`.
+    void invoke(ResumableFrameContext& frame) {
+        TIRO_DEBUG_ASSERT(invoke_ != nullptr, "invalid instance");
+        return invoke_(frame, buffer_);
     }
 
 private:
-    template<typename SyncFunction>
-    NativeFunctionStorage(ConstructorTag<NativeFunctionType::Sync>, SyncFunction&& func) {
-        using Func = remove_cvref_t<SyncFunction>;
-        check_function_properties<Func>();
-
-        type_ = NativeFunctionType::Resumable;
-        invoke_resumable_ = invoke_sync_impl<Func>;
-        new (&buffer_) Func(std::forward<SyncFunction>(func));
-    }
-
-    template<typename AsyncFunction>
-    NativeFunctionStorage(ConstructorTag<NativeFunctionType::Async>, AsyncFunction&& func) {
-        using Func = remove_cvref_t<AsyncFunction>;
-        check_function_properties<Func>();
-
-        type_ = NativeFunctionType::Async;
-        invoke_async_ = invoke_async_impl<Func>;
-        new (&buffer_) Func(std::forward<AsyncFunction>(func));
-    }
-
     template<typename ResumableFunction>
-    NativeFunctionStorage(ConstructorTag<NativeFunctionType::Resumable>, ResumableFunction&& func) {
+    NativeFunctionHolder(DynamicConstructor, ResumableFunction&& func) {
         using Func = remove_cvref_t<ResumableFunction>;
         check_function_properties<Func>();
-
-        type_ = NativeFunctionType::Resumable;
-        invoke_resumable_ = invoke_resumable_impl<Func>;
+        invoke_ = invoke_impl<Func>;
         new (&buffer_) Func(std::forward<ResumableFunction>(func));
     }
 
     template<auto Function>
-    constexpr NativeFunctionStorage(ConstexprConstructorTag<NativeFunctionType::Sync, Function>)
-        : type_(NativeFunctionType::Resumable)
-        , invoke_resumable_(invoke_static_sync_impl<Function>)
-        , buffer_() {}
-
-    template<auto Function>
-    constexpr NativeFunctionStorage(ConstexprConstructorTag<NativeFunctionType::Async, Function>)
-        : type_(NativeFunctionType::Async)
-        , invoke_async_(invoke_static_async_impl<Function>)
-        , buffer_() {}
-
-    template<auto Function>
-    constexpr NativeFunctionStorage(
-        ConstexprConstructorTag<NativeFunctionType::Resumable, Function>)
-        : type_(NativeFunctionType::Resumable)
-        , invoke_resumable_(invoke_static_resumable_impl<Function>)
+    constexpr NativeFunctionHolder(ConstexprConstructor<Function>)
+        : invoke_(invoke_static_impl<Function>)
         , buffer_() {}
 
     template<typename Func>
@@ -403,56 +347,18 @@ private:
     }
 
     template<typename Func>
-    static void invoke_sync_impl(ResumableFrameContext& frame, void* buffer) {
-        Func* func = static_cast<Func*>(buffer);
-        translate_to_sync(frame, [&](SyncFrameContext& sync) { (*func)(sync); });
-    }
-
-    template<typename Func>
-    static void invoke_async_impl(AsyncFrameContext frame, void* buffer) {
-        Func* func = static_cast<Func*>(buffer);
-        (*func)(std::move(frame));
-    }
-
-    template<typename Func>
-    static void invoke_resumable_impl(ResumableFrameContext& frame, void* buffer) {
+    static void invoke_impl(ResumableFrameContext& frame, void* buffer) {
         Func* func = static_cast<Func*>(buffer);
         (*func)(frame);
     }
 
     template<auto Func>
-    static void invoke_static_sync_impl(ResumableFrameContext& frame, void*) {
-        translate_to_sync(frame, [](SyncFrameContext& sync) { Func(sync); });
-    }
-
-    template<auto Func>
-    static void invoke_static_async_impl(AsyncFrameContext frame, void*) {
-        Func(std::move(frame));
-    }
-
-    template<auto Func>
-    static void invoke_static_resumable_impl(ResumableFrameContext& frame, void*) {
+    static void invoke_static_impl(ResumableFrameContext& frame, void*) {
         Func(frame);
     }
 
-    template<typename SyncFunc>
-    static void translate_to_sync(ResumableFrameContext& frame, SyncFunc&& func) {
-        TIRO_DEBUG_ASSERT(frame.state() == ResumableFrameContext::START,
-            "unexpected frame state when invoking a sync function");
-
-        SyncFrameContext sync(frame);
-        func(sync);
-        if (frame.state() != ResumableFrameContext::END)
-            frame.return_value(Value::null());
-    }
-
 private:
-    NativeFunctionType type_;
-    union {
-        void (*invalid_)(); // needed for constexpr default constructor
-        void (*invoke_async_)(AsyncFrameContext frame, void* buffer);
-        void (*invoke_resumable_)(ResumableFrameContext& frame, void* buffer);
-    };
+    void (*invoke_)(ResumableFrameContext& frame, void* buffer);
     alignas(void*) char buffer_[buffer_size];
 };
 
@@ -468,15 +374,64 @@ private:
     struct Payload {
         u32 params;
         u32 locals;
-        NativeFunctionStorage function;
+        NativeFunctionHolder function;
+    };
+
+public:
+    class Builder final {
+    public:
+        Builder& params(u32 value) {
+            params_ = value;
+            return *this;
+        }
+
+        Builder& name(Handle<String> value) {
+            name_ = value;
+            return *this;
+        }
+
+        Builder& closure(Handle<Value> value) {
+            closure_ = value;
+            return *this;
+        }
+
+        NativeFunction make(Context& ctx) { return NativeFunction::make_impl(ctx, *this); }
+
+    private:
+        friend NativeFunction;
+
+        Builder(const NativeFunctionHolder& holder, u32 locals)
+            : holder_(holder)
+            , locals_(locals) {}
+
+    private:
+        NativeFunctionHolder holder_;
+        MaybeHandle<String> name_;
+        MaybeHandle<Value> closure_;
+        u32 params_ = 0;
+        u32 locals_ = 0;
     };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>, StaticPayloadPiece<Payload>>;
 
-    /// Constructs a new native function from the given arguments.
-    static NativeFunction make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-        u32 params, u32 locals, const NativeFunctionStorage& function);
+    template<typename SyncFn>
+    static Builder sync(SyncFn&& fn) {
+        using Adapter = SyncAdapter<remove_cvref_t<SyncFn>>;
+        return Builder(NativeFunctionHolder::wrap(Adapter(std::forward<SyncFn>(fn))), 0);
+    }
+
+    template<typename AsyncFn>
+    static Builder async(AsyncFn&& fn) {
+        using Adapter = AsyncAdapter<remove_cvref_t<AsyncFn>>;
+        return Builder(NativeFunctionHolder::wrap(Adapter(std::forward<AsyncFn>(fn))),
+            AsyncFrameContext::LOCALS_COUNT);
+    }
+
+    template<typename ResumableFn>
+    static Builder resumable(ResumableFn&& fn, u32 locals = 0) {
+        return Builder(NativeFunctionHolder::wrap(std::forward<ResumableFn>(fn)), locals);
+    }
 
     explicit NativeFunction(Value v)
         : HeapValue(v, DebugCheck<NativeFunction>()) {}
@@ -487,9 +442,59 @@ public:
     u32 locals();
 
     /// Returns the actual native function.
-    NativeFunctionStorage function();
+    NativeFunctionHolder function();
 
     Layout* layout() const { return access_heap<Layout>(); }
+
+private:
+    static NativeFunction make_impl(Context& ctx, const Builder& builder);
+
+private:
+    template<typename SyncFn>
+    struct SyncAdapter {
+        SyncFn func;
+
+        explicit SyncAdapter(SyncFn fn)
+            : func(std::move(fn)) {}
+
+        void operator()(ResumableFrameContext& frame) {
+            TIRO_DEBUG_ASSERT(frame.state() == ResumableFrameContext::START,
+                "unexpected frame state when invoking a sync function");
+
+            SyncFrameContext sync(frame);
+            func(sync);
+            if (frame.cont().action() == ResumableFrameContinuation::NONE)
+                frame.return_value(Value::null());
+        }
+    };
+
+    template<typename AsyncFn>
+    struct AsyncAdapter {
+        AsyncFn func;
+
+        explicit AsyncAdapter(AsyncFn fn)
+            : func(std::move(fn)) {}
+
+        void operator()(ResumableFrameContext& frame) {
+            switch (frame.state()) {
+            case AsyncFrameContext::STATE_START: {
+                AsyncFrameContext async(frame);
+                func(async);
+                if (frame.cont().action() == ResumableFrameContinuation::NONE)
+                    frame.return_value(Value::null());
+                return;
+            }
+            case AsyncFrameContext::STATE_RESUME: {
+                auto result = frame.local(AsyncFrameContext::LOCAL_RESULT);
+                auto panic = frame.local(AsyncFrameContext::LOCAL_PANIC);
+                if (!panic->is_null())
+                    return frame.panic(*panic.must_cast<Exception>());
+                return frame.return_value(*result);
+            }
+            }
+            TIRO_DEBUG_ASSERT(false, "unexpected frame state when invoking an async function");
+        }
+    };
 };
 
 template<typename T>

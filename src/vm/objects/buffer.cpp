@@ -62,7 +62,7 @@ static void buffer_size_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc buffer_methods[] = {
-    FunctionDesc::method("size"sv, 1, NativeFunctionStorage::static_sync<buffer_size_impl>()),
+    FunctionDesc::method("size"sv, 1, buffer_size_impl),
 };
 
 constexpr TypeDesc buffer_type_desc{"Buffer"sv, buffer_methods};

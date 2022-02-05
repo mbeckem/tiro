@@ -11,7 +11,6 @@ namespace tiro::vm {
 /// Represents executable byte code, typically used to
 /// represents the instructions within a function.
 ///
-/// TODO: Need a bytecode validation routine.
 /// TODO: Code should not be movable on the heap.
 class Code final : public HeapValue {
 public:

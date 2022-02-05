@@ -107,13 +107,11 @@ static void result_error_impl(SyncFrameContext& frame) {
 }
 
 static constexpr FunctionDesc result_methods[] = {
-    FunctionDesc::method("type"sv, 1, NativeFunctionStorage::static_sync<result_type_impl>()),
-    FunctionDesc::method(
-        "is_success"sv, 1, NativeFunctionStorage::static_sync<result_is_success_impl>()),
-    FunctionDesc::method(
-        "is_error"sv, 1, NativeFunctionStorage::static_sync<result_is_error_impl>()),
-    FunctionDesc::method("value"sv, 1, NativeFunctionStorage::static_sync<result_value_impl>()),
-    FunctionDesc::method("error"sv, 1, NativeFunctionStorage::static_sync<result_error_impl>()),
+    FunctionDesc::method("type"sv, 1, result_type_impl),
+    FunctionDesc::method("is_success"sv, 1, result_is_success_impl),
+    FunctionDesc::method("is_error"sv, 1, result_is_error_impl),
+    FunctionDesc::method("value"sv, 1, result_value_impl),
+    FunctionDesc::method("error"sv, 1, result_error_impl),
 };
 
 constexpr TypeDesc result_type_desc{"Result"sv, result_methods};

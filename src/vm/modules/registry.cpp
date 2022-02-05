@@ -56,7 +56,7 @@ void ModuleRegistry::resolve_module(Context& ctx, Handle<Module> module) {
         size_t total_members_ = 0;
 
         Frame(ExternalStorage& storage, Handle<Module> module)
-            : module_(storage, storage.allocate(module))
+            : module_(storage.allocate(module))
             , total_members_(module->members().size()) {}
     };
 

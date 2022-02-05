@@ -83,15 +83,11 @@ class Fallible;
 
 class SyncFrameContext;
 class AsyncFrameContext;
+class AsyncResumeToken;
 class ResumableFrameContext;
-
-using NativeFunctionPtr = void (*)(SyncFrameContext&);
-using NativeAsyncFunctionPtr = void (*)(AsyncFrameContext);
-using NativeResumableFunctionPtr = void (*)(ResumableFrameContext&);
 
 struct CoroutineFrame;
 struct CodeFrame;
-struct AsyncFrame;
 struct ResumableFrame;
 
 } // namespace tiro::vm

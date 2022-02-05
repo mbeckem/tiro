@@ -4,9 +4,41 @@
 #include "common/adt/span.hpp"
 #include "common/defs.hpp"
 #include "vm/objects/fwd.hpp"
-#include "vm/objects/native.hpp"
 
 namespace tiro::vm {
+
+using SyncFunctionPtr = void (*)(SyncFrameContext& frame);
+using AsyncFunctionPtr = void (*)(AsyncFrameContext& frame);
+using ResumableFunctionPtr = void (*)(ResumableFrameContext& frame);
+
+enum class FunctionPtrType { Sync, Async, Resumable };
+
+struct FunctionPtr {
+    FunctionPtrType type;
+    union {
+        SyncFunctionPtr sync;
+        AsyncFunctionPtr async;
+        struct {
+            ResumableFunctionPtr func;
+            u32 locals;
+        } resumable;
+    };
+
+    constexpr FunctionPtr(SyncFunctionPtr ptr)
+        : type(FunctionPtrType::Sync)
+        , sync(ptr) {}
+
+    constexpr FunctionPtr(AsyncFunctionPtr ptr)
+        : type(FunctionPtrType::Async)
+        , async(ptr) {}
+
+    constexpr FunctionPtr(ResumableFunctionPtr ptr)
+        : FunctionPtr(ptr, 0) {}
+
+    constexpr FunctionPtr(ResumableFunctionPtr ptr, u32 locals)
+        : type(FunctionPtrType::Resumable)
+        , resumable({ptr, locals}) {}
+};
 
 struct FunctionDesc {
     enum Flags {
@@ -27,25 +59,25 @@ struct FunctionDesc {
     u32 params;
 
     /// Native function pointer argument that implements the function.
-    NativeFunctionStorage func;
+    FunctionPtr func;
 
     /// Bitwise combination of `Flags` values.
     int flags = 0;
 
     static constexpr FunctionDesc
-    method(std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
+    method(std::string_view name, u32 params, const FunctionPtr& func, int flags = 0) {
         return {name, params, func, flags | InstanceMethod};
     }
 
-    static constexpr FunctionDesc static_method(
-        std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
+    static constexpr FunctionDesc
+    static_method(std::string_view name, u32 params, const FunctionPtr& func, int flags = 0) {
         TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
             "Must not set the instance method flag in static methods");
         return {name, params, func, flags};
     }
 
     static constexpr FunctionDesc
-    plain(std::string_view name, u32 params, const NativeFunctionStorage& func, int flags = 0) {
+    plain(std::string_view name, u32 params, const FunctionPtr& func, int flags = 0) {
         TIRO_DEBUG_ASSERT((flags & InstanceMethod) == 0,
             "Must not set the instance method flag in plain function");
         return {name, params, func, flags};
@@ -53,7 +85,7 @@ struct FunctionDesc {
 
 private:
     constexpr FunctionDesc(
-        std::string_view name_, u32 params_, const NativeFunctionStorage& func_, int flags_ = 0)
+        std::string_view name_, u32 params_, const FunctionPtr& func_, int flags_ = 0)
         : name(name_)
         , params(params_)
         , func(func_)

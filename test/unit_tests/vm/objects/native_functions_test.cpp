@@ -40,88 +40,9 @@ struct SimpleCallback : CoroutineCallback {
 
 } // namespace
 
-static void sync_dummy(SyncFrameContext&) {}
-
-static void async_dummy(AsyncFrameContext) {}
-
-static void resumable_dummy(ResumableFrameContext&) {}
-
 TEST_CASE("Native function arg should be trivial", "[native_functions]") {
-    static_assert(std::is_trivially_copyable_v<NativeFunctionStorage>);
-    static_assert(std::is_trivially_destructible_v<NativeFunctionStorage>);
-}
-
-TEST_CASE("Native function arg should wrap sync functions", "[native_functions]") {
-    SECTION("Without userdata.") {
-        auto arg = NativeFunctionStorage::sync([](SyncFrameContext&) {});
-
-        // Now implemented in terms of resumable functions
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
-
-    SECTION("Static stateless") {
-        auto arg = NativeFunctionStorage::static_sync<sync_dummy>();
-
-        // Now implemented in terms of resumable functions
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
-
-    SECTION("With some user data") {
-        struct Capture {
-            void* x;
-            void* y;
-        } capture{};
-
-        auto arg = NativeFunctionStorage::sync([capture](SyncFrameContext&) { (void) capture; });
-
-        // Now implemented in terms of resumable functions
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
-}
-
-TEST_CASE("Native function arg should wrap async functions", "[native_functions]") {
-    SECTION("Without userdata.") {
-        auto arg = NativeFunctionStorage::async([](AsyncFrameContext) {});
-        REQUIRE(arg.type() == NativeFunctionType::Async);
-    }
-
-    SECTION("Static stateless") {
-        auto arg = NativeFunctionStorage::static_async<async_dummy>();
-        REQUIRE(arg.type() == NativeFunctionType::Async);
-    }
-
-    SECTION("With some user data") {
-        struct Capture {
-            void* x;
-            void* y;
-        } capture{};
-
-        auto arg = NativeFunctionStorage::async([capture](AsyncFrameContext) { (void) capture; });
-        REQUIRE(arg.type() == NativeFunctionType::Async);
-    }
-}
-
-TEST_CASE("Native function arg should wrap resumable functions", "[native_functions]") {
-    SECTION("Without userdata.") {
-        auto arg = NativeFunctionStorage::resumable([](ResumableFrameContext&) {});
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
-
-    SECTION("Static stateless") {
-        auto arg = NativeFunctionStorage::static_resumable<resumable_dummy>();
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
-
-    SECTION("With some user data") {
-        struct Capture {
-            void* x;
-            void* y;
-        } capture{};
-
-        auto arg = NativeFunctionStorage::resumable(
-            [capture](ResumableFrameContext&) { (void) capture; });
-        REQUIRE(arg.type() == NativeFunctionType::Resumable);
-    }
+    static_assert(std::is_trivially_copyable_v<NativeFunctionHolder>);
+    static_assert(std::is_trivially_destructible_v<NativeFunctionHolder>);
 }
 
 TEST_CASE("Native functions should be invocable", "[native_functions]") {
@@ -145,8 +66,7 @@ TEST_CASE("Native functions should be invocable", "[native_functions]") {
         Local pointer = sc.local(NativePointer::make(ctx, &i));
         Local values = sc.local(Tuple::make(ctx, 1));
         values->checked_set(0, *pointer);
-        func.set(NativeFunction::make(
-            ctx, name, values, 0, 0, NativeFunctionStorage::sync(native_func)));
+        func.set(NativeFunction::sync(native_func).name(name).closure(values).make(ctx));
     }
 
     REQUIRE(func->name().view() == "test");
@@ -162,15 +82,14 @@ TEST_CASE("Native functions should be invocable", "[native_functions]") {
 
 TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
     // Resumes immediately.
-    NativeAsyncFunctionPtr native_func = [](AsyncFrameContext frame) {
+    auto native_func = [](AsyncFrameContext& frame) {
         return frame.return_value(SmallInteger::make(3));
     };
 
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(
-        NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::async(native_func)));
+    Local func = sc.local(NativeFunction::async(native_func).name(name).make(ctx));
 
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
@@ -180,15 +99,16 @@ TEST_CASE("Trivial async functions should be invocable", "[native_functions]") {
 }
 
 TEST_CASE("Async functions that pause the coroutine should be invocable", "[native_functions]") {
-    NativeAsyncFunctionPtr native_func = [](AsyncFrameContext frame) {
+    auto native_func = [](AsyncFrameContext& frame) {
         void* loop_ptr = frame.closure().must_cast<NativePointer>().data();
         REQUIRE(loop_ptr);
 
-        auto& loop = *static_cast<std::vector<AsyncFrameContext>*>(loop_ptr);
-        loop.push_back(std::move(frame));
+        auto& loop = *static_cast<std::vector<AsyncResumeToken>*>(loop_ptr);
+        loop.push_back(frame.resume_token());
+        frame.yield();
     };
 
-    std::vector<AsyncFrameContext> main_loop;
+    std::vector<AsyncResumeToken> main_loop;
     i64 result = 0;
 
     Context ctx;
@@ -198,7 +118,7 @@ TEST_CASE("Async functions that pause the coroutine should be invocable", "[nati
     Local name = sc.local(String::make(ctx, "Test"));
     Local loop_ptr = sc.local(NativePointer::make(ctx, &main_loop));
     Local func = sc.local(
-        NativeFunction::make(ctx, name, loop_ptr, 0, 0, NativeFunctionStorage::async(native_func)));
+        NativeFunction::async(native_func).name(name).closure(loop_ptr).make(ctx));
     Local coro = sc.local(ctx.make_coroutine(func, {}));
 
     SimpleCallback callback = [&ctx, &result, &coro](
@@ -239,7 +159,7 @@ TEST_CASE("Async functions that pause the coroutine should be invocable", "[nati
 }
 
 TEST_CASE("Trivial resumable functions should be invocable", "[native_functions]") {
-    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+    auto native_func = [](ResumableFrameContext& frame) {
         switch (frame.state()) {
         case ResumableFrame::START:
             return frame.return_value(SmallInteger::make(3));
@@ -250,8 +170,7 @@ TEST_CASE("Trivial resumable functions should be invocable", "[native_functions]
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(
-        NativeFunction::make(ctx, name, {}, 0, 0, NativeFunctionStorage::resumable(native_func)));
+    Local func = sc.local(NativeFunction::resumable(native_func).name(name).make(ctx));
 
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
@@ -290,20 +209,22 @@ TEST_CASE("Resumable functions should be able to call other functions", "[native
         }
     };
 
+    auto native_simple_func = [](SyncFrameContext& frame) {
+        auto num = frame.arg(0);
+        REQUIRE(num->is<Integer>());
+        i64 result = (num.must_cast<Integer>()->value() * 2) + 2;
+        frame.return_value(frame.ctx().get_integer(result));
+    };
+
     Context ctx;
     Scope sc(ctx);
     Local simple_name = sc.local(String::make(ctx, "simple"));
-    Local simple_func = sc.local(NativeFunction::make(
-        ctx, simple_name, {}, 1, 0, NativeFunctionStorage::sync([](SyncFrameContext& frame) {
-            auto num = frame.arg(0);
-            REQUIRE(num->is<Integer>());
-            i64 result = (num.must_cast<Integer>()->value() * 2) + 2;
-            frame.return_value(frame.ctx().get_integer(result));
-        })));
+    Local simple_func = sc.local(
+        NativeFunction::sync(native_simple_func).name(simple_name).params(1).make(ctx));
 
     Local resumable_name = sc.local(String::make(ctx, "TestResumable"));
-    Local resumable_func = sc.local(NativeFunction::make(
-        ctx, resumable_name, {}, 1, 0, NativeFunctionStorage::resumable(native_resumable_func)));
+    Local resumable_func = sc.local(
+        NativeFunction::resumable(native_resumable_func).params(1).name(resumable_name).make(ctx));
     Local resumable_func_args = sc.local(Tuple::make(ctx, {simple_func}));
 
     Local result = sc.local(ctx.run_init(resumable_func, resumable_func_args));
@@ -316,7 +237,7 @@ TEST_CASE("Resumable functions should be able to call other functions", "[native
 TEST_CASE("Resumable function locals should be initialized to null", "[native_functions]") {
     static constexpr u32 locals = 123;
 
-    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+    auto native_func = [](ResumableFrameContext& frame) {
         REQUIRE(frame.local_count() == locals);
 
         for (u32 i = 0; i < locals; ++i) {
@@ -334,8 +255,7 @@ TEST_CASE("Resumable function locals should be initialized to null", "[native_fu
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(NativeFunction::make(
-        ctx, name, {}, 0, locals, NativeFunctionStorage::resumable(native_func)));
+    Local func = sc.local(NativeFunction::resumable(native_func, locals).name(name).make(ctx));
 
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
@@ -346,7 +266,7 @@ TEST_CASE("Resumable function locals should be initialized to null", "[native_fu
 
 TEST_CASE("Resumable function locals persist between calls to the native function",
     "[native_functions]") {
-    NativeResumableFunctionPtr native_func = [](ResumableFrameContext& frame) {
+    auto native_func = [](ResumableFrameContext& frame) {
         auto& ctx = frame.ctx();
         auto local = frame.local(0);
         switch (frame.state()) {
@@ -365,8 +285,7 @@ TEST_CASE("Resumable function locals persist between calls to the native functio
     Context ctx;
     Scope sc(ctx);
     Local name = sc.local(String::make(ctx, "Test"));
-    Local func = sc.local(
-        NativeFunction::make(ctx, name, {}, 0, 1, NativeFunctionStorage::resumable(native_func)));
+    Local func = sc.local(NativeFunction::resumable(native_func, 1).name(name).make(ctx));
 
     Local result = sc.local(ctx.run_init(func, {}));
     REQUIRE(result->is_success());
