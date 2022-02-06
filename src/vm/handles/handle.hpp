@@ -328,8 +328,6 @@ public:
     explicit MaybeHandleBase(T* slot)
         : MaybeHandleBase(slot, InternalTag()) {}
 
-    MaybeHandleBase(const MaybeHandleBase&) = default;
-
 private:
     struct InternalTag {};
 
