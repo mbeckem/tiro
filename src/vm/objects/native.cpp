@@ -151,7 +151,7 @@ Value ResumableFrameContext::invoke_return() {
     u32 values = stack.top_value_count();
     TIRO_DEBUG_ASSERT(
         values == 0 || values == 1, "expected zero or one top values in resumable function frame");
-    return stack.top_value_count() > 0 ? *stack.top_value() : Value::null();
+    return values > 0 ? *stack.top_value() : Value::null();
 }
 
 CoroutineToken ResumableFrameContext::resume_token() {
