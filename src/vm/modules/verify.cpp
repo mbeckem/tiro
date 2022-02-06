@@ -328,6 +328,10 @@ void ModuleVerifier::fail(std::string_view message) {
 }
 
 void FunctionVerifier::verify() {
+    if (function_.locals() > max_locals)
+        fail(fmt::format("function uses too many locals ({} locals, maximum is {})",
+            function_.locals(), max_locals));
+
     // Name has already been verified in ModuleVerifier#visit_function
     const auto& insts = parsed_instructions_ = read_instructions();
 
@@ -665,14 +669,23 @@ void FunctionVerifier::InstructionVisitor::visit_lnot(const BytecodeInstr::LNot&
 
 void FunctionVerifier::InstructionVisitor::visit_array(const BytecodeInstr::Array& array) {
     self.check(array.target);
+
+    if (array.count > max_container_args)
+        self.fail("Too many arguments in array construction");
 }
 
 void FunctionVerifier::InstructionVisitor::visit_tuple(const BytecodeInstr::Tuple& tuple) {
     self.check(tuple.target);
+
+    if (tuple.count > max_container_args)
+        self.fail("Too many arguments in tuple construction");
 }
 
 void FunctionVerifier::InstructionVisitor::visit_set(const BytecodeInstr::Set& set) {
     self.check(set.target);
+
+    if (set.count > max_container_args)
+        self.fail("Too many arguments in set construction");
 }
 
 void FunctionVerifier::InstructionVisitor::visit_map(const BytecodeInstr::Map& map) {
@@ -680,6 +693,8 @@ void FunctionVerifier::InstructionVisitor::visit_map(const BytecodeInstr::Map& m
 
     if (map.count % 2 != 0)
         self.fail("Map instruction must specify an even number of keys and values");
+    if (map.count > max_container_args)
+        self.fail("Too many arguments in map construction");
 }
 
 void FunctionVerifier::InstructionVisitor::visit_env(const BytecodeInstr::Env& env) {

@@ -15,14 +15,20 @@
 
 namespace tiro::vm::test {
 
-static const ContextSettings ctx_settings = [] {
+static const ContextSettings default_ctx_settings = [] {
     ContextSettings settings;
     settings.print_stdout = [](std::string_view message) { std::cout << message << std::flush; };
     return settings;
 }();
 
-TestContext::TestContext(std::string_view source)
-    : context_(std::make_unique<Context>(ctx_settings))
+static ContextSettings ctx_settings(int flags) {
+    auto settings = default_ctx_settings;
+    settings.enable_panic_stack_traces = flags & TestContext::ENABLE_PANIC_STACK_TRACES;
+    return settings;
+}
+
+TestContext::TestContext(std::string_view source, int flags)
+    : context_(std::make_unique<Context>(ctx_settings(flags)))
     , compiled_(test_support::compile_result(source))
     , module_(*context_, Nullable<Module>()) {
 

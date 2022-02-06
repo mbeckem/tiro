@@ -113,7 +113,7 @@ TEST_CASE("Defer statements in callers should be executed when a callee panics",
 
 TEST_CASE("Panics should be registered as secondary exceptions if another exception is in flight",
     "[exceptions]") {
-    /* TODO: secondary exceptions 
+    /* TODO: secondary exceptions
     std::string_view source = R"RAW(
         import std;
 
@@ -218,6 +218,51 @@ TEST_CASE("panic should be able to rethrow existing exceptions", "[exceptions]")
     auto ex = test.call("make_exception").panics().as<exception>();
     auto res = test.call("test", ex).panics();
     REQUIRE(same(test.get_vm(), ex, res));
+}
+
+TEST_CASE("panic should not capture a stack trace by default", "[exceptions]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        export func test() {
+            nested(3);
+        }
+
+        func nested(n) {
+            if n == 0 {
+                std.panic("help!");
+            }
+            nested(n - 1);
+        }
+    )RAW";
+
+    eval_test test(source);
+    auto ex = test.call("test").panics().as<exception>();
+    auto trace = ex.trace();
+    REQUIRE(trace.is<null>());
+}
+
+TEST_CASE("panic should capture a stack trace when enabled", "[exceptions]") {
+    std::string_view source = R"RAW(
+        import std;
+
+        export func test() {
+            nested(2);
+        }
+
+        func nested(n) {
+            if n == 0 {
+                std.panic("help!");
+            }
+            nested(n - 1);
+        }
+    )RAW";
+
+    eval_test test(source, eval_test::enable_panic_stack_traces);
+    auto ex = test.call("test").panics().as<exception>();
+    auto trace = ex.trace().as<string>();
+    std::string_view expected = "Coroutine-1:\n  - nested\n  - nested\n  - nested\n  - test";
+    REQUIRE(trace.value() == expected);
 }
 
 TEST_CASE("invalid usage of builtin operators should panic instead of throwing c++ exceptions",

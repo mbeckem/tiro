@@ -52,13 +52,13 @@ static Fallible<f64> require_number_as_f64(Context& ctx, std::string_view functi
     return number.value()->convert_float();
 }
 
-static void std_type_of(NativeFunctionFrame& frame) {
+static void std_type_of(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     Handle object = frame.arg(0);
     frame.return_value(ctx.types().type_of(object));
 }
 
-static void std_print(NativeFunctionFrame& frame) {
+static void std_print(SyncFrameContext& frame) {
     const size_t args = frame.arg_count();
 
     Context& ctx = frame.ctx();
@@ -79,19 +79,19 @@ static void std_print(NativeFunctionFrame& frame) {
         print_impl(message);
 }
 
-static void std_debug_repr(NativeFunctionFrame& frame) {
+static void std_debug_repr(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     Handle object = frame.arg(0);
     bool pretty = frame.arg_count() > 1 ? ctx.is_truthy(frame.arg(1)) : false;
     frame.return_value(dump(ctx, object, pretty));
 }
 
-static void std_new_string_builder(NativeFunctionFrame& frame) {
+static void std_new_string_builder(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     frame.return_value(StringBuilder::make(ctx));
 }
 
-static void std_new_buffer(NativeFunctionFrame& frame) {
+static void std_new_buffer(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
 
     auto size_arg = frame.arg(0);
@@ -105,28 +105,19 @@ static void std_new_buffer(NativeFunctionFrame& frame) {
     frame.return_value(Buffer::make(ctx, *size, 0));
 }
 
-// TODO: Temporary API because we don't have syntax support for records yet.
-static void std_new_record(NativeFunctionFrame& frame) {
-    Context& ctx = frame.ctx();
-    auto maybe_array = frame.arg(0).try_cast<Array>();
-    if (!maybe_array)
-        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "new_record: argument must be a an array"));
-    frame.return_value(Record::make(ctx, maybe_array.handle()));
-}
-
-static void std_new_success(NativeFunctionFrame& frame) {
+static void std_new_success(SyncFrameContext& frame) {
     frame.return_value(Result::make_success(frame.ctx(), frame.arg(0)));
 }
 
-static void std_new_error(NativeFunctionFrame& frame) {
+static void std_new_error(SyncFrameContext& frame) {
     frame.return_value(Result::make_error(frame.ctx(), frame.arg(0)));
 }
 
-static void std_current_coroutine(NativeFunctionFrame& frame) {
+static void std_current_coroutine(SyncFrameContext& frame) {
     frame.return_value(*frame.coro());
 }
 
-static void std_launch(NativeFunctionFrame& frame) {
+static void std_launch(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     Handle func = frame.arg(0);
 
@@ -140,25 +131,25 @@ static void std_launch(NativeFunctionFrame& frame) {
     frame.return_value(*coro);
 }
 
-static void std_loop_timestamp(NativeFunctionFrame& frame) {
+static void std_loop_timestamp(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     frame.return_value(ctx.get_integer(ctx.loop_timestamp()));
 }
 
-static void std_coroutine_token(NativeFunctionFrame& frame) {
+static void std_coroutine_token(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     frame.return_value(Coroutine::create_token(ctx, frame.coro()));
 }
 
-static void std_yield_coroutine(NativeFunctionFrame& frame) {
+static void std_yield_coroutine(SyncFrameContext& frame) {
     frame.coro()->state(CoroutineState::Waiting);
 }
 
-static void std_dispatch(NativeFunctionFrame& frame) {
+static void std_dispatch(SyncFrameContext& frame) {
     Coroutine::schedule(frame.ctx(), frame.coro());
 }
 
-static void std_panic(NativeFunctionFrame& frame) {
+static void std_panic(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     if (frame.arg_count() < 1)
         return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "panic: requires at least one argument"));
@@ -180,10 +171,10 @@ static void std_panic(NativeFunctionFrame& frame) {
         message = sc.local(builder->to_string(ctx));
     }
 
-    frame.panic(Exception::make(ctx, message));
+    frame.panic(Exception::make(ctx, message, /* skip this frame */ 1));
 }
 
-static void std_to_utf8(NativeFunctionFrame& frame) {
+static void std_to_utf8(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     Handle param = frame.arg(0);
     if (!param->is<String>()) {
@@ -200,80 +191,80 @@ static void std_to_utf8(NativeFunctionFrame& frame) {
     frame.return_value(*buffer);
 }
 
-static void std_abs(NativeFunctionFrame& frame) {
+static void std_abs(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "abs"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::abs(x)));
 }
 
-static void std_pow(NativeFunctionFrame& frame) {
+static void std_pow(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "pow"sv, "x"sv, frame.arg(0)));
     TIRO_FRAME_TRY(y, require_number_as_f64(ctx, "pow"sv, "y"sv, frame.arg(1)));
     frame.return_value(Float::make(ctx, std::pow(x, y)));
 }
 
-static void std_log(NativeFunctionFrame& frame) {
+static void std_log(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "log"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::log(x)));
 }
 
-static void std_sqrt(NativeFunctionFrame& frame) {
+static void std_sqrt(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "sqrt"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sqrt(x)));
 }
 
-static void std_round(NativeFunctionFrame& frame) {
+static void std_round(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "round"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::round(x)));
 }
 
-static void std_ceil(NativeFunctionFrame& frame) {
+static void std_ceil(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "ceil"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::ceil(x)));
 }
 
-static void std_floor(NativeFunctionFrame& frame) {
+static void std_floor(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "floor"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::floor(x)));
 }
 
-static void std_sin(NativeFunctionFrame& frame) {
+static void std_sin(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "sin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::sin(x)));
 }
 
-static void std_cos(NativeFunctionFrame& frame) {
+static void std_cos(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "cos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::cos(x)));
 }
 
-static void std_tan(NativeFunctionFrame& frame) {
+static void std_tan(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "tan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::tan(x)));
 }
 
-static void std_asin(NativeFunctionFrame& frame) {
+static void std_asin(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "asin"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::asin(x)));
 }
 
-static void std_acos(NativeFunctionFrame& frame) {
+static void std_acos(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "acos"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::acos(x)));
 }
 
-static void std_atan(NativeFunctionFrame& frame) {
+static void std_atan(SyncFrameContext& frame) {
     Context& ctx = frame.ctx();
     TIRO_FRAME_TRY(x, require_number_as_f64(ctx, "atan"sv, "x"sv, frame.arg(0)));
     frame.return_value(Float::make(ctx, std::atan(x)));
@@ -316,53 +307,46 @@ static constexpr MathConstant math_constants[] = {
     {"INFINITY", std::numeric_limits<f64>::infinity()},
 };
 
-static const FunctionDesc functions[] = {
+static constexpr FunctionDesc functions[] = {
     // I/O
-    FunctionDesc::plain(
-        "print"sv, 0, NativeFunctionStorage::static_sync<std_print>(), FunctionDesc::Variadic),
-    FunctionDesc::plain("debug_repr", 1, NativeFunctionStorage::static_sync<std_debug_repr>()),
-    FunctionDesc::plain(
-        "loop_timestamp"sv, 0, NativeFunctionStorage::static_sync<std_loop_timestamp>()),
-    FunctionDesc::plain("to_utf8"sv, 1, NativeFunctionStorage::static_sync<std_to_utf8>()),
+    FunctionDesc::plain("print"sv, 0, std_print, FunctionDesc::Variadic),
+    FunctionDesc::plain("debug_repr", 1, std_debug_repr),
+    FunctionDesc::plain("loop_timestamp"sv, 0, std_loop_timestamp),
+    FunctionDesc::plain("to_utf8"sv, 1, std_to_utf8),
 
     // Math
-    FunctionDesc::plain("abs"sv, 1, NativeFunctionStorage::static_sync<std_abs>()),
-    FunctionDesc::plain("pow"sv, 2, NativeFunctionStorage::static_sync<std_pow>()),
-    FunctionDesc::plain("log"sv, 1, NativeFunctionStorage::static_sync<std_log>()),
-    FunctionDesc::plain("sqrt"sv, 1, NativeFunctionStorage::static_sync<std_sqrt>()),
-    FunctionDesc::plain("round"sv, 1, NativeFunctionStorage::static_sync<std_round>()),
-    FunctionDesc::plain("ceil"sv, 1, NativeFunctionStorage::static_sync<std_ceil>()),
-    FunctionDesc::plain("floor"sv, 1, NativeFunctionStorage::static_sync<std_floor>()),
-    FunctionDesc::plain("sin"sv, 1, NativeFunctionStorage::static_sync<std_sin>()),
-    FunctionDesc::plain("cos"sv, 1, NativeFunctionStorage::static_sync<std_cos>()),
-    FunctionDesc::plain("tan"sv, 1, NativeFunctionStorage::static_sync<std_tan>()),
-    FunctionDesc::plain("asin"sv, 1, NativeFunctionStorage::static_sync<std_asin>()),
-    FunctionDesc::plain("acos"sv, 1, NativeFunctionStorage::static_sync<std_acos>()),
-    FunctionDesc::plain("atan"sv, 1, NativeFunctionStorage::static_sync<std_atan>()),
+    FunctionDesc::plain("abs"sv, 1, std_abs),
+    FunctionDesc::plain("pow"sv, 2, std_pow),
+    FunctionDesc::plain("log"sv, 1, std_log),
+    FunctionDesc::plain("sqrt"sv, 1, std_sqrt),
+    FunctionDesc::plain("round"sv, 1, std_round),
+    FunctionDesc::plain("ceil"sv, 1, std_ceil),
+    FunctionDesc::plain("floor"sv, 1, std_floor),
+    FunctionDesc::plain("sin"sv, 1, std_sin),
+    FunctionDesc::plain("cos"sv, 1, std_cos),
+    FunctionDesc::plain("tan"sv, 1, std_tan),
+    FunctionDesc::plain("asin"sv, 1, std_asin),
+    FunctionDesc::plain("acos"sv, 1, std_acos),
+    FunctionDesc::plain("atan"sv, 1, std_atan),
 
     // Utilities
-    FunctionDesc::plain("type_of"sv, 1, NativeFunctionStorage::static_sync<std_type_of>()),
+    FunctionDesc::plain("type_of"sv, 1, std_type_of),
 
     // Error handling
-    FunctionDesc::plain("success"sv, 1, NativeFunctionStorage::static_sync<std_new_success>()),
-    FunctionDesc::plain("error"sv, 1, NativeFunctionStorage::static_sync<std_new_error>()),
-    FunctionDesc::plain("panic"sv, 1, NativeFunctionStorage::static_sync<std_panic>()),
+    FunctionDesc::plain("success"sv, 1, std_new_success),
+    FunctionDesc::plain("error"sv, 1, std_new_error),
+    FunctionDesc::plain("panic"sv, 1, std_panic),
 
     // Coroutines
-    FunctionDesc::plain("launch"sv, 1, NativeFunctionStorage::static_sync<std_launch>()),
-    FunctionDesc::plain(
-        "current_coroutine"sv, 0, NativeFunctionStorage::static_sync<std_current_coroutine>()),
-    FunctionDesc::plain(
-        "coroutine_token"sv, 0, NativeFunctionStorage::static_sync<std_coroutine_token>()),
-    FunctionDesc::plain(
-        "yield_coroutine"sv, 0, NativeFunctionStorage::static_sync<std_yield_coroutine>()),
-    FunctionDesc::plain("dispatch"sv, 0, NativeFunctionStorage::static_sync<std_dispatch>()),
+    FunctionDesc::plain("launch"sv, 1, std_launch),
+    FunctionDesc::plain("current_coroutine"sv, 0, std_current_coroutine),
+    FunctionDesc::plain("coroutine_token"sv, 0, std_coroutine_token),
+    FunctionDesc::plain("yield_coroutine"sv, 0, std_yield_coroutine),
+    FunctionDesc::plain("dispatch"sv, 0, std_dispatch),
 
     // Constructor functions (TODO)
-    FunctionDesc::plain(
-        "new_string_builder"sv, 0, NativeFunctionStorage::static_sync<std_new_string_builder>()),
-    FunctionDesc::plain("new_buffer"sv, 1, NativeFunctionStorage::static_sync<std_new_buffer>()),
-    FunctionDesc::plain("new_record"sv, 1, NativeFunctionStorage::static_sync<std_new_record>()),
+    FunctionDesc::plain("new_string_builder"sv, 0, std_new_string_builder),
+    FunctionDesc::plain("new_buffer"sv, 1, std_new_buffer),
 };
 
 Module create_std_module(Context& ctx) {
@@ -393,7 +377,7 @@ Module create_std_module(Context& ctx) {
     for (const auto& fn : functions) {
         TIRO_DEBUG_ASSERT((fn.flags & FunctionDesc::InstanceMethod) == 0,
             "Instance methods not supported as module members.");
-        builder.add_function(fn.name, fn.params, {}, fn.func);
+        builder.add_function(fn.name, fn.params, fn.func);
     }
 
     return builder.build();

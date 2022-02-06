@@ -1,6 +1,7 @@
 #ifndef TIRO_VM_HANDLES_EXTERNAL_HPP
 #define TIRO_VM_HANDLES_EXTERNAL_HPP
 
+#include "common/adt/not_null.hpp"
 #include "common/defs.hpp"
 #include "vm/handles/fwd.hpp"
 #include "vm/handles/handle.hpp"
@@ -20,20 +21,26 @@ namespace tiro::vm {
 namespace detail {
 
 constexpr size_t external_slots_per_page(size_t page_bytes) {
+    size_t H = sizeof(void*); // Fixed header size
     size_t B = page_bytes;    // Block size
     size_t P = sizeof(void*); // Pointer size
     size_t C = 64;            // Bitset representation in bits (pessimistic)
     size_t M = CHAR_BIT;
-    return ((M * B) - C + 1) / (1 + M * P);
+    return ((M * (B - H)) - C + 1) / (1 + M * P);
 };
 
 } // namespace detail
 
 /// Implements a set of handles suitable for use in external code.
 /// Handles can be allocated and deallocated manually.
-/// TODO: Externals should replace globals.
 class ExternalStorage final {
 public:
+    /// Returns a pointer to the external storage instance that created the given `external` handle.
+    /// \pre `external` must be a valid handle
+    /// \pre the storage that created the handle must still be valid
+    template<typename T>
+    inline static NotNull<ExternalStorage*> from_external(const External<T>& external);
+
     ExternalStorage();
     ~ExternalStorage();
 
@@ -63,6 +70,14 @@ public:
     /// Returns the total number of slots (free and in use).
     size_t total_slots() const { return total_slots_; }
 
+    /// Returns the back pointer to the owning context.
+    /// Not initialized in tests, always valid otherwise.
+    Context* ctx() const { return ctx_; }
+
+    NotNull<Context*> must_ctx() const { return TIRO_NN(ctx()); }
+
+    void set_ctx(Context& ctx) { ctx_ = &ctx; }
+
     template<typename Tracer>
     inline void trace(Tracer&& tracer);
 
@@ -79,8 +94,10 @@ private:
     // TODO: Bitset algorithms, required elsewhere as well. Make 'allocated' a raw array
     // with guaranteed size then.
     struct Page {
-        Page() {}
+        Page(ExternalStorage* parent_)
+            : parent(parent_) {}
 
+        ExternalStorage* parent;
         std::bitset<page_slots> allocated;
         Slot slots[];
     };
@@ -96,6 +113,8 @@ private:
     static size_t slot_index(Page* page, Slot* slot);
 
 private:
+    Context* ctx_ = nullptr;
+
     // Contains all allocated pages.
     absl::flat_hash_set<Page*> pages_;
 
@@ -152,26 +171,22 @@ class UniqueExternal : public detail::MutHandleOps<T, UniqueExternal<T>>,
                        public detail::EnableUpcast<T, Handle, UniqueExternal<T>> {
 public:
     /// Creates an invalid instance.
-    explicit UniqueExternal(ExternalStorage& storage)
-        : storage_(&storage)
-        , slot_(nullptr) {}
+    explicit UniqueExternal()
+        : slot_(nullptr) {}
 
     /// Takes ownership of the external, which must be valid.
     template<typename U, std::enable_if_t<std::is_convertible_v<U, T>>* = nullptr>
-    explicit UniqueExternal(ExternalStorage& storage, External<U> external)
-        : storage_(&storage)
-        , slot_(get_valid_slot(external)) {}
+    explicit UniqueExternal(External<U> external)
+        : slot_(get_valid_slot(external)) {}
 
     ~UniqueExternal() { reset(); }
 
     UniqueExternal(UniqueExternal&& other) noexcept
-        : storage_(other.storage_)
-        , slot_(std::exchange(other.slot_, nullptr)) {}
+        : slot_(std::exchange(other.slot_, nullptr)) {}
 
     UniqueExternal& operator=(UniqueExternal&& other) noexcept {
         if (this != &other) {
             reset();
-            storage_ = other.storage_;
             slot_ = std::exchange(other.slot_, nullptr);
         }
         return *this;
@@ -180,7 +195,11 @@ public:
     UniqueExternal(const UniqueExternal&) = delete;
     UniqueExternal& operator=(const UniqueExternal&) = delete;
 
-    ExternalStorage& storage() const { return *storage_; }
+    /// \pre `valid()`
+    ExternalStorage& storage() const {
+        TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::storage(): Invalid instance.");
+        return *ExternalStorage::from_external(get());
+    }
 
     bool valid() const { return slot_; }
     explicit operator bool() const { return slot_; }
@@ -197,6 +216,13 @@ public:
         return OutHandle<T>::from_raw_slot(slot_);
     }
 
+    /// Returns an external instance that refers to the same slot.
+    /// The instance remains valid for as long as the unique external stays valid.
+    External<T> get() const {
+        TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::get(): Invalid instance.");
+        return External<T>::from_raw_slot(slot_);
+    }
+
     External<T> release() {
         TIRO_DEBUG_ASSERT(slot_, "UniqueExternal::release(): Invalid instance.");
         return External<T>::from_raw_slot(std::exchange(slot_, nullptr));
@@ -204,7 +230,7 @@ public:
 
     void reset() {
         if (slot_) {
-            storage_->free(External<T>::from_raw_slot(slot_));
+            storage().free(get());
             slot_ = nullptr;
         }
     }
@@ -215,12 +241,20 @@ private:
     Value* get_slot() const { return slot_; }
 
 private:
-    ExternalStorage* storage_;
     Value* slot_;
 };
 
 template<typename T>
-UniqueExternal(ExternalStorage&, External<T> ext) -> UniqueExternal<T>;
+UniqueExternal(External<T> ext) -> UniqueExternal<T>;
+
+template<typename T>
+NotNull<ExternalStorage*> ExternalStorage::from_external(const External<T>& external) {
+    auto slot = get_valid_slot(external);
+    TIRO_DEBUG_ASSERT(slot, "invalid slot");
+    auto page = page_from_slot(reinterpret_cast<Slot*>(slot));
+    TIRO_DEBUG_ASSERT(page, "invalid page");
+    return TIRO_NN(page->parent);
+}
 
 template<typename T, typename U>
 External<detail::DeducedType<T, U>> ExternalStorage::allocate(U&& initial) {

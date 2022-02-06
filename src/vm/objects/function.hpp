@@ -11,7 +11,6 @@ namespace tiro::vm {
 /// Represents executable byte code, typically used to
 /// represents the instructions within a function.
 ///
-/// TODO: Need a bytecode validation routine.
 /// TODO: Code should not be movable on the heap.
 class Code final : public HeapValue {
 public:
@@ -243,6 +242,19 @@ public:
 };
 
 std::string_view to_string(MagicFunction::Which);
+
+/// Common type for all function values.
+/// This class currently does not expose an actual shared interface.
+class Function final : public Value {
+public:
+    explicit Function(Value v)
+        : Value(v, DebugCheck<Function>()) {}
+
+    Function(BoundMethod func);
+    Function(CodeFunction func);
+    Function(MagicFunction func);
+    Function(NativeFunction func);
+};
 
 } // namespace tiro::vm
 

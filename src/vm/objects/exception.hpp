@@ -3,7 +3,8 @@
 
 #include "common/error.hpp"
 #include "vm/object_support/layout.hpp"
-#include "vm/object_support/type_desc.hpp"
+#include "vm/objects/nullable.hpp"
+#include "vm/objects/string.hpp"
 #include "vm/objects/value.hpp"
 
 #include "fmt/format.h"
@@ -42,6 +43,7 @@ class Exception final : public HeapValue {
 private:
     enum Slots {
         MessageSlot,
+        TraceSlot,
         SecondarySlot,
         SlotCount_,
     };
@@ -50,11 +52,17 @@ public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
     static Exception make(Context& ctx, Handle<String> message);
+    static Exception make(Context& ctx, Handle<String> message, u32 skip_frames);
 
     explicit Exception(Value v)
         : HeapValue(v, DebugCheck<Exception>()) {}
 
+    /// Error message specified at construction time.
     String message();
+
+    /// Represents the state of the call stack at the time the exception was thrown.
+    /// May not be present (e.g. if stack traces are disabled).
+    Nullable<String> trace();
 
     /// Returns an array of secondary exceptions. Might be null or empty.
     Nullable<Array> secondary();
@@ -72,6 +80,8 @@ public:
     Layout* layout() const { return access_heap<Layout>(); }
 
 private:
+    static Exception make_impl(Context& ctx, Handle<String> message, MaybeHandle<String> trace);
+
     void secondary(Nullable<Array> secondary);
 };
 

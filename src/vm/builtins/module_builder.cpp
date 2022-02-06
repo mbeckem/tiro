@@ -29,11 +29,24 @@ ModuleBuilder& ModuleBuilder::add_member(std::string_view name, Handle<Value> me
     return *this;
 }
 
-ModuleBuilder& ModuleBuilder::add_function(
-    std::string_view name, u32 argc, MaybeHandle<Tuple> values, const NativeFunctionStorage& func) {
+ModuleBuilder&
+ModuleBuilder::add_function(std::string_view name, u32 argc, const FunctionPtr& ptr) {
     Scope sc(ctx_);
     Local func_name = sc.local(ctx_.get_interned_string(name));
-    Local func_value = sc.local(NativeFunction::make(ctx_, func_name, values, argc, func));
+
+    auto builder = [&] {
+        switch (ptr.type) {
+        case FunctionPtrType::Sync:
+            return NativeFunction::sync(ptr.sync);
+        case FunctionPtrType::Async:
+            return NativeFunction::async(ptr.async);
+        case FunctionPtrType::Resumable:
+            return NativeFunction::resumable(ptr.resumable.func, ptr.resumable.locals);
+        }
+        TIRO_UNREACHABLE("invalid function pointer type");
+    };
+
+    Local func_value = sc.local(builder().name(func_name).params(argc).make(ctx_));
     return add_member(name, func_value);
 }
 

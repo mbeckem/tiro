@@ -353,6 +353,46 @@ TEST_CASE("verifier rejects non-closure functions that use the LoadClosure instr
         verify_module(mod), Error, exception_contains_string("only closure functions"));
 }
 
+TEST_CASE("verifier rejects array instructions with too many arguments", "[module-verify]") {
+    BytecodeModule mod = empty_module();
+    add_simple_function(mod, 0, 1, [&](BytecodeWriter& writer) {
+        writer.array(9999999, BytecodeRegister(0));
+        writer.ret(BytecodeRegister(0));
+    });
+    REQUIRE_THROWS_MATCHES(verify_module(mod), Error,
+        exception_contains_string("Too many arguments in array construction"));
+}
+
+TEST_CASE("verifier rejects tuple instructions with too many arguments", "[module-verify]") {
+    BytecodeModule mod = empty_module();
+    add_simple_function(mod, 0, 1, [&](BytecodeWriter& writer) {
+        writer.tuple(9999999, BytecodeRegister(0));
+        writer.ret(BytecodeRegister(0));
+    });
+    REQUIRE_THROWS_MATCHES(verify_module(mod), Error,
+        exception_contains_string("Too many arguments in tuple construction"));
+}
+
+TEST_CASE("verifier rejects set instructions with too many arguments", "[module-verify]") {
+    BytecodeModule mod = empty_module();
+    add_simple_function(mod, 0, 1, [&](BytecodeWriter& writer) {
+        writer.set(9999999, BytecodeRegister(0));
+        writer.ret(BytecodeRegister(0));
+    });
+    REQUIRE_THROWS_MATCHES(verify_module(mod), Error,
+        exception_contains_string("Too many arguments in set construction"));
+}
+
+TEST_CASE("verifier rejects map instructions with too many arguments", "[module-verify]") {
+    BytecodeModule mod = empty_module();
+    add_simple_function(mod, 0, 1, [&](BytecodeWriter& writer) {
+        writer.map(9999998, BytecodeRegister(0));
+        writer.ret(BytecodeRegister(0));
+    });
+    REQUIRE_THROWS_MATCHES(verify_module(mod), Error,
+        exception_contains_string("Too many arguments in map construction"));
+}
+
 TEST_CASE("verifier rejects map instructions with odd number of params", "[module-verify]") {
     BytecodeModule mod = empty_module();
     add_simple_function(mod, 0, 1, [&](BytecodeWriter& writer) {

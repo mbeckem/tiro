@@ -51,6 +51,7 @@ Context::Context(ContextSettings settings)
     heap_.collector().roots(&roots_);
     heap_.max_size(settings_.max_heap_size_bytes);
     roots_.init(*this);
+    roots_.get_externals().set_ctx(*this);
 }
 
 Context::~Context() {}
@@ -110,6 +111,7 @@ void Context::run_ready() {
         Handle<Coroutine> coro = current.must_cast<Coroutine>();
         interpreter.run(coro);
         if (coro->state() == CoroutineState::Done) {
+            coro->reset_token(); // ensure old token cannot be used
             execute_callbacks(coro);
         }
     }

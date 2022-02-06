@@ -8,10 +8,10 @@
 namespace tiro::vm {
 
 Fallible<> check_arity(Context& ctx, std::string_view function_name, size_t expected_argc,
-    const NativeFunctionFrame& frame);
+    const SyncFrameContext& frame);
 
-Fallible<> check_arity(
-    std::string_view function_name, size_t expected_argc, const NativeAsyncFunctionFrame& frame);
+Fallible<>
+check_arity(std::string_view function_name, size_t expected_argc, const AsyncFrameContext& frame);
 
 template<typename T>
 Fallible<>

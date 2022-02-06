@@ -197,14 +197,10 @@ public:
 
     /// Attempts to extract an integer value from this number.
     /// Fails (with an empty optional) if this number represents a floating point value.
-    ///
-    /// TODO: Should this function extract integers from floats that do not have a fractional part?
     std::optional<i64> try_extract_int();
 
     /// Attempts to extract a valid `size_t` value from this integer.
     /// Returns an empty optional if this integer is not in bounds.
-    ///
-    /// TODO: Should this function extract integers from floats that do not have a fractional part?
     std::optional<size_t> try_extract_size();
 
     /// Returns the type of this number as an exhaustive enum.

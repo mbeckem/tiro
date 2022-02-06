@@ -28,6 +28,8 @@ class function;
 class tuple;
 class record;
 class array;
+class result;
+class exception;
 class coroutine;
 class module;
 class native;
@@ -35,6 +37,8 @@ class type;
 
 class sync_frame;
 class async_frame;
+class async_token;
+class resumable_frame;
 
 // tiropp/native_type.hpp
 template<typename T>

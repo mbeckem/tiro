@@ -54,6 +54,8 @@ typedef struct tiro_module* tiro_module_t;
 typedef struct tiro_value* tiro_handle_t;
 typedef struct tiro_sync_frame* tiro_sync_frame_t;
 typedef struct tiro_async_frame* tiro_async_frame_t;
+typedef struct tiro_async_token* tiro_async_token_t;
+typedef struct tiro_resumable_frame* tiro_resumable_frame_t;
 
 /**
  * Represents a string that is not necessarily zero terminated.
@@ -71,7 +73,7 @@ typedef struct tiro_string {
 /**
  * Helper function to construct a tiro_string_t from a zero terminated string.
  * Internally calls strlen on non-NULL inputs to determine their length.
- * 
+ *
  * \param data a zero terminated string, or NULL.
  */
 inline tiro_string_t tiro_cstr(const char* data) {

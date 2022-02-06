@@ -26,7 +26,7 @@ Value* ExternalStorage::allocate_slot() {
                 deallocate_aligned(aligned_storage, page_size, page_size);
         };
 
-        Page* page = new (aligned_storage) Page();
+        Page* page = new (aligned_storage) Page(this);
         pages_.insert(page);
         aligned_storage = nullptr; // disable guard, ownership is transferred
 

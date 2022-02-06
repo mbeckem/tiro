@@ -157,7 +157,7 @@ TIRO_API void tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, t
 TIRO_API size_t tiro_tuple_size(tiro_vm_t vm, tiro_handle_t tuple);
 
 /**
- * Retrieves the tuple element at the given `index` from `tuple` and assigns it to `result`, unless an error occcurs.
+ * Retrieves the tuple element at the given `index` from `tuple` and assigns it to `result`, unless an error occurs.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a tuple, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
 TIRO_API void tiro_tuple_get(
@@ -172,7 +172,7 @@ TIRO_API void tiro_tuple_set(
 
 /**
  * Constructs a new record with the given key names. `keys` must be an array consisting of strings (which mus be unique).
- * The specified keys will be valid propery names on the new record. The value associated with each key will be initialized to null.
+ * The specified keys will be valid property names on the new record. The value associated with each key will be initialized to null.
  *
  * Returns `TIRO_ERROR_BAD_TYPE` if `keys` is not an array, or if its contents are not all strings.
  * On success, the constructed record will be assigned to `result`.
@@ -208,7 +208,7 @@ tiro_make_array(tiro_vm_t vm, size_t initial_capacity, tiro_handle_t result, tir
 TIRO_API size_t tiro_array_size(tiro_vm_t vm, tiro_handle_t array);
 
 /**
- * Retrieves the array element at the given `index` from `array` and assigns it to `result`, unless an error occcurs.
+ * Retrieves the array element at the given `index` from `array` and assigns it to `result`, unless an error occurs.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is not an array, or `TIRO_ERROR_OUT_OF_BOUNDS` if the index is out of bounds.
  */
 TIRO_API void tiro_array_get(
@@ -270,11 +270,20 @@ tiro_result_error(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t out, tiro_
 
 /**
  * Retrieves the message from the exception in `instance` and writes it into `result`.
- * When this call is successful, `result` will reference a string.
+ * If this call is successful, `result` will reference a string.
  * Returns `TIRO_ERROR_BAD_TYPE` if the instance is no exception.
  */
 TIRO_API void tiro_exception_message(
     tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Retrieves the exception's call stack trace and writes it into `result`.
+ * If this call is successful, `result` will reference a string (if stack traces are enabled
+ * and one could be retrieved) or null otherwise.
+ * Returns `TIRO_ERROR_BAD_TYPE` if the instance is no exception.
+ */
+TIRO_API void
+tiro_exception_trace(tiro_vm_t vm, tiro_handle_t instance, tiro_handle_t result, tiro_error_t* err);
 
 /**
  * Constructs a new coroutine that will execute the given function.
@@ -315,7 +324,7 @@ TIRO_API void tiro_coroutine_result(
  * \param userdata
  *      The original userdata pointer that was provided when the callback was registered.
  */
-typedef void (*tiro_coroutine_callback)(tiro_vm_t vm, tiro_handle_t coro, void* userdata);
+typedef void (*tiro_coroutine_callback_t)(tiro_vm_t vm, tiro_handle_t coro, void* userdata);
 
 /**
  * Represents a cleanup function associated with a coroutine callback. Cleanup functions are always executed immediately
@@ -327,7 +336,7 @@ typedef void (*tiro_coroutine_callback)(tiro_vm_t vm, tiro_handle_t coro, void* 
  *
  * TODO: Does the cleanup function need access to the vm instance?
  */
-typedef void (*tiro_coroutine_cleanup)(void* userdata);
+typedef void (*tiro_coroutine_cleanup_t)(void* userdata);
 
 /**
  * Schedules the given callback to be invoked once the coroutine completes.
@@ -349,9 +358,9 @@ typedef void (*tiro_coroutine_cleanup)(void* userdata);
  *
  * `userdata` will be passed to `callback` and `cleanup` when appropriate, and it will not be used in any other way.
  */
-TIRO_API void
-tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutine_callback callback,
-    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error_t* err);
+TIRO_API void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
+    tiro_coroutine_callback_t callback, tiro_coroutine_cleanup_t cleanup, void* userdata,
+    tiro_error_t* err);
 
 /**
  * Starts the given coroutine by scheduling it for execution. The coroutine must not have been started before.
@@ -398,7 +407,7 @@ tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_erro
  * to the API when constructing a new native object.
  *
  * Native objects that are created with a certain type will continue refencing that type instance by its address.
- * The lifetime of `tiro_native_type_t` instances is not managued by the runtime, they must remain valid for
+ * The lifetime of `tiro_native_type_t` instances is not managed by the runtime, they must remain valid for
  * as long as there are native objects referring to them.
  *
  * \todo DRAFT API. Will probably be replaced with native user defined types.
@@ -460,145 +469,6 @@ TIRO_API void* tiro_native_data(tiro_vm_t vm, tiro_handle_t object);
  * Returns 0 on error.
  */
 TIRO_API size_t tiro_native_size(tiro_vm_t vm, tiro_handle_t object);
-
-/**
- * The prototype of a native function callback that provides a synchronous tiro function.
- * This type of native function is appropriate for simple, nonblocking operations.
- * Use the more complex asynchronous API instead if the operation has the potential of blocking the process.
- *
- * Note that this API does not allow for custom native userdata. Use native objects instead and pass them in the closure.
- *
- * \param vm
- *      The virtual machine the function is executing on.
- * \param frame
- *      The function call frame. Use `tiro_sync_frame_arg` and `tiro_sync_frame_argc` to access the function
- *      call arguments. Call `tiro_sync_frame_result` to set the return value (it defaults to null if not set).
- *      The closure is also available by calling `tiro_sync_frame_closure`.
- *      The frame value is only valid for the duration of the function call.
- *
- * TODO: Exception API
- */
-typedef void (*tiro_sync_function_t)(tiro_vm_t vm, tiro_sync_frame_t frame);
-
-/**
- * Returns the number of function call arguments present in the given frame.
- * Returns 0 for invalid input arguments.
- */
-TIRO_API size_t tiro_sync_frame_argc(tiro_sync_frame_t frame);
-
-/**
- * Stores the function call argument with the given `index` into `result`.
- * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the argument index is invalid.
- */
-TIRO_API void
-tiro_sync_frame_arg(tiro_sync_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err);
-
-/** Returns the closure value which was specified when the function was created. */
-TIRO_API void
-tiro_sync_frame_closure(tiro_sync_frame_t frame, tiro_handle_t result, tiro_error_t* err);
-
-/** Sets the return value for the given function call frame to the given `value`. */
-TIRO_API void
-tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, tiro_error_t* err);
-
-/**
- * Signals a panic from the given function call frame.
- * TODO: Allow user defined exception objects instead of plain string?
- */
-TIRO_API void
-tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string message, tiro_error_t* err);
-
-/**
- * Constructs a new function object with the given name that will invoke the native function `func` when called.
- * `argc` is the number of arguments required for calling `func`. `closure` may be an arbitrary value
- * that will be passed to the function on every invocation.
- *
- * On success, the new function will be stored in `result`.
- * Returns `TIRO_BAD_TYPE` if `name` is not a string. Returns `TIRO_BAD_ARG` if the the requested number of parameters
- * is too large. The current maximum is `1024`.
- */
-TIRO_API void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_sync_function_t func,
-    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
-
-/**
- * The prototype of a native function callback that provides an asynchronous tiro function.
- * Functions of this type should be used to implement long running operations that would otherwise block
- * the calling coroutine (for example, a socket read or write).
- *
- * Calling an asynchronous function will pause ("yield") the calling coroutine. It will be resumed when
- * a result is provided to the frame object, e.g. by calling `tiro_async_frame_return_value`. Attempting to resume
- * a coroutine multiple times is an error.
- *
- * Note that this API does not allow for custom native userdata. Use native objects instead and pass them in the closure.
- *
- * \param vm
- *      The virtual machine the function is executing on.
- * \param frame
- *      The function call frame. Use `tiro_async_frame_arg` and `tiro_async_frame_argc` to access the function
- *      call arguments. Call `tiro_async_frame_return_value` to set the return value (it defaults to null if not set).
- *      The closure is also available by calling `tiro_async_frame_closure`.
- *
- *      The frame remains valid until it is freed by the caller by invoking `tiro_async_frame_free` (forgetting to
- *      free a frame results in a memory leak).
- *
- * TODO: Exception API
- */
-typedef void (*tiro_async_function_t)(tiro_vm_t vm, tiro_async_frame_t frame);
-
-/**
- * Frees an async frame. Does nothing if `frame` is NULL.
- *
- * Frames are allocated for the caller before invoking the native callback function. They must be freed by calling
- * this function after async operation has been completed (e.g. after calling `tiro_async_frame_return_value(...)`).
- *
- * \warning *All* async call frames must be freed before the vm itself is freed. If there are pending async operations
- * when the vm shall be destroyed, always free them first (they do not have to receive a result).
- */
-TIRO_API void tiro_async_frame_free(tiro_async_frame_t frame);
-
-/** Returns the vm instance that this frame belongs to. Returns NULL on error. */
-TIRO_API tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame);
-
-/** Returns the number of function call arguments received by this frame. Returns 0 on error. */
-TIRO_API size_t tiro_async_frame_argc(tiro_async_frame_t frame);
-
-/**
- * Retrieves the function call argument at the specified index and stores it into `result`.
- * Returns `TIRO_ERROR_OUT_OF_BOUNDS` if the argument index is invalid.
- */
-TIRO_API void tiro_async_frame_arg(
-    tiro_async_frame_t frame, size_t index, tiro_handle_t result, tiro_error_t* err);
-
-/** Returns the closure value which was specified when the function was created. */
-TIRO_API void
-tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, tiro_error_t* err);
-
-/**
- * Sets the return value for the given function call frame to the given `value`.
- * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
- */
-TIRO_API void
-tiro_async_frame_return_value(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err);
-
-/**
- * Signals a panic from the given function call frame.
- * TODO: Allow user defined exception objects instead of plain string?
- * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
- */
-TIRO_API void
-tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err);
-
-/**
- * Constructs a new function object with the given name that will invoke the native function `func` when called.
- * `argc` is the number of arguments required for calling `func`. `closure` may be an arbitrary value
- * that will be passed to the function on every invocation.
- *
- * On success, the new function will be stored in `result`.
- * Returns `TIRO_BAD_TYPE` if `name` is not a string. Returns `TIRO_BAD_ARG` if the the requested number of parameters
- * is too large. The current maximum is `1024`.
- */
-TIRO_API void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_function_t func,
-    size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
 
 #ifdef __cplusplus
 } /* extern "C" */

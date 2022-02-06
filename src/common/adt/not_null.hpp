@@ -49,9 +49,9 @@ public:
     explicit NotNull(GuaranteedNotNull, U&& ptr)
         : ptr_(std::forward<U>(ptr)) {
         static_assert(std::is_constructible_v<T, std::nullptr_t>,
-            "T must be constructible with a null pointer.");
+            "T must be constructible with a null pointer");
 
-        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
+        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null");
     }
 
     /// Constructs a non-null pointer from a reference.
@@ -77,7 +77,7 @@ public:
     NotNull& operator=(NotNull&&) noexcept = default;
 
     const T& get() const& {
-        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull: pointer is null.");
+        TIRO_DEBUG_ASSERT(ptr_ != nullptr, "NotNull<T>: pointer is null");
         return ptr_;
     }
 
@@ -154,13 +154,13 @@ auto debug_check_null(
     [[maybe_unused]] const SourceLocation& loc, T&& value, [[maybe_unused]] const char* expr) {
 
     if constexpr (is_not_null_v<remove_cvref_t<T>>) {
-        TIRO_DEBUG_ASSERT(value.get() != nullptr, "NotNull<T> pointer must not be null.");
+        TIRO_DEBUG_ASSERT(value.get() != nullptr, "NotNull<T> pointer must not be null");
         return std::forward<T>(value);
     }
 
 #ifdef TIRO_DEBUG
     if (TIRO_UNLIKELY(value == nullptr)) {
-        detail::assert_fail(loc, expr, "Attempted to construct a NotNull<T> from a null pointer.");
+        detail::assert_fail(loc, expr, "attempted to construct a NotNull<T> from a null pointer");
     }
 #endif
     return NotNull(guaranteed_not_null, std::forward<T>(value));

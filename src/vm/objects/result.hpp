@@ -7,7 +7,6 @@
 
 namespace tiro::vm {
 
-// TODO: Think about (simple) stack traces.
 class Result final : public HeapValue {
 private:
     enum Slots {

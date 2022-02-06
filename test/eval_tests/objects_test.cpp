@@ -41,20 +41,6 @@ TEST_CASE("Record's members should be inspectable and modifiable", "[objects]") 
     test.call("test_record").returns_int(-3);
 }
 
-TEST_CASE("Record's members should be null by default", "[objects]") {
-    std::string_view source = R"(
-        import std;
-
-        export func test_record() = {
-            const rec = std.new_record([#foo]);
-            rec.foo;
-        }
-    )";
-
-    eval_test test(source);
-    test.call("test_record").returns_null();
-}
-
 TEST_CASE("Record's member functions should be invokable", "[objects]") {
     std::string_view source = R"(
         import std;

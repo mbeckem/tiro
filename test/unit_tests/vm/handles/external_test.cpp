@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include "vm/context.hpp"
 #include "vm/handles/external.hpp"
 #include "vm/objects/all.hpp"
 
@@ -10,6 +11,15 @@ TEST_CASE("ExternalStorage should be empty by default", "[external]") {
     REQUIRE(storage.used_slots() == 0);
     REQUIRE(storage.free_slots() == 0);
     REQUIRE(storage.total_slots() == 0);
+    REQUIRE(storage.ctx() == nullptr);
+}
+
+TEST_CASE("External storage can be linked with the parent context", "[external]") {
+    ExternalStorage storage;
+    Context ctx;
+    storage.set_ctx(ctx);
+    REQUIRE(storage.ctx() == &ctx);
+    REQUIRE(storage.must_ctx().get() == &ctx);
 }
 
 TEST_CASE("ExternalStorage should count allocated handles", "[external]") {
@@ -82,7 +92,7 @@ TEST_CASE("UniqueExternal should free externals on destruction", "[external]") {
     ExternalStorage storage;
 
     {
-        UniqueExternal ext(storage, storage.allocate(Value::null()));
+        UniqueExternal ext(storage.allocate(Value::null()));
         REQUIRE(storage.used_slots() == 1);
         REQUIRE(ext);
         REQUIRE(ext.valid());
@@ -92,8 +102,7 @@ TEST_CASE("UniqueExternal should free externals on destruction", "[external]") {
 }
 
 TEST_CASE("UniqueExternal should be invalid by default", "[external]") {
-    ExternalStorage storage;
-    UniqueExternal<Value> ext(storage);
+    UniqueExternal<Value> ext;
     REQUIRE_FALSE(ext);
     REQUIRE_FALSE(ext.valid());
 }
@@ -101,7 +110,7 @@ TEST_CASE("UniqueExternal should be invalid by default", "[external]") {
 TEST_CASE("Moving UniqueExternals should transfer ownership", "[external]") {
     ExternalStorage storage;
     {
-        UniqueExternal a(storage, storage.allocate(SmallInteger::make(123)));
+        UniqueExternal a(storage.allocate(SmallInteger::make(123)));
         REQUIRE(a.valid());
         REQUIRE(a->value() == 123);
 
@@ -116,7 +125,7 @@ TEST_CASE("Moving UniqueExternals should transfer ownership", "[external]") {
 TEST_CASE("Releasing a UniqueExternal should make it invalid", "[external]") {
     ExternalStorage storage;
     {
-        UniqueExternal ext(storage, storage.allocate(Value::null()));
+        UniqueExternal ext(storage.allocate(Value::null()));
         REQUIRE(storage.used_slots() == 1);
 
         External released = ext.release();

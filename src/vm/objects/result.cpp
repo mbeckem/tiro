@@ -66,7 +66,7 @@ Integer Result::get_which() {
     return layout()->read_static_slot<Integer>(WhichSlot);
 }
 
-static void result_type_impl(NativeFunctionFrame& frame) {
+static void result_type_impl(SyncFrameContext& frame) {
     auto result = check_instance<Result>(frame);
     switch (result->which()) {
     case Result::Success:
@@ -78,17 +78,17 @@ static void result_type_impl(NativeFunctionFrame& frame) {
     }
 }
 
-static void result_is_success_impl(NativeFunctionFrame& frame) {
+static void result_is_success_impl(SyncFrameContext& frame) {
     auto result = check_instance<Result>(frame);
     frame.return_value(frame.ctx().get_boolean(result->is_success()));
 }
 
-static void result_is_error_impl(NativeFunctionFrame& frame) {
+static void result_is_error_impl(SyncFrameContext& frame) {
     auto result = check_instance<Result>(frame);
     frame.return_value(frame.ctx().get_boolean(result->is_error()));
 }
 
-static void result_value_impl(NativeFunctionFrame& frame) {
+static void result_value_impl(SyncFrameContext& frame) {
     auto result = check_instance<Result>(frame);
     if (!result->is_success()) {
         return frame.panic(
@@ -97,7 +97,7 @@ static void result_value_impl(NativeFunctionFrame& frame) {
     frame.return_value(result->unchecked_value());
 }
 
-static void result_error_impl(NativeFunctionFrame& frame) {
+static void result_error_impl(SyncFrameContext& frame) {
     auto result = check_instance<Result>(frame);
     if (!result->is_error()) {
         return frame.panic(
@@ -107,13 +107,11 @@ static void result_error_impl(NativeFunctionFrame& frame) {
 }
 
 static constexpr FunctionDesc result_methods[] = {
-    FunctionDesc::method("type"sv, 1, NativeFunctionStorage::static_sync<result_type_impl>()),
-    FunctionDesc::method(
-        "is_success"sv, 1, NativeFunctionStorage::static_sync<result_is_success_impl>()),
-    FunctionDesc::method(
-        "is_error"sv, 1, NativeFunctionStorage::static_sync<result_is_error_impl>()),
-    FunctionDesc::method("value"sv, 1, NativeFunctionStorage::static_sync<result_value_impl>()),
-    FunctionDesc::method("error"sv, 1, NativeFunctionStorage::static_sync<result_error_impl>()),
+    FunctionDesc::method("type"sv, 1, result_type_impl),
+    FunctionDesc::method("is_success"sv, 1, result_is_success_impl),
+    FunctionDesc::method("is_error"sv, 1, result_is_error_impl),
+    FunctionDesc::method("value"sv, 1, result_value_impl),
+    FunctionDesc::method("error"sv, 1, result_error_impl),
 };
 
 constexpr TypeDesc result_type_desc{"Result"sv, result_methods};

@@ -5,6 +5,7 @@
 #include "vm/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/module.hpp"
+#include "vm/objects/nullable.hpp"
 
 #include <optional>
 

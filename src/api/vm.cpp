@@ -43,6 +43,8 @@ tiro_vm_t tiro_vm_new(const tiro_vm_settings_t* settings, tiro_error_t* err) {
             };
         }
 
+        internal_settings.enable_panic_stack_traces = raw_settings.enable_panic_stack_trace;
+
         return new tiro_vm(raw_settings.userdata, std::move(internal_settings));
     });
 }

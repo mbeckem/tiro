@@ -5,7 +5,7 @@
 
 namespace tiro::vm {
 
-// TODO submodules should be members of their parent module.
+/// Creates the module object that contains the standard library.
 Module create_std_module(Context& ctx);
 
 } // namespace tiro::vm

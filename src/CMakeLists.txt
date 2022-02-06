@@ -54,6 +54,7 @@ tiro_add_headers(TIRO_HEADERS "${SOURCE_INCLUDE_DIR}/tiro"
     compiler.h
     def.h
     error.h
+    functions.h
     objects.h
     vm.h
 )
@@ -64,6 +65,7 @@ tiro_add_headers(TIROPP_HEADERS "${SOURCE_INCLUDE_DIR}/tiropp"
     compiler.hpp
     def.hpp
     error.hpp
+    functions.hpp
     fwd.hpp
     native_type.hpp
     objects.hpp

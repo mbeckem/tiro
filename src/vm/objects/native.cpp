@@ -5,33 +5,6 @@
 
 namespace tiro::vm {
 
-std::string_view to_string(NativeFunctionType type) {
-    switch (type) {
-    case NativeFunctionType::Invalid:
-        return "Invalid";
-    case NativeFunctionType::Sync:
-        return "Sync";
-    case NativeFunctionType::Async:
-        return "Async";
-    }
-    TIRO_UNREACHABLE("Invalid native function type.");
-}
-
-NativeFunction NativeFunction::make(Context& ctx, Handle<String> name, MaybeHandle<Value> closure,
-    u32 params, const NativeFunctionStorage& function) {
-
-    // TODO: Invalid value only exists because static layout requires default construction at the moment.
-    TIRO_DEBUG_ASSERT(
-        function.type() != NativeFunctionType::Invalid, "invalid native function value");
-
-    Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
-    data->write_static_slot(NameSlot, name);
-    data->write_static_slot(ClosureSlot, closure.to_nullable());
-    data->static_payload()->params = params;
-    data->static_payload()->function = function;
-    return NativeFunction(from_heap(data));
-}
-
 String NativeFunction::name() {
     return layout()->read_static_slot<String>(NameSlot);
 }
@@ -44,142 +17,239 @@ u32 NativeFunction::params() {
     return layout()->static_payload()->params;
 }
 
-NativeFunctionStorage NativeFunction::function() {
+u32 NativeFunction::locals() {
+    return layout()->static_payload()->locals;
+}
+
+NativeFunctionHolder NativeFunction::function() {
     return layout()->static_payload()->function;
 }
 
-NativeFunctionFrame::NativeFunctionFrame(
-    Context& ctx, Handle<Coroutine> coro, SyncFrame* frame, OutHandle<Value> return_value)
+NativeFunction NativeFunction::make_impl(Context& ctx, const Builder& builder) {
+    Scope sc(ctx);
+    Local name = sc.local<String>(defer_init);
+    if (builder.name_) {
+        name = builder.name_.handle();
+    } else {
+        name = ctx.get_interned_string("<unnamed function>");
+    }
+
+    // TODO: Invalid value only exists because static layout requires default construction at the moment.
+    TIRO_DEBUG_ASSERT(builder.holder_.valid(), "invalid native function value");
+
+    Layout* data = create_object<NativeFunction>(ctx, StaticSlotsInit(), StaticPayloadInit());
+    data->write_static_slot(NameSlot, name);
+    data->write_static_slot(ClosureSlot, builder.closure_.to_nullable());
+    data->static_payload()->params = builder.params_;
+    data->static_payload()->locals = builder.locals_;
+    data->static_payload()->function = builder.holder_;
+    return NativeFunction(from_heap(data));
+}
+
+ResumableFrameContext::ResumableFrameContext(Context& ctx, Handle<Coroutine> coro,
+    NotNull<ResumableFrame*> frame, ResumableFrameContinuation& cont)
     : ctx_(ctx)
     , coro_(coro)
     , frame_(frame)
-    , return_value_(return_value) {
-    TIRO_DEBUG_ASSERT(frame, "invalid frame");
+    , cont_(cont) {
     TIRO_DEBUG_ASSERT(
-        frame == coro->stack().value().top_frame(), "function frame must be on top the of stack");
+        frame_ == coro->stack().value().top_frame(), "function frame must be on top the of stack");
+    TIRO_DEBUG_ASSERT(cont_.action() == ResumableFrameContinuation::NONE,
+        "resumable frame continuation was initialized incorrectly");
 }
 
-Handle<Coroutine> NativeFunctionFrame::coro() const {
+void ResumableFrameContinuation::do_ret(Value v) {
+    action_ = RETURN;
+    regs_[0].set(v);
+}
+
+void ResumableFrameContinuation::do_panic(Exception ex) {
+    action_ = PANIC;
+    regs_[0].set(ex);
+}
+
+void ResumableFrameContinuation::do_invoke(Function func, Nullable<Tuple> args) {
+    action_ = INVOKE;
+    regs_[0].set(func);
+    regs_[1].set(args);
+}
+
+void ResumableFrameContinuation::do_yield() {
+    action_ = YIELD;
+}
+
+ResumableFrameContinuation::RetData ResumableFrameContinuation::ret_data() const {
+    TIRO_DEBUG_ASSERT(action_ == RETURN, "not a return action");
+    return {regs_[0]};
+}
+
+ResumableFrameContinuation::PanicData ResumableFrameContinuation::panic_data() const {
+    TIRO_DEBUG_ASSERT(action_ == PANIC, "not a panic action");
+    return {regs_[0].must_cast<Exception>()};
+}
+
+ResumableFrameContinuation::InvokeData ResumableFrameContinuation::invoke_data() const {
+    TIRO_DEBUG_ASSERT(action_ == INVOKE, "not an invoke action");
+    return {regs_[0].must_cast<Function>(), regs_[1].must_cast<Nullable<Tuple>>()};
+}
+
+Handle<Coroutine> ResumableFrameContext::coro() const {
     return coro_;
 }
 
-Value NativeFunctionFrame::closure() const {
-    return frame_->func.closure();
-}
-
-size_t NativeFunctionFrame::arg_count() const {
-    return frame_->args;
-}
-
-Handle<Value> NativeFunctionFrame::arg(size_t index) const {
-    TIRO_CHECK(index < arg_count(),
-        "NativeFunctionFrame::arg(): Index {} is out of bounds for "
-        "argument count {}",
-        index, arg_count());
-    return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame_, index));
-}
-
-HandleSpan<Value> NativeFunctionFrame::args() const {
-    return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame_));
-}
-
-void NativeFunctionFrame::return_value(Value r) {
-    return_value_.set(r);
-    frame_->flags &= ~FRAME_UNWINDING;
-}
-
-void NativeFunctionFrame::panic(Value ex) {
-    return_value_.set(ex);
-    frame_->flags |= FRAME_UNWINDING;
-}
-
-NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(
-    Context& ctx, Handle<Coroutine> coro, AsyncFrame* frame)
-    : ctx_(ctx)
-    , coro_external_(get_valid_slot(ctx.externals().allocate(coro)))
-    , frame_(frame) {
-    TIRO_DEBUG_ASSERT(frame, "invalid frame");
-    TIRO_DEBUG_ASSERT(
-        frame == coro->stack().value().top_frame(), "function frame must be on top the of stack");
-}
-
-NativeAsyncFunctionFrame::NativeAsyncFunctionFrame(NativeAsyncFunctionFrame&& other) noexcept
-    : ctx_(other.ctx_)
-    , coro_external_(std::exchange(other.coro_external_, nullptr))
-    , frame_(other.frame_) {}
-
-NativeAsyncFunctionFrame::~NativeAsyncFunctionFrame() {
-    if (coro_external_) {
-        ctx_.externals().free(External<Coroutine>::from_raw_slot(coro_external_));
-    }
-}
-
-Value NativeAsyncFunctionFrame::closure() const {
+Value ResumableFrameContext::closure() const {
     return frame()->func.closure();
 }
 
-size_t NativeAsyncFunctionFrame::arg_count() const {
-    return frame()->args;
+size_t ResumableFrameContext::arg_count() const {
+    return frame()->argc;
 }
 
-Handle<Value> NativeAsyncFunctionFrame::arg(size_t index) const {
-    TIRO_CHECK(index < arg_count(),
-        "NativeAsyncFunctionFrame::arg(): Index {} is out of bounds for "
-        "argument count {}",
+Handle<Value> ResumableFrameContext::arg(size_t index) const {
+    TIRO_CHECK(index < arg_count(), "argument index {} is out of bounds for argument count {}",
         index, arg_count());
     return Handle<Value>::from_raw_slot(CoroutineStack::arg(frame(), index));
 }
 
-HandleSpan<Value> NativeAsyncFunctionFrame::args() const {
+HandleSpan<Value> ResumableFrameContext::args() const {
     return HandleSpan<Value>::from_raw_slots(CoroutineStack::args(frame()));
 }
 
-void NativeAsyncFunctionFrame::return_value(Value v) {
-    AsyncFrame* af = frame();
-    af->return_value_or_exception = v;
-    af->flags &= ~FRAME_UNWINDING;
-    resume();
+size_t ResumableFrameContext::local_count() const {
+    return frame()->locals;
 }
 
-void NativeAsyncFunctionFrame::panic(Value ex) {
-    AsyncFrame* af = frame();
-    af->return_value_or_exception = ex;
-    af->flags |= FRAME_UNWINDING;
-    resume();
+MutHandle<Value> ResumableFrameContext::local(size_t index) const {
+    TIRO_CHECK(index < local_count(), "local index {} is out of bounds for local count {}", index,
+        local_count());
+    return MutHandle<Value>::from_raw_slot(CoroutineStack::local(frame(), index));
 }
 
-void NativeAsyncFunctionFrame::resume() {
-    Handle<Coroutine> coro = coroutine();
-
-    // Signals to the interpreter that the a result is ready when it enters the frame again.
-    AsyncFrame* af = frame();
-    if (af->flags & FRAME_ASYNC_RESUMED)
-        TIRO_ERROR("cannot resume a coroutine multiple times from the same async function");
-    af->flags |= FRAME_ASYNC_RESUMED;
-
-    TIRO_CHECK(coro->state() == CoroutineState::Running || coro->state() == CoroutineState::Waiting,
-        "invalid coroutine state {}, cannot resume", to_string(coro->state()));
-
-    // If state == Running:
-    //      Coroutine is not yet suspended. This means that we're calling resume()
-    //      from the initial native function call. This is not a problem, the interpreter will observe
-    //      the RESUMED flag and continue accordingly.
-    // If state == Waiting:
-    //      Coroutine was suspended correctly and is now being resumed by some kind of callback.
-    ctx().resume_coroutine(coro);
-    frame_ = nullptr;
+MutHandleSpan<Value> ResumableFrameContext::locals() const {
+    return MutHandleSpan<Value>::from_raw_slots(CoroutineStack::locals(frame()));
 }
 
-Handle<Coroutine> NativeAsyncFunctionFrame::coroutine() const {
-    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "async frame was moved");
-    return External<Coroutine>::from_raw_slot(coro_external_);
+int ResumableFrameContext::state() const {
+    return frame()->state;
 }
 
-AsyncFrame* NativeAsyncFunctionFrame::frame() const {
-    TIRO_DEBUG_ASSERT(coro_external_ != nullptr, "async frame was moved");
-    TIRO_CHECK(frame_, "coroutine was already resumed");
-    return frame_;
+void ResumableFrameContext::set_state(int state) {
+    frame()->state = state;
 }
+
+void ResumableFrameContext::invoke(int next_state, Function func, Nullable<Tuple> arguments) {
+    cont_.do_invoke(func, arguments);
+    set_state(next_state);
+}
+
+Value ResumableFrameContext::invoke_return() {
+    auto rf = frame();
+    auto stack = coro_->stack().value();
+    if (TIRO_UNLIKELY(stack.top_frame() != rf))
+        TIRO_ERROR("the current resumable frame must be the top frame");
+
+    u32 values = stack.top_value_count();
+    TIRO_DEBUG_ASSERT(
+        values == 0 || values == 1, "expected zero or one top values in resumable function frame");
+    return stack.top_value_count() > 0 ? *stack.top_value() : Value::null();
+}
+
+CoroutineToken ResumableFrameContext::resume_token() {
+    return Coroutine::create_token(ctx(), coro());
+}
+
+void ResumableFrameContext::yield(int next_state) {
+    cont_.do_yield();
+    set_state(next_state);
+}
+
+void ResumableFrameContext::return_value(Value r) {
+    cont_.do_ret(r);
+    set_state(ResumableFrame::END);
+}
+
+void ResumableFrameContext::panic(Exception ex) {
+    cont_.do_panic(ex);
+    set_state(ResumableFrame::END);
+}
+
+NotNull<ResumableFrame*> ResumableFrameContext::frame() const {
+    TIRO_DEBUG_ASSERT(frame_, "invalid frame");
+    return TIRO_NN(frame_);
+}
+
+AsyncResumeToken AsyncFrameContext::resume_token() {
+    Context& ctx = parent_.ctx();
+    UniqueExternal token(ctx.externals().allocate(parent_.resume_token()));
+    return AsyncResumeToken(std::move(token));
+}
+
+UnownedAsyncResumeToken::UnownedAsyncResumeToken(External<CoroutineToken> token)
+    : token_(std::move(token)) {}
+
+Context& UnownedAsyncResumeToken::ctx() const {
+    return *ExternalStorage::from_external(token_)->must_ctx();
+}
+
+void UnownedAsyncResumeToken::return_value(Value r) {
+    complete(r, false);
+}
+
+void UnownedAsyncResumeToken::panic(Exception ex) {
+    complete(ex, true);
+}
+
+void UnownedAsyncResumeToken::complete(Value unsafe_value, bool panic) {
+    Context& ctx = get_ctx();
+    Scope sc(ctx);
+    Local coro = sc.local(get_coro());
+    if (TIRO_UNLIKELY(ctx.interpreter().current_coroutine().same(*coro))) {
+        TIRO_ERROR("invalid usage of async resume token: frame did not yield yet");
+    }
+
+    Local value = sc.local(unsafe_value);
+    if (!CoroutineToken::resume(ctx, token_)) {
+        TIRO_ERROR(
+            "invalid usage of old async resume token: the coroutine may have resumed already");
+    }
+
+    auto frame = get_frame(coro);
+    auto local = CoroutineStack::local(
+        frame, panic ? AsyncFrameContext::LOCAL_PANIC : AsyncFrameContext::LOCAL_RESULT);
+    *local = *value;
+}
+
+Context& UnownedAsyncResumeToken::get_ctx() {
+    return *ExternalStorage::from_external(token_)->must_ctx();
+}
+
+Coroutine UnownedAsyncResumeToken::get_coro() {
+    return token_->coroutine();
+}
+
+NotNull<ResumableFrame*> UnownedAsyncResumeToken::get_frame(Handle<Coroutine> coro) {
+    auto stack = coro->stack();
+    TIRO_DEBUG_ASSERT(!stack.is_null(), "waiting coroutines must have a stack");
+
+    auto frame = stack.value().top_frame();
+    TIRO_DEBUG_ASSERT(frame, "waiting coroutines must have a top frame");
+    TIRO_DEBUG_ASSERT(
+        frame->type == FrameType::Resumable, "the top frame must be a resumable frame");
+
+    auto resumable_frame = static_cast<ResumableFrame*>(frame);
+    return TIRO_NN(resumable_frame);
+}
+
+AsyncResumeToken::AsyncResumeToken(UniqueExternal<CoroutineToken> token)
+    : token_(std::move(token)) {
+    TIRO_DEBUG_ASSERT(token_, "invalid token");
+}
+
+AsyncResumeToken::~AsyncResumeToken() = default;
+
+AsyncResumeToken::AsyncResumeToken(AsyncResumeToken&& other) noexcept = default;
+
+AsyncResumeToken& AsyncResumeToken::operator=(AsyncResumeToken&& other) noexcept = default;
 
 NativeObject NativeObject::make(Context& ctx, const tiro_native_type_t* type, size_t size) {
     Layout* data = create_object<NativeObject>(ctx, size,

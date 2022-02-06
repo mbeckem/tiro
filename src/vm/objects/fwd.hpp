@@ -81,16 +81,14 @@ class Nullable;
 template<typename T = void>
 class Fallible;
 
-class NativeFunctionFrame;
-class NativeAsyncFunctionFrame;
-
-using NativeFunctionPtr = void (*)(NativeFunctionFrame&);
-using NativeAsyncFunctionPtr = void (*)(NativeAsyncFunctionFrame);
+class SyncFrameContext;
+class AsyncFrameContext;
+class AsyncResumeToken;
+class ResumableFrameContext;
 
 struct CoroutineFrame;
 struct CodeFrame;
-struct SyncFrame;
-struct AsyncFrame;
+struct ResumableFrame;
 
 } // namespace tiro::vm
 

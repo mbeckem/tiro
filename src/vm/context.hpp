@@ -41,6 +41,9 @@ public:
 struct ContextSettings {
     std::function<void(std::string_view message)> print_stdout;
 
+    // True: exceptions capture a stack trace at their point of creation
+    bool enable_panic_stack_traces = false;
+
     // TODO: Make this an option.
     DefaultHeapAllocator alloc;
 
@@ -66,6 +69,7 @@ public:
     void userdata(void* ptr) { userdata_ = ptr; }
 
     Heap& heap() { return heap_; }
+    Interpreter& interpreter() { return roots_.get_interpreter(); } // TODO: not only one
     RootedStack& stack() { return roots_.get_stack(); }
     ExternalStorage& externals() { return roots_.get_externals(); }
     ModuleRegistry& modules() { return roots_.get_modules(); }
@@ -124,7 +128,7 @@ private:
 
 private:
     // -- These functions are called by the frame types when resuming a waiting coroutine.
-    friend NativeAsyncFunctionFrame;
+    friend AsyncFrameContext;
     friend Coroutine;
     friend CoroutineToken;
 

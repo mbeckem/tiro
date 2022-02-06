@@ -185,6 +185,19 @@ inline constexpr ValueType TypeToTag = detail::MapTypeToTag<Type>::tag;
 template<ValueType tag>
 using TagToType = typename detail::MapTagToType<tag>::type;
 
+namespace detail {
+
+template<typename T>
+struct is_nullable : std::false_type {};
+
+template<typename T>
+struct is_nullable<Nullable<T>> : std::true_type {};
+
+} // namespace detail
+
+template<typename T>
+inline constexpr bool is_nullable = detail::is_nullable<remove_cvref_t<T>>::value;
+
 } // namespace tiro::vm
 
 TIRO_ENABLE_FREE_TO_STRING(tiro::vm::ValueType)

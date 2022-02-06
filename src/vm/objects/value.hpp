@@ -55,7 +55,7 @@ public:
     /// \pre The type of the value must match the target type.
     template<typename T>
     T must_cast() const {
-        TIRO_DEBUG_ASSERT(is<T>(), "Value is not an instance of this type.");
+        TIRO_DEBUG_ASSERT(is<T>(), "value is not an instance of this type");
         return T(*this);
     }
 
@@ -86,7 +86,7 @@ public:
             return ValueCategory::EmbeddedInteger;
 
         TIRO_DEBUG_ASSERT(
-            is_heap_ptr(), "The value must be on the heap if the other conditions are false.");
+            is_heap_ptr(), "the value must be on the heap if the other conditions are false");
         return ValueCategory::Heap;
     }
 
@@ -111,19 +111,19 @@ protected:
     explicit Value(EmbeddedIntegerTag, uintptr_t value)
         : raw_(value) {
         TIRO_DEBUG_ASSERT(
-            raw_ & embedded_integer_flag, "Value does not represent an embedded integer.");
+            raw_ & embedded_integer_flag, "value does not represent an embedded integer");
     }
 
     explicit Value(HeapPointerTag, NotNull<Header*> ptr)
         : raw_(reinterpret_cast<uintptr_t>(ptr.get())) {
         TIRO_DEBUG_ASSERT(
-            (raw_ & embedded_integer_flag) == 0, "Heap pointer is not aligned correctly.");
+            (raw_ & embedded_integer_flag) == 0, "heap pointer is not aligned correctly");
     }
 
     template<typename CheckedType>
     explicit Value(Value v, DebugCheck<CheckedType>)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "Value has unexpected type.");
+        TIRO_DEBUG_ASSERT(v.is<CheckedType>(), "value has unexpected type");
     }
 
     static Value from_heap(Header* object) { return Value(HeapPointerTag(), TIRO_NN(object)); }
@@ -145,12 +145,12 @@ public:
 
     explicit HeapValue(Value v)
         : Value(v) {
-        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "value must be a heap pointer");
     }
 
     /// Returns the heap pointer stored in this value.
     Header* heap_ptr() const {
-        TIRO_DEBUG_ASSERT(is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(is_heap_ptr(), "value must be a heap pointer");
         return reinterpret_cast<Header*>(raw());
     }
 
@@ -164,7 +164,7 @@ protected:
     template<typename CheckedType>
     explicit HeapValue(Value v, DebugCheck<CheckedType> check)
         : Value(v, check) {
-        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "Value must be a heap pointer.");
+        TIRO_DEBUG_ASSERT(v.is_heap_ptr(), "value must be a heap pointer");
     }
 
     // Cast to the inner layout. T must be a layout type derived from Header.
@@ -172,58 +172,10 @@ protected:
     // Warning: the type cast in unchecked!
     template<typename T>
     T* access_heap() const {
-        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header.");
+        static_assert(std::is_base_of_v<Header, T>, "T must be a base class of Header");
         return static_cast<T*>(heap_ptr());
     }
 };
-
-/// A value that is either an instance of `T` or null.
-/// Note that this is a compile time concept only (its a plain value
-/// under the hood).
-template<typename T>
-class Nullable final : public Value {
-public:
-    using ValueType = T;
-
-    /// Constructs an instance that holds null.
-    Nullable()
-        : Value(Value::null()) {}
-
-    /// Constructs an instance that holds a value. `value` must be a valid `T` or null.
-    Nullable(T value)
-        : Value(value, DebugCheck<T>()) {}
-
-    /// Constructs an instance that holds a value. `value` must be a valid `T` or null.
-    /// Disabled when T == Value (implicit constructor is available then).
-    template<typename U = T, std::enable_if_t<!std::is_same_v<U, Value>>* = nullptr>
-    explicit Nullable(Value value)
-        : Value(value, DebugCheck<Nullable<T>>()) {}
-
-    /// Check whether this instance holds null or a valid value.
-    using Value::is_null;
-    using Value::operator bool;
-    bool has_value() const { return !is_null(); }
-
-    /// Returns the inner value. Fails with an assertion error if this instance is null.
-    /// \pre `has_value()`.
-    T value() const {
-        TIRO_DEBUG_ASSERT(has_value(), "Nullable: instance does not holds a value.");
-        return T(static_cast<Value>(*this));
-    }
-};
-
-namespace detail {
-
-template<typename T>
-struct is_nullable : std::false_type {};
-
-template<typename T>
-struct is_nullable<Nullable<T>> : std::true_type {};
-
-} // namespace detail
-
-template<typename T>
-inline constexpr bool is_nullable = detail::is_nullable<remove_cvref_t<T>>::value;
 
 namespace detail {
 
@@ -257,6 +209,7 @@ struct ValueTypeCheck<SmallInteger> {
     static bool test(Value v) { return v.is_embedded_integer(); }
 };
 
+// See definition of Number class.
 template<>
 struct ValueTypeCheck<Number> {
     static bool test(Value v) {
@@ -264,6 +217,7 @@ struct ValueTypeCheck<Number> {
     }
 };
 
+// See definition of StringLike class.
 template<>
 struct ValueTypeCheck<StringLike> {
     static bool test(Value v) {
@@ -271,6 +225,7 @@ struct ValueTypeCheck<StringLike> {
     }
 };
 
+// See definition of Nullable<T> class.
 template<typename T>
 struct ValueTypeCheck<Nullable<T>> {
     static bool test(Value v) { return v.is_null() || ValueTypeCheck<T>::test(v); }

@@ -27,14 +27,25 @@ public:
         return add_method(desc.name, desc.params, desc.func, desc.flags);
     }
 
-    TypeBuilder& add_method(std::string_view name, u32 argc, const NativeFunctionStorage& func,
+    TypeBuilder& add_method(std::string_view name, u32 argc, const FunctionPtr& func,
         /* MethodDesc::Flags */ int flags) {
         Scope sc(ctx_);
         Local member_name = sc.local(ctx_.get_symbol(name));
         Local member_str = sc.local(member_name->name());
-        Local member_value = sc.local<Value>(
-            NativeFunction::make(ctx_, member_str, {}, argc, func));
 
+        auto builder = [&] {
+            switch (func.type) {
+            case FunctionPtrType::Sync:
+                return NativeFunction::sync(func.sync);
+            case FunctionPtrType::Async:
+                return NativeFunction::async(func.async);
+            case FunctionPtrType::Resumable:
+                return NativeFunction::resumable(func.resumable.func, func.resumable.locals);
+            }
+            TIRO_UNREACHABLE("invalid function type");
+        };
+
+        Local member_value = sc.local<Value>(builder().name(member_str).params(argc).make(ctx_));
         if (flags & FunctionDesc::InstanceMethod) {
             member_value = Method::make(ctx_, member_value);
         }
@@ -519,7 +530,6 @@ Fallible<Value> TypeSystem::load_member(Context& ctx, Handle<Value> object, Hand
 
         // Static data and plain function can be returned as-is. Methods must be unwrapped:
         // `const method = Type.method` returns a function that takes an instance of `Type` as its first argument.
-        // TODO: Static members on types
         auto found = type->find_member(member);
         if (!found || !found->is<Method>())
             return member_not_found_in_type_exception(ctx, type, member);
@@ -531,7 +541,6 @@ Fallible<Value> TypeSystem::load_member(Context& ctx, Handle<Value> object, Hand
         Type type = type_of(object);
         auto found = type.find_member(member);
 
-        // TODO: Static members on types
         if (!found || !found->is<Method>())
             return member_not_found_exception(ctx, object, member);
 
@@ -556,14 +565,13 @@ Fallible<void> TypeSystem::store_member(
         return {};
     }
 
-    case ValueType::Type: // TODO Static members
+    case ValueType::Type:
     default:
         return member_assignment_not_supported_exception(ctx, object);
     }
 }
 
 Fallible<Value> TypeSystem::load_method(Context& ctx, Handle<Value> object, Handle<Symbol> member) {
-    // TODO: Implement fields.
     switch (object->type()) {
     case ValueType::Module:
     case ValueType::Record:
@@ -571,7 +579,6 @@ Fallible<Value> TypeSystem::load_method(Context& ctx, Handle<Value> object, Hand
         return load_member(ctx, object, member);
 
     default: {
-        // TODO: Instance fields are not implemented.
         auto public_type = type_of(object);
         auto found = public_type.find_member(member);
         if (!found)

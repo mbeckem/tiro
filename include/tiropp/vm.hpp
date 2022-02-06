@@ -4,6 +4,7 @@
 #include "tiropp/compiler.hpp"
 #include "tiropp/def.hpp"
 #include "tiropp/detail/resource_holder.hpp"
+#include "tiropp/detail/translate.hpp"
 #include "tiropp/error.hpp"
 #include "tiropp/fwd.hpp"
 
@@ -37,6 +38,12 @@ struct vm_settings {
     /// `std.print(...)` was called. The vm will print to the process's standard output
     /// when this function is not set.
     std::function<void(std::string_view message)> print_stdout;
+
+    /// Set this to true to enable capturing of the current call stack trace when an exception
+    /// is created during a panic.
+    /// Capturing stack traces has a significant performance impact because many call frames on the
+    /// call stack have to be visited.
+    bool enable_panic_stack_traces = false;
 };
 
 class vm final {
@@ -99,17 +106,18 @@ private:
         raw_settings.page_size = settings_.page_size;
         raw_settings.max_heap_size = settings_.max_heap_size;
         raw_settings.userdata = this;
+        raw_settings.enable_panic_stack_trace = settings_.enable_panic_stack_traces;
 
         if (settings_.print_stdout) {
             raw_settings.print_stdout = [](tiro_string_t message, void* userdata) {
                 // FIXME handle exceptions?
                 tiro::vm& self = *static_cast<tiro::vm*>(userdata);
-                self.settings_.print_stdout({message.data, message.length});
+                self.settings_.print_stdout(detail::from_raw(message));
             };
         }
 
         tiro_vm_t raw_vm = tiro_vm_new(&raw_settings, error_adapter());
-        TIRO_ASSERT(raw_vm); // Returns error on failure
+        TIRO_ASSERT(raw_vm);
         return raw_vm;
     }
 
