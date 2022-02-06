@@ -324,7 +324,7 @@ TIRO_API void tiro_coroutine_result(
  * \param userdata
  *      The original userdata pointer that was provided when the callback was registered.
  */
-typedef void (*tiro_coroutine_callback)(tiro_vm_t vm, tiro_handle_t coro, void* userdata);
+typedef void (*tiro_coroutine_callback_t)(tiro_vm_t vm, tiro_handle_t coro, void* userdata);
 
 /**
  * Represents a cleanup function associated with a coroutine callback. Cleanup functions are always executed immediately
@@ -336,7 +336,7 @@ typedef void (*tiro_coroutine_callback)(tiro_vm_t vm, tiro_handle_t coro, void* 
  *
  * TODO: Does the cleanup function need access to the vm instance?
  */
-typedef void (*tiro_coroutine_cleanup)(void* userdata);
+typedef void (*tiro_coroutine_cleanup_t)(void* userdata);
 
 /**
  * Schedules the given callback to be invoked once the coroutine completes.
@@ -358,9 +358,9 @@ typedef void (*tiro_coroutine_cleanup)(void* userdata);
  *
  * `userdata` will be passed to `callback` and `cleanup` when appropriate, and it will not be used in any other way.
  */
-TIRO_API void
-tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine, tiro_coroutine_callback callback,
-    tiro_coroutine_cleanup cleanup, void* userdata, tiro_error_t* err);
+TIRO_API void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
+    tiro_coroutine_callback_t callback, tiro_coroutine_cleanup_t cleanup, void* userdata,
+    tiro_error_t* err);
 
 /**
  * Starts the given coroutine by scheduling it for execution. The coroutine must not have been started before.

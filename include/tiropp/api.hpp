@@ -4,6 +4,7 @@
 #include "tiropp/compiler.hpp"
 #include "tiropp/def.hpp"
 #include "tiropp/error.hpp"
+#include "tiropp/functions.hpp"
 #include "tiropp/fwd.hpp"
 #include "tiropp/native_type.hpp"
 #include "tiropp/objects.hpp"

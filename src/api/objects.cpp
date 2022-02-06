@@ -761,18 +761,18 @@ void tiro_coroutine_result(
 }
 
 void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
-    tiro_coroutine_callback callback, tiro_coroutine_cleanup cleanup, void* userdata,
+    tiro_coroutine_callback_t callback, tiro_coroutine_cleanup_t cleanup, void* userdata,
     tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!vm || !coroutine || !callback)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
 
         struct Callback final : vm::CoroutineCallback {
-            tiro_coroutine_callback callback;
-            tiro_coroutine_cleanup cleanup;
+            tiro_coroutine_callback_t callback;
+            tiro_coroutine_cleanup_t cleanup;
             void* userdata;
 
-            Callback(tiro_coroutine_callback callback_, tiro_coroutine_cleanup cleanup_,
+            Callback(tiro_coroutine_callback_t callback_, tiro_coroutine_cleanup_t cleanup_,
                 void* userdata_) noexcept
                 : callback(callback_)
                 , cleanup(cleanup_)
