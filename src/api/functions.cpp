@@ -75,19 +75,6 @@ void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_sync_functio
     return make_native_function(vm, name, func, argc, closure, result, err);
 }
 
-void tiro_async_frame_free(tiro_async_frame_t frame) {
-    delete to_internal(frame);
-}
-
-tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame) {
-    return entry_point(nullptr, nullptr, [&]() -> tiro_vm_t {
-        if (!frame)
-            return nullptr;
-
-        return vm_from_context(to_internal(frame)->ctx());
-    });
-}
-
 size_t tiro_async_frame_arg_count(tiro_async_frame_t frame) {
     return get_argc(frame);
 }
@@ -129,9 +116,68 @@ void tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, t
     });
 }
 
+tiro_async_token_t tiro_async_frame_token(tiro_async_frame_t frame, tiro_error_t* err) {
+    return entry_point(err, nullptr, [&]() -> tiro_async_token_t {
+        if (!frame)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG), nullptr;
+
+        auto internal_frame = to_internal(frame);
+        auto token = internal_frame->resume_token().release();
+        return to_external_token(token);
+    });
+}
+
+void tiro_async_frame_yield(tiro_async_frame_t frame, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!frame)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        auto internal_frame = to_internal(frame);
+        internal_frame->yield();
+    });
+}
+
 void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_function_t func,
     size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err) {
     return make_native_function(vm, name, func, argc, closure, result, err);
+}
+
+void tiro_async_token_free(tiro_async_token_t token) {
+    return entry_point(nullptr, [&]() {
+        if (!token)
+            return;
+
+        // Simply destroys the value
+        vm::AsyncResumeToken internal_token(vm::UniqueExternal(to_internal_token(token)));
+    });
+}
+
+void tiro_async_token_return_value(
+    tiro_async_token_t token, tiro_handle_t value, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!token || !value)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::UnownedAsyncResumeToken internal_token(to_internal_token(token));
+        internal_token.return_value(*to_internal(value));
+    });
+}
+
+void tiro_async_token_panic_msg(
+    tiro_async_token_t token, tiro_string_t message, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!token || !valid_string(message))
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::UnownedAsyncResumeToken internal_token(to_internal_token(token));
+        auto message_view = to_internal(message);
+
+        // TODO: Ensure that function always goes into panic mode, even if the following throws!
+        auto& ctx = internal_token.ctx();
+        vm::Scope sc(ctx);
+        vm::Local message_string = sc.local(vm::String::make(ctx, message_view));
+        internal_token.panic(vm::Exception::make(ctx, message_string));
+    });
 }
 
 size_t tiro_resumable_frame_arg_count(tiro_resumable_frame_t frame) {
@@ -327,12 +373,7 @@ static vm::NativeFunction::Builder get_builder(tiro_async_function_t func) {
         tiro_async_function_t func;
 
         void operator()(vm::AsyncFrameContext& frame) {
-            (void) frame;
-            TIRO_NOT_IMPLEMENTED(); // TODO
-            /*
-            auto dynamic_frame = std::make_unique<vm::AsyncFrameContext>(std::move(frame));
-            func(vm_from_context(frame.ctx()), to_external(dynamic_frame.release()));
-            */
+            func(vm_from_context(frame.ctx()), to_external(&frame));
         }
     };
 

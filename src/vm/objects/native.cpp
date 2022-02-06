@@ -184,26 +184,22 @@ AsyncResumeToken AsyncFrameContext::resume_token() {
     return AsyncResumeToken(std::move(token));
 }
 
-AsyncResumeToken::AsyncResumeToken(UniqueExternal<CoroutineToken> token)
-    : token_(std::move(token)) {
-    TIRO_DEBUG_ASSERT(token_, "invalid coroutine token");
+UnownedAsyncResumeToken::UnownedAsyncResumeToken(External<CoroutineToken> token)
+    : token_(std::move(token)) {}
+
+Context& UnownedAsyncResumeToken::ctx() const {
+    return *ExternalStorage::from_external(token_)->must_ctx();
 }
 
-AsyncResumeToken::~AsyncResumeToken() {}
-
-AsyncResumeToken::AsyncResumeToken(AsyncResumeToken&& other) noexcept = default;
-
-AsyncResumeToken& AsyncResumeToken::operator=(AsyncResumeToken&& other) noexcept = default;
-
-void AsyncResumeToken::return_value(Value r) {
+void UnownedAsyncResumeToken::return_value(Value r) {
     complete(r, false);
 }
 
-void AsyncResumeToken::panic(Exception ex) {
+void UnownedAsyncResumeToken::panic(Exception ex) {
     complete(ex, true);
 }
 
-void AsyncResumeToken::complete(Value unsafe_value, bool panic) {
+void UnownedAsyncResumeToken::complete(Value unsafe_value, bool panic) {
     Context& ctx = get_ctx();
     Scope sc(ctx);
     Local coro = sc.local(get_coro());
@@ -223,16 +219,15 @@ void AsyncResumeToken::complete(Value unsafe_value, bool panic) {
     *local = *value;
 }
 
-Context& AsyncResumeToken::get_ctx() {
-    return *ExternalStorage::from_external(token_.get())->must_ctx();
+Context& UnownedAsyncResumeToken::get_ctx() {
+    return *ExternalStorage::from_external(token_)->must_ctx();
 }
 
-Coroutine AsyncResumeToken::get_coro() {
-    TIRO_DEBUG_ASSERT(token_, "invalid token");
+Coroutine UnownedAsyncResumeToken::get_coro() {
     return token_->coroutine();
 }
 
-NotNull<ResumableFrame*> AsyncResumeToken::get_frame(Handle<Coroutine> coro) {
+NotNull<ResumableFrame*> UnownedAsyncResumeToken::get_frame(Handle<Coroutine> coro) {
     auto stack = coro->stack();
     TIRO_DEBUG_ASSERT(!stack.is_null(), "waiting coroutines must have a stack");
 
@@ -244,6 +239,17 @@ NotNull<ResumableFrame*> AsyncResumeToken::get_frame(Handle<Coroutine> coro) {
     auto resumable_frame = static_cast<ResumableFrame*>(frame);
     return TIRO_NN(resumable_frame);
 }
+
+AsyncResumeToken::AsyncResumeToken(UniqueExternal<CoroutineToken> token)
+    : token_(std::move(token)) {
+    TIRO_DEBUG_ASSERT(token_, "invalid token");
+}
+
+AsyncResumeToken::~AsyncResumeToken() = default;
+
+AsyncResumeToken::AsyncResumeToken(AsyncResumeToken&& other) noexcept = default;
+
+AsyncResumeToken& AsyncResumeToken::operator=(AsyncResumeToken&& other) noexcept = default;
 
 NativeObject NativeObject::make(Context& ctx, const tiro_native_type_t* type, size_t size) {
     Layout* data = create_object<NativeObject>(ctx, size,

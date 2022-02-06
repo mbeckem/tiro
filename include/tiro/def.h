@@ -54,7 +54,7 @@ typedef struct tiro_module* tiro_module_t;
 typedef struct tiro_value* tiro_handle_t;
 typedef struct tiro_sync_frame* tiro_sync_frame_t;
 typedef struct tiro_async_frame* tiro_async_frame_t;
-typedef struct tiro_async_resume_token* tiro_async_resume_token_t;
+typedef struct tiro_async_token* tiro_async_token_t;
 typedef struct tiro_resumable_frame* tiro_resumable_frame_t;
 
 /**

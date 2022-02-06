@@ -255,16 +255,13 @@ private:
     ResumableFrameContext& parent_;
 };
 
-class AsyncResumeToken final {
+class UnownedAsyncResumeToken final {
 public:
-    explicit AsyncResumeToken(UniqueExternal<CoroutineToken> token);
-    ~AsyncResumeToken();
+    explicit UnownedAsyncResumeToken(External<CoroutineToken> token);
 
-    AsyncResumeToken(AsyncResumeToken&& other) noexcept;
-    AsyncResumeToken& operator=(AsyncResumeToken&& other) noexcept;
+    Context& ctx() const;
 
     void return_value(Value r);
-
     void panic(Exception ex);
 
 private:
@@ -277,6 +274,28 @@ private:
     /// XXX: points to the coroutine stack, do not store the pointer
     /// for long (gc may run or stack may reallocate).
     NotNull<ResumableFrame*> get_frame(Handle<Coroutine> coro);
+
+private:
+    External<CoroutineToken> token_;
+};
+
+class AsyncResumeToken final {
+public:
+    explicit AsyncResumeToken(UniqueExternal<CoroutineToken> token);
+    ~AsyncResumeToken();
+
+    AsyncResumeToken(AsyncResumeToken&& other) noexcept;
+    AsyncResumeToken& operator=(AsyncResumeToken&& other) noexcept;
+
+    Context& ctx() const { return forward().ctx(); }
+
+    void return_value(Value r) { forward().return_value(r); }
+    void panic(Exception ex) { forward().panic(ex); }
+
+    External<CoroutineToken> release() { return token_.release(); }
+
+private:
+    UnownedAsyncResumeToken forward() const { return UnownedAsyncResumeToken(token_.get()); }
 
 private:
     UniqueExternal<CoroutineToken> token_;

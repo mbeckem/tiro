@@ -7,11 +7,9 @@
 #include <string>
 #include <vector>
 
-static void dummy_sync_func(tiro_vm_t, tiro_sync_frame_t){};
+static void dummy_sync_func(tiro_vm_t, tiro_sync_frame_t) {}
 
-static void dummy_async_func(tiro_vm_t, tiro_async_frame_t frame) {
-    tiro_async_frame_free(frame);
-}
+static void dummy_async_func(tiro_vm_t, tiro_async_frame_t) {}
 
 static void dummy_resumable_func(tiro_vm_t, tiro_resumable_frame_t frame) {
     if (tiro_resumable_frame_state(frame) == TIRO_RESUMABLE_STATE_START)
@@ -333,18 +331,21 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
     };
 
     struct AsyncTask : Task {
-        tiro_async_frame_t frame_;
+        tiro_async_token_t token_;
         double result_;
 
-        AsyncTask(tiro_async_frame_t frame, double result)
-            : frame_(frame)
+        AsyncTask(tiro_async_token_t token, double result)
+            : token_(token)
             , result_(result) {}
 
-        ~AsyncTask() { tiro_async_frame_free(frame_); }
+        ~AsyncTask() { tiro_async_token_free(token_); }
+
+        AsyncTask(AsyncTask&&) noexcept = delete;
+        AsyncTask& operator=(AsyncTask&&) noexcept = delete;
 
         void run(tiro::vm& vm) override {
             tiro::handle result = tiro::make_float(vm, result_);
-            tiro_async_frame_return_value(frame_, result.raw_handle(), tiro::error_adapter());
+            tiro_async_token_return_value(token_, result.raw_handle(), tiro::error_adapter());
         }
     };
 
@@ -386,10 +387,13 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
                 double result = arg_1.as<tiro::integer>().value() * arg_2.as<tiro::float_>().value()
                                 + closure.as<tiro::tuple>().get(0).as<tiro::integer>().value();
 
-                // Enqueue a task to resume the coroutine.
-                auto task = std::make_unique<AsyncTask>(frame, result);
-                frame = nullptr;
+                // Create an async token and enqueue a task to resume the coroutine later.
+                tiro_async_token_t token = tiro_async_frame_token(frame, tiro::error_adapter());
+                REQUIRE(token);
+                auto task = std::make_unique<AsyncTask>(token, result);
                 context->queue.push_back(std::move(task));
+
+                tiro_async_frame_yield(frame, tiro::error_adapter());
             } catch (...) {
                 context->error = std::current_exception();
             }
@@ -397,9 +401,6 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
             // Some kind of memory corruption.
             std::terminate();
         }
-
-        if (frame)
-            tiro_async_frame_free(frame);
     };
 
     AsyncContext async_context;
@@ -470,7 +471,7 @@ TEST_CASE("Native async function invocation should succeed", "[api]") {
         std::rethrow_exception(async_context.error);
 }
 
-TEST_CASE("Native async functions should support panics", "[api]") {
+TEST_CASE("Native async functions should support panics when not yielding", "[api]") {
     struct Context {
         std::exception_ptr error;
     } context;
@@ -484,10 +485,10 @@ TEST_CASE("Native async functions should support panics", "[api]") {
             tiro_errc_t errc = TIRO_OK;
             tiro_async_frame_panic_msg(
                 frame, tiro_cstr("error from native function"), error_observer(errc));
+            REQUIRE(errc == TIRO_OK);
         } catch (...) {
             std::any_cast<Context*>(inner_vm.userdata())->error = std::current_exception();
         }
-        tiro_async_frame_free(frame);
     };
 
     tiro::string name = tiro::make_string(vm, "func");
@@ -509,13 +510,64 @@ TEST_CASE("Native async functions should support panics", "[api]") {
     REQUIRE(message == "error from native function");
 }
 
-TEST_CASE("Async frame functions should fail for invalid input.", "[api]") {
+TEST_CASE("Native async functions should support panics when after yielding", "[api]") {
     tiro::vm vm;
 
-    SECTION("Invalid frame for vm") {
-        tiro_vm_t raw_vm = tiro_async_frame_vm(nullptr);
-        REQUIRE(raw_vm == nullptr);
+    struct Context {
+        std::exception_ptr error;
+        tiro_async_token_t token = nullptr;
+
+        ~Context() { tiro_async_token_free(token); }
+    } context;
+    vm.userdata() = &context;
+
+    constexpr tiro_async_function_t func = [](tiro_vm_t frame_vm, tiro_async_frame_t frame) {
+        tiro::vm& inner_vm = tiro::vm::unsafe_from_raw_vm(frame_vm);
+        Context* inner_context = std::any_cast<Context*>(inner_vm.userdata());
+        try {
+            inner_context->token = tiro_async_frame_token(frame, tiro::error_adapter());
+            tiro_async_frame_yield(frame, tiro::error_adapter());
+        } catch (...) {
+            inner_context->error = std::current_exception();
+        }
+    };
+
+    tiro::string name = tiro::make_string(vm, "func");
+    tiro::handle function = tiro::make_null(vm);
+    tiro_make_async_function(vm.raw_vm(), name.raw_handle(), func, 0, nullptr,
+        function.raw_handle(), tiro::error_adapter());
+
+    tiro::coroutine coro = tiro::make_coroutine(vm, function.as<tiro::function>());
+
+    // Run until yield
+    coro.start();
+    vm.run_ready();
+
+    // Function must have yielded and created a token
+    if (context.error) {
+        std::rethrow_exception(context.error);
     }
+    REQUIRE(context.token != nullptr);
+
+    // Signal panic to async frame and continue executing until done
+    tiro_async_token_panic_msg(
+        context.token, tiro_cstr("error from native function"), tiro::error_adapter());
+    REQUIRE(vm.has_ready());
+    vm.run_ready();
+    REQUIRE(coro.completed());
+
+    auto result = coro.result();
+    REQUIRE(result.kind() == tiro::value_kind::result);
+
+    tiro::handle error = result.as<tiro::result>().error();
+    REQUIRE(error.kind() == tiro::value_kind::exception);
+
+    std::string message = error.as<tiro::exception>().message().value();
+    REQUIRE(message == "error from native function");
+}
+
+TEST_CASE("Async frame functions should fail for invalid input", "[api]") {
+    tiro::vm vm;
 
     SECTION("Invalid frame for argc") {
         size_t argc = tiro_async_frame_arg_count(nullptr);
@@ -540,6 +592,68 @@ TEST_CASE("Async frame functions should fail for invalid input.", "[api]") {
         tiro::handle value = tiro::make_null(vm);
         tiro_errc_t errc = TIRO_OK;
         tiro_async_frame_return_value(nullptr, value.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+}
+
+TEST_CASE("Async token function should fail for invalid input", "[api]") {
+    tiro::vm vm;
+    tiro::integer value = tiro::make_integer(vm, 123);
+
+    struct Context {
+        std::exception_ptr error;
+        tiro_async_token_t token = nullptr;
+
+        ~Context() { tiro_async_token_free(token); }
+    } context;
+    vm.userdata() = &context;
+
+    constexpr tiro_async_function_t func = [](tiro_vm_t frame_vm, tiro_async_frame_t frame) {
+        tiro::vm& inner_vm = tiro::vm::unsafe_from_raw_vm(frame_vm);
+        Context* inner_context = std::any_cast<Context*>(inner_vm.userdata());
+        try {
+            inner_context->token = tiro_async_frame_token(frame, tiro::error_adapter());
+            tiro_async_frame_yield(frame, tiro::error_adapter());
+        } catch (...) {
+            inner_context->error = std::current_exception();
+        }
+    };
+
+    tiro::string name = tiro::make_string(vm, "func");
+    tiro::handle function = tiro::make_null(vm);
+    tiro_make_async_function(vm.raw_vm(), name.raw_handle(), func, 0, nullptr,
+        function.raw_handle(), tiro::error_adapter());
+
+    tiro::coroutine coro = tiro::make_coroutine(vm, function.as<tiro::function>());
+
+    // Run until yield to get a valid token
+    coro.start();
+    vm.run_ready();
+
+    // Check function behaviour on invalid input
+    auto& token = context.token;
+
+    SECTION("return_value: invalid token") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_async_token_return_value(nullptr, value.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("return_value: invalid handle") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_async_token_return_value(token, nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("panic_msg: invalid token") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_async_token_panic_msg(nullptr, tiro_cstr("error message"), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("panic_msg: invalid message") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_async_token_panic_msg(token, {nullptr, 123}, error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
     }
 }

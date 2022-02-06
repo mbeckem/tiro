@@ -75,37 +75,24 @@ TIRO_API void tiro_make_sync_function(tiro_vm_t vm, tiro_handle_t name, tiro_syn
  * Functions of this type should be used to implement long running operations that would otherwise block
  * the calling coroutine (for example, a socket read or write).
  *
- * Calling an asynchronous function will pause ("yield") the calling coroutine. It will be resumed when
- * a result is provided to the frame object, e.g. by calling `tiro_async_frame_return_value`. Attempting to resume
- * a coroutine multiple times is an error.
+ * Calling an asynchronous function can pause ("yield") the calling coroutine.
+ * It will be resumed when a result is provided to the resume token object.
+ * Attempting to resume a coroutine multiple times is an error.
  *
- * Note that this API does not allow for custom native userdata. Use native objects instead and pass them in the closure.
+ * Note that this API does not allow for custom native userdata.
+ * Use native objects instead and pass them in the closure.
  *
  * \param vm
  *      The virtual machine the function is executing on.
  * \param frame
- *      The function call frame. Use `tiro_async_frame_arg` and `tiro_async_frame_arg_count` to access the function
- *      call arguments. Call `tiro_async_frame_return_value` to set the return value (it defaults to null if not set).
+ *      The function call frame.
+ *      Use `tiro_async_frame_arg` and `tiro_async_frame_arg_count` to access the function call arguments.
+ *      Call `tiro_async_frame_return_value` to set the return value (it defaults to null if not set).
  *      The closure is also available by calling `tiro_async_frame_closure`.
  *
- *      The frame remains valid until it is freed by the caller by invoking `tiro_async_frame_free` (forgetting to
- *      free a frame results in a memory leak).
+ *      The frame is only valid for the duration of the native function call.
  */
 typedef void (*tiro_async_function_t)(tiro_vm_t vm, tiro_async_frame_t frame);
-
-/**
- * Frees an async frame. Does nothing if `frame` is NULL.
- *
- * Frames are allocated for the caller before invoking the native callback function. They must be freed by calling
- * this function after async operation has been completed (e.g. after calling `tiro_async_frame_return_value(...)`).
- *
- * \warning *All* async call frames must be freed before the vm itself is freed. If there are pending async operations
- * when the vm shall be destroyed, always free them first (they do not have to receive a result).
- */
-TIRO_API void tiro_async_frame_free(tiro_async_frame_t frame);
-
-/** Returns the vm instance that this frame belongs to. Returns NULL on error. */
-TIRO_API tiro_vm_t tiro_async_frame_vm(tiro_async_frame_t frame);
 
 /** Returns the number of function call arguments received by this frame. Returns 0 on error. */
 TIRO_API size_t tiro_async_frame_arg_count(tiro_async_frame_t frame);
@@ -123,18 +110,49 @@ tiro_async_frame_closure(tiro_async_frame_t frame, tiro_handle_t result, tiro_er
 
 /**
  * Sets the return value for the given function call frame to the given `value`.
- * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
+ * This function can be used to signal an immediate return without yielding.
  */
 TIRO_API void
 tiro_async_frame_return_value(tiro_async_frame_t frame, tiro_handle_t value, tiro_error_t* err);
 
 /**
  * Signals a panic from the given function call frame.
+ * This function can be used to signal an immediate panic without yielding.
  * TODO: Allow user defined exception objects instead of plain string?
- * Async function frames must be freed (by calling `tiro_async_frame_free`) after they have been completed.
  */
 TIRO_API void
 tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err);
+
+/**
+ * Returns a token for resuming an async function call after yielding.
+ *
+ * Yielding from an async function call must be implemented by
+ *
+ *  1. acquiring an async token and storing it somewhere
+ *  2. scheduling some asynchronous operation
+ *  3. calling `tiro_async_frame_yield` and returning from the native function call
+ *
+ * After the async operation has completed, the coroutine may be resumed by
+ *
+ *  1. calling `tiro_async_token_return_value` or `tiro_async_token_panic_msg` to provide a function result
+ *  2. calling `tiro_async_token_free` to destroy the token
+ *
+ * The token must be freed via `tiro_async_token_free` when it is no longer needed.
+ *
+ * NOTE: When a vm instance is being destroyed, all async tokens will be freed automatically if they have not
+ * been freed already.
+ * It is not necessary to resume an async function call when the vm is shutting down.
+ *
+ * \return The async token or `NULL` in case of an error.
+ */
+TIRO_API tiro_async_token_t tiro_async_frame_token(tiro_async_frame_t frame, tiro_error_t* err);
+
+/**
+ * Yields from an async function call, pausing the current coroutine until it is resumed via an async frame token.
+ *
+ * The native function should return immediately after calling this function.
+ */
+TIRO_API void tiro_async_frame_yield(tiro_async_frame_t frame, tiro_error_t* err);
 
 /**
  * Constructs a new function object with the given name that will invoke the native function `func` when called.
@@ -147,6 +165,30 @@ tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_e
  */
 TIRO_API void tiro_make_async_function(tiro_vm_t vm, tiro_handle_t name, tiro_async_function_t func,
     size_t argc, tiro_handle_t closure, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Destroys an async token.
+ * Must be called for each token in order to clean up memory associated with the given token.
+ */
+TIRO_API void tiro_async_token_free(tiro_async_token_t token);
+
+/**
+ * Resumes a yielding coroutine that was paused by calling yield from an async function call frame.
+ * The associated async function call will return with the given value.
+ *
+ * Async token must be freed when they are no longer needed.
+ */
+TIRO_API void
+tiro_async_token_return_value(tiro_async_token_t token, tiro_handle_t value, tiro_error_t* err);
+
+/**
+ * Resumes a yielding coroutine that was paused by calling yield from an async function call frame.
+ * The associated async function call will panic with the given error message.
+ *
+ * Async token must be freed when they are no longer needed.
+ */
+TIRO_API void
+tiro_async_token_panic_msg(tiro_async_token_t token, tiro_string_t message, tiro_error_t* err);
 
 /**
  * The prototype of a native function that implements a resumable function.

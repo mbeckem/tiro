@@ -37,6 +37,7 @@ class type;
 
 class sync_frame;
 class async_frame;
+class async_token;
 class resumable_frame;
 
 // tiropp/native_type.hpp

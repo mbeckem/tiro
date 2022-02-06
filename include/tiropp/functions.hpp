@@ -91,11 +91,7 @@ function make_sync_function(vm& v, const string& name, size_t argc, const handle
 }
 
 /// Represents the call frame of a asynchronous function call.
-/// The lifetime of async_frames is dynamic.
-/// They usually outlive their surrounding native function call, which causes the calling tiro coroutine to sleep.
-/// The coroutine resumes when the frame's return value has been set.
-///
-/// Frames must not outlive their associated vm.
+/// References to sync_frames are only valid from within the surrounding function call.
 class async_frame final {
 public:
     async_frame(tiro_vm_t raw_vm, tiro_async_frame_t raw_frame)
@@ -105,8 +101,8 @@ public:
         TIRO_ASSERT(raw_frame);
     }
 
-    async_frame(async_frame&&) noexcept = default;
-    async_frame& operator=(async_frame&&) noexcept = default;
+    async_frame(async_frame&&) noexcept = delete;
+    async_frame& operator=(async_frame&&) noexcept = delete;
 
     /// Returns the number of arguments passed to this function call.
     size_t arg_count() const { return tiro_async_frame_arg_count(raw_frame_); }
@@ -128,23 +124,42 @@ public:
     }
 
     /// Sets the return value for this function call frame to the given `value`.
+    /// This function can be used to signal an immediate return without yielding.
     void return_value(const handle& value) {
         detail::check_handles(raw_vm_, value);
         tiro_async_frame_return_value(raw_frame_, value.raw_handle(), error_adapter());
     }
 
     /// Signals a panic from this function call frame using the given message.
+    /// This function can be used to signal an immediate panic without yielding.
     void panic_msg(std::string_view message) {
         tiro_async_frame_panic_msg(raw_frame_, detail::to_raw(message), error_adapter());
     }
+
+    /// Returns a token for resuming an async function call after yielding.
+    ///
+    /// Yielding from an async function call must be implemented by
+    ///
+    ///  1. acquiring an async token and storing it somewhere
+    ///  2. scheduling some asynchronous operation
+    ///  3. calling `yield()` on this frame and returning from the native function call
+    ///
+    /// After the async operation has completed, the coroutine may be resumed by
+    ///  calling `token.return_value` or `token.panic_msg` to provide a function result.
+    inline async_token token() const;
+
+    /// Yields from an async function call, pausing the current coroutine until it is resumed via an async frame token.
+    /// The native function should return immediately after calling this function.
+    void yield() { tiro_async_frame_yield(raw_frame_, error_adapter()); }
 
     tiro_vm_t raw_vm() const { return raw_vm_; }
 
     tiro_async_frame_t raw_frame() const { return raw_frame_; }
 
 private:
-    tiro_vm_t raw_vm_; // Unowned
-    detail::resource_holder<tiro_async_frame_t, tiro_async_frame_free> raw_frame_;
+    // Both are unowned.
+    tiro_vm_t raw_vm_;
+    tiro_async_frame_t raw_frame_;
 };
 
 /// Constructs a new function object with the given name that will invoke the native function when called.
@@ -161,11 +176,12 @@ function make_async_function(vm& v, const string& name, size_t argc, const handl
         vm& inner_v = vm::unsafe_from_raw_vm(raw_vm);
         async_frame frame(raw_vm, raw_frame);
         try {
-            Function(inner_v, std::move(frame));
+            Function(inner_v, frame);
+        } catch (const std::exception& e) {
+            std::string_view message(e.what());
+            tiro_async_frame_panic_msg(raw_frame, detail::to_raw(message), nullptr);
         } catch (...) {
-            // FIXME: Bad design :(
-            // Cannot panic here because the frame was already moved and the callee may have freed it.
-            std::terminate();
+            tiro_async_frame_panic_msg(raw_frame, detail::to_raw("unknown exception"), nullptr);
         }
     };
 
@@ -175,6 +191,38 @@ function make_async_function(vm& v, const string& name, size_t argc, const handl
         result.raw_handle(), error_adapter());
     return function(std::move(result));
 }
+
+/// A token that can be used to resume a yielding coroutine.
+class async_token final {
+public:
+    async_token(tiro_vm_t vm, tiro_async_token_t token)
+        : raw_vm_(vm)
+        , raw_token_(token) {}
+
+    async_token(async_token&&) noexcept = default;
+    async_token& operator=(async_token&&) noexcept = default;
+
+    /// Resumes a yielding coroutine that was paused by calling yield from an async function call frame.
+    /// The associated async function call will return with the given value.
+    void return_value(const handle& value) {
+        detail::check_handles(raw_vm_, value);
+        tiro_async_token_return_value(raw_token_, value.raw_handle(), error_adapter());
+    }
+
+    /// Resumes a yielding coroutine that was paused by calling yield from an async function call frame.
+    /// The associated async function call will panic with the given error message.
+    void panic_msg(std::string_view message) {
+        tiro_async_token_panic_msg(raw_token_, detail::to_raw(message), error_adapter());
+    }
+
+    tiro_vm_t raw_vm() const { return raw_vm_; }
+
+    tiro_async_token_t raw_token() { return raw_token_; }
+
+private:
+    tiro_vm_t raw_vm_; // Unowned
+    detail::resource_holder<tiro_async_token_t, tiro_async_token_free> raw_token_;
+};
 
 /// Represents the call frame of a resumable function call.
 /// References to an instance of this class are only valid from within the native function implementing
@@ -341,6 +389,12 @@ function make_resumable_function(
     desc.func = func;
     tiro_make_resumable_function(v.raw_vm(), &desc, result.raw_handle(), error_adapter());
     return function(std::move(result));
+}
+
+async_token async_frame::token() const {
+    tiro_async_token_t raw_token = tiro_async_frame_token(raw_frame_, error_adapter());
+    TIRO_ASSERT(raw_token != nullptr);
+    return async_token(raw_vm_, raw_token);
 }
 
 } // namespace tiro

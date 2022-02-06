@@ -71,7 +71,7 @@ void report_caught_exception(tiro_error_t* err);
 ///     }
 ///
 /// Note: existing errors in `err` will not be overwritten.
-#define TIRO_REPORT(err, ...) ::tiro::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
+#define TIRO_REPORT(err, ...) ::api::report_error((err), TIRO_SOURCE_LOCATION(), __VA_ARGS__)
 
 /// Copies `str` into a zero-terminated, malloc'd string.
 char* copy_to_cstr(std::string_view str);
@@ -165,8 +165,7 @@ inline tiro::vm::SyncFrameContext* to_internal(tiro_sync_frame_t frame) {
     return reinterpret_cast<tiro::vm::SyncFrameContext*>(frame);
 }
 
-// Never actually defined. Async frames have public type `tiro_async_frame` but will be
-// cast to their real type, which is `vm::AsyncFrameContext`.
+// Never actually defined.
 struct tiro_async_frame;
 
 inline tiro_async_frame_t to_external(tiro::vm::AsyncFrameContext* frame) {
@@ -175,6 +174,17 @@ inline tiro_async_frame_t to_external(tiro::vm::AsyncFrameContext* frame) {
 
 inline tiro::vm::AsyncFrameContext* to_internal(tiro_async_frame_t frame) {
     return reinterpret_cast<tiro::vm::AsyncFrameContext*>(frame);
+}
+
+struct tiro_async_token;
+
+inline tiro_async_token_t to_external_token(tiro::vm::External<tiro::vm::CoroutineToken> token) {
+    return reinterpret_cast<tiro_async_token_t>(tiro::vm::get_valid_slot(token));
+}
+
+inline tiro::vm::External<tiro::vm::CoroutineToken> to_internal_token(tiro_async_token_t token) {
+    return tiro::vm::External<tiro::vm::CoroutineToken>::from_raw_slot(
+        reinterpret_cast<tiro::vm::Value*>(token));
 }
 
 // Never actually defined. Resumable frames have public type `tiro_resumable_frame` but will be

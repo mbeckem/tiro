@@ -14,11 +14,11 @@ static tiro::handle simple_throwing_sync_function(tiro::vm&, tiro::sync_frame&) 
     throw std::runtime_error("some error message");
 }
 
-static void simple_async_function(tiro::vm& vm, tiro::async_frame frame) {
+static void simple_async_function(tiro::vm& vm, tiro::async_frame& frame) {
     frame.return_value(tiro::make_integer(vm, 456));
 }
 
-static void simple_panicking_async_function(tiro::vm&, tiro::async_frame frame) {
+static void simple_panicking_async_function(tiro::vm&, tiro::async_frame& frame) {
     frame.panic_msg("some error message");
 }
 
