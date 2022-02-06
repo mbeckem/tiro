@@ -7,15 +7,12 @@ namespace tiro::vm {
 
 template<typename Tracer>
 void RootSet::trace(Tracer&& tracer) {
-    // TODO The constant values should probably be allocated as "eternal",
-    // so they will not have to be marked or traced.
     tracer(true_);
     tracer(false_);
     tracer(undefined_);
     tracer(first_ready_);
     tracer(last_ready_);
     tracer(interned_strings_);
-    tracer(coroutines_);
 
     stack_.trace(tracer);
     externals_.trace(tracer);

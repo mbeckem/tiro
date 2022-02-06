@@ -18,7 +18,6 @@ void RootSet::init(Context& ctx) {
     false_ = Boolean::make(ctx, false);
     undefined_ = Undefined::make(ctx);
     interned_strings_ = HashTable::make(ctx);
-    coroutines_ = Set::make(ctx);
 
     modules_.init(ctx);
     types_.init_public(ctx);
@@ -38,10 +37,6 @@ Handle<Undefined> RootSet::get_undefined() {
 
 Handle<HashTable> RootSet::get_interned_strings() {
     return Handle(&interned_strings_).must_cast<HashTable>();
-}
-
-Handle<Set> RootSet::get_coroutines() {
-    return Handle(&coroutines_).must_cast<Set>();
 }
 
 MutHandle<Nullable<Coroutine>> RootSet::get_first_ready() {

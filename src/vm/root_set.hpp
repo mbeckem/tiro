@@ -33,7 +33,6 @@ public:
     Handle<Boolean> get_false();
     Handle<Undefined> get_undefined();
     Handle<HashTable> get_interned_strings();
-    Handle<Set> get_coroutines();
 
     MutHandle<Nullable<Coroutine>> get_first_ready();
     MutHandle<Nullable<Coroutine>> get_last_ready();
@@ -53,9 +52,6 @@ private:
     Nullable<Undefined> undefined_;
     Nullable<Coroutine> first_ready_, last_ready_; // Linked list of runnable coroutines
     Nullable<HashTable> interned_strings_;         // TODO this should eventually be a weak map
-
-    // Created and not yet completed coroutines.
-    Nullable<Set> coroutines_;
 
     // Stack of values used for Scope/Local instances.
     RootedStack stack_;
