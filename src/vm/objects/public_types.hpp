@@ -4,6 +4,7 @@
 #include "common/adt/span.hpp"
 #include "common/assert.hpp"
 #include "common/defs.hpp"
+#include "common/format.hpp"
 #include "vm/objects/types.hpp"
 
 #include <optional>
@@ -232,5 +233,7 @@ case ValueType::vt:      \
 }
 
 } // namespace tiro::vm
+
+TIRO_ENABLE_FREE_TO_STRING(tiro::vm::PublicType)
 
 #endif // TIRO_VM_OBJECTS_PUBLIC_TYPES_HPP
