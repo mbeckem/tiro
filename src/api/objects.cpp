@@ -461,7 +461,7 @@ void tiro_record_set(
         vm::Scope sc(ctx);
         vm::Local symbol = sc.local(ctx.get_symbol(string));
 
-        bool success = vm::Record::set(ctx, record_handle, symbol, to_internal(value));
+        bool success = record_handle->set(*symbol, *to_internal(value));
         if (!success)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_KEY);
     });

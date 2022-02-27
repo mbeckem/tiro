@@ -31,86 +31,77 @@ size_t RecordSchema::size() {
     return get_props().size();
 }
 
+std::optional<size_t> RecordSchema::index_of(Symbol symbol) {
+    auto props = get_props();
+    auto found_value = props.get(symbol);
+    if (!found_value)
+        return {};
+
+    Value value = *found_value;
+    TIRO_DEBUG_ASSERT(value.is<Integer>(), "value must be an integer");
+    return value.must_cast<Integer>().try_extract_size();
+}
+
 HashTable RecordSchema::get_props() {
     return layout()->read_static_slot<HashTable>(PropertiesSlot);
 }
 
 Record Record::make(Context& ctx, Handle<Array> keys) {
     Scope sc(ctx);
-    Local props = sc.local(HashTable::make(ctx));
-    Local key = sc.local();
-    for (size_t i = 0, n = keys->size(); i < n; ++i) {
-        key = keys->unchecked_get(i);
-        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
-        [[maybe_unused]] bool inserted =
-            props->set(ctx, key, null_handle()).must("failed to insert record value");
-        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
-    }
-    return make_from_map(ctx, props);
+    Local schema = sc.local(RecordSchema::make(ctx, keys));
+    return make(ctx, schema);
 }
 
-Record Record::make(Context& ctx, HandleSpan<Symbol> symbols) {
+Record Record::make(Context& ctx, Handle<RecordSchema> schema) {
     Scope sc(ctx);
-    Local props = sc.local(HashTable::make(ctx));
-    for (auto symbol : symbols) {
-        [[maybe_unused]] bool inserted =
-            props->set(ctx, symbol, null_handle()).must("failed to insert record value");
-        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
-    }
-    return make_from_map(ctx, props);
-}
+    Local values = sc.local(Tuple::make(ctx, schema->size()));
 
-Record Record::make(Context& ctx, Handle<RecordSchema> tmpl) {
-    Scope sc(ctx);
-    Local props = sc.local(
-        HashTable::make(ctx, tmpl->size()).must("failed to allocate record storage"));
-    tmpl->for_each(ctx, [&](auto symbol) {
-        [[maybe_unused]] bool inserted =
-            props->set(ctx, symbol, null_handle()).must("failed to insert record value");
-        TIRO_DEBUG_ASSERT(inserted, "keys must be unique");
-    });
-    return make_from_map(ctx, props);
+    Layout* data = create_object<Record>(ctx, StaticSlotsInit());
+    data->write_static_slot(SchemaSlot, schema);
+    data->write_static_slot(ValuesSlot, values);
+    return Record(from_heap(data));
 }
 
 Array Record::keys(Context& ctx, Handle<Record> record) {
     Scope sc(ctx);
-    Local props = sc.local(record->get_props());
-    Local keys = sc.local(Array::make(ctx, props->size()));
-    props->for_each(ctx, [&](Handle<Value> key, Handle<Value> value) {
-        TIRO_DEBUG_ASSERT(key->is<Symbol>(), "keys must be symbols");
-        keys->append(ctx, key).must("failed to add record key");
-        (void) value;
-    });
+    Local schema = sc.local(record->get_schema());
+    Local keys = sc.local(Array::make(ctx, schema->size()));
+    schema->for_each(ctx,
+        [&](Handle<Symbol> symbol) { keys->append(ctx, symbol).must("failed to add record key"); });
     return *keys;
 }
 
 std::optional<Value> Record::get(Symbol key) {
-    HashTable table = get_props();
-    return table.get(key);
+    auto schema = get_schema();
+    auto found_index = schema.index_of(key);
+    if (!found_index)
+        return {};
+
+    size_t index = *found_index;
+    auto values = get_values();
+    TIRO_DEBUG_ASSERT(index < values.size(), "index too large");
+    return values.checked_get(index);
 }
 
-bool Record::set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle<Value> value) {
-    // Note: scope is not really necessary here from an optimization standpoint because
-    // no property can be added, so no allocation can occur (the set of keys is fixed at construction).
-    Scope sc(ctx);
-    Local props = sc.local(record->get_props());
-
-    // Note: there is no find API yet, so we do a contains() check first.
-    if (!props->contains(*key))
+bool Record::set(Symbol key, Value value) {
+    auto schema = get_schema();
+    auto found_index = schema.index_of(key);
+    if (!found_index)
         return false;
 
-    props->set(ctx, key, value).must("failed to set record entry"); // tables have fixed size
+    size_t index = *found_index;
+    auto values = get_values();
+    TIRO_DEBUG_ASSERT(index < values.size(), "index too large");
+    values.unchecked_set(index, value);
     return true;
 }
 
-HashTable Record::get_props() {
-    return layout()->read_static_slot<HashTable>(PropertiesSlot);
+RecordSchema Record::get_schema() {
+    return layout()->read_static_slot<RecordSchema>(SchemaSlot);
 }
 
-Record Record::make_from_map(Context& ctx, Handle<HashTable> props) {
-    Layout* data = create_object<Record>(ctx, StaticSlotsInit());
-    data->write_static_slot(PropertiesSlot, props);
-    return Record(from_heap(data));
+Tuple Record::get_values() {
+    return layout()->read_static_slot<Tuple>(ValuesSlot);
 }
 
 } // namespace tiro::vm

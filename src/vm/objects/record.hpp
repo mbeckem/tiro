@@ -7,6 +7,7 @@
 #include "vm/objects/fwd.hpp"
 #include "vm/objects/hash_table.hpp"
 #include "vm/objects/primitives.hpp"
+#include "vm/objects/tuple.hpp"
 #include "vm/objects/value.hpp"
 
 #include <optional>
@@ -32,8 +33,12 @@ public:
     explicit RecordSchema(Value v)
         : HeapValue(v, DebugCheck<RecordSchema>()) {}
 
-    /// Returns the number of properties configured for this template.
+    /// Returns the number of properties configured for this schema.
     size_t size();
+
+    /// Returns the slot index of the given symbol, or an empty optional if the schema
+    /// does not contain the given symbol.
+    std::optional<size_t> index_of(Symbol symbol);
 
     /// Iterates over all symbols in the record schema.
     template<typename Iter>
@@ -42,6 +47,16 @@ public:
         Local props = sc.local(get_props());
         props->template for_each(
             ctx, [&](auto key_handle, auto) { iter(key_handle.template must_cast<Symbol>()); });
+    }
+
+    template<typename Iter>
+    void for_each_unsafe(Iter&& iter) {
+        auto props = get_props();
+
+        // Note: map keeps insertion order
+        size_t index = 0;
+        props.template for_each_unsafe(
+            [&](auto key, auto) { iter(key.template must_cast<Symbol>(), index++); });
     }
 
     Layout* layout() const { return access_heap<Layout>(); }
@@ -54,13 +69,13 @@ private:
 /// specified during construction, which can then be associated with arbitrary values of any type.
 /// The set of keys cannot be altered after a record has been constructed.
 ///
-/// TODO: Records should have a schema (an instance of InternalType?) that specifies their properties.
-/// This would deduplicate many of the string keys and make construction efficient.
-/// They should share the same infrastructure (key to slot mapping and so on) as classes.
+/// TODO: Share record slot logic with classes once they are implemented.
+/// The mapping between value indices and names will work the same.
 class Record final : public HeapValue {
 private:
     enum {
-        PropertiesSlot,
+        SchemaSlot,
+        ValuesSlot,
         SlotCount_,
     };
 
@@ -71,12 +86,8 @@ public:
     /// The values associated with these keys will be initialized to null.
     static Record make(Context& ctx, Handle<Array> keys);
 
-    /// Creates a new record with the given property keys.
-    /// The values associated with these keys will be initialized to null.
-    static Record make(Context& ctx, HandleSpan<Symbol> symbols);
-
-    /// Creates a new record from an existing template. All values are initialized to null.
-    static Record make(Context& ctx, Handle<RecordSchema> tmpl);
+    /// Creates a new record from an existing schema. All values are initialized to null.
+    static Record make(Context& ctx, Handle<RecordSchema> schema);
 
     explicit Record(Value v)
         : HeapValue(v, DebugCheck<Record>()) {}
@@ -89,18 +100,19 @@ public:
     /// Returns the value associated with that key, or an empty optional if the key is invalid for this record.
     std::optional<Value> get(Symbol key);
 
-    /// Sets the value associated with the given key. Returns true on success. Returns false (and does nothing)
-    /// if the key is invalid for this record.
-    static bool set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle<Value> value);
+    /// Sets the value associated with the given key.
+    /// Returns true on success.
+    /// Returns false (and does nothing) if the key is invalid for this record.
+    bool set(Symbol key, Value value);
 
     /// Quick-and-dirty iteration for record inspection without allocation.
-    /// TODO: Should be replaced with a link to the record schema, which should store the keys.
     template<typename Function>
     void for_each_unsafe(Function&& fn) {
-        HashTable props = get_props();
-        props.for_each_unsafe([&](Value k, Value v) {
-            TIRO_DEBUG_ASSERT(k.is<Symbol>(), "Record keys must always be symbols.");
-            fn(k.template must_cast<Symbol>(), v);
+        auto schema = get_schema();
+        auto values = get_values();
+        schema.template for_each_unsafe([&](Symbol key, size_t index) {
+            TIRO_DEBUG_ASSERT(index < values.size(), "record value index out of bounds");
+            fn(key, values.unchecked_get(index));
         });
     }
 
@@ -110,7 +122,8 @@ private:
     static Record make_from_map(Context& ctx, Handle<HashTable> properties);
 
 private:
-    HashTable get_props();
+    RecordSchema get_schema();
+    Tuple get_values();
 };
 
 } // namespace tiro::vm

@@ -560,7 +560,7 @@ Fallible<void> TypeSystem::store_member(
         return member_assignment_not_supported_exception(ctx, object);
     case ValueType::Record: {
         auto record = object.must_cast<Record>();
-        if (TIRO_UNLIKELY(!Record::set(ctx, record, member, value)))
+        if (TIRO_UNLIKELY(!record->set(*member, *value)))
             return member_not_found_exception(ctx, object, member);
         return {};
     }
