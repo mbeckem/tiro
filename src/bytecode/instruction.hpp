@@ -502,11 +502,11 @@ public:
     };
 
     struct Record final {
-        BytecodeMemberId tmpl;
+        BytecodeMemberId schema;
         BytecodeRegister target;
 
-        Record(const BytecodeMemberId& tmpl_, const BytecodeRegister& target_)
-            : tmpl(tmpl_)
+        Record(const BytecodeMemberId& schema_, const BytecodeRegister& target_)
+            : schema(schema_)
             , target(target_) {}
     };
 
@@ -759,7 +759,8 @@ public:
     make_env(const BytecodeRegister& parent, const u32& size, const BytecodeRegister& target);
     static BytecodeInstr make_closure(
         const BytecodeMemberId& tmpl, const BytecodeRegister& env, const BytecodeRegister& target);
-    static BytecodeInstr make_record(const BytecodeMemberId& tmpl, const BytecodeRegister& target);
+    static BytecodeInstr
+    make_record(const BytecodeMemberId& schema, const BytecodeRegister& target);
     static BytecodeInstr
     make_iterator(const BytecodeRegister& container, const BytecodeRegister& target);
     static BytecodeInstr make_iterator_next(const BytecodeRegister& iterator,

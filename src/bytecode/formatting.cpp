@@ -77,8 +77,8 @@ static DumpHelper<Entity> dump(Entity entity) {
     return {entity};
 }
 
-void format_record_template(const BytecodeRecordTemplate& tmpl, FormatStream& stream) {
-    stream.format("Record template\n");
+void format_record_schema(const BytecodeRecordSchema& tmpl, FormatStream& stream) {
+    stream.format("Record schema\n");
     for (const auto& key : tmpl.keys()) {
         stream.format("- {}\n", dump(key));
     }
@@ -142,10 +142,10 @@ void format_module(const BytecodeModule& module, FormatStream& stream) {
             stream.format("\n");
         }
 
-        void visit_record_template(const BytecodeMember::RecordTemplate& r) {
+        void visit_record_schema(const BytecodeMember::RecordSchema& r) {
             const auto& tmpl = module[r.id];
             IndentStream indent(stream, 4, false);
-            format_record_template(tmpl, indent);
+            format_record_schema(tmpl, indent);
         }
     };
 
@@ -420,7 +420,7 @@ void Disassembler::disassemble_instruction() {
         }
 
         void visit_record(const BytecodeInstr::Record& record) {
-            out_.format(" template {} target {}", dump(record.tmpl), dump(record.target));
+            out_.format(" schema {} target {}", dump(record.schema), dump(record.target));
         }
 
         void visit_iterator(const BytecodeInstr::Iterator& iterator) {

@@ -589,7 +589,7 @@ void BytecodeInterpreter::run() {
             const u32 tmpl_index = read_u32();
             auto target = read_local();
 
-            auto tmpl = reg(get_member(tmpl_index)).must_cast<RecordTemplate>();
+            auto tmpl = reg(get_member(tmpl_index)).must_cast<RecordSchema>();
             target.set(Record::make(ctx_, tmpl));
             break;
         }

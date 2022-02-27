@@ -134,7 +134,7 @@ public:
 
     TIRO_ENTITY_STORAGE_ACCESSORS(LinkItem, BytecodeMemberId, items_)
     TIRO_ENTITY_STORAGE_ACCESSORS(LinkFunction, BytecodeFunctionId, functions_)
-    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordTemplate, BytecodeRecordTemplateId, records_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordSchema, BytecodeRecordSchemaId, records_)
 
 private:
     using RecordKey = absl::flat_hash_set<BytecodeMemberId, UseHasher>;
@@ -197,16 +197,16 @@ private:
     EntityStorage<LinkItem, BytecodeMemberId> items_;
 
     /// Deduplicates items. Does not do deep equality checks (for example, all functions
-    /// and record templates are unequal).
+    /// and record schemas are unequal).
     absl::flat_hash_map<LinkItem, BytecodeMemberId, UseHasher> item_index_;
 
-    /// Compiled record templates (collection of symbol keys used for record construction).
+    /// Compiled record schemas (collection of symbol keys used for record construction).
     /// These are anonymous and immutable and will be shared when the same composition of keys is requested again.
-    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId> records_;
+    EntityStorage<BytecodeRecordSchema, BytecodeRecordSchemaId> records_;
 
-    /// Deduplicates record templates. Maps sets of symbols to a record template id that can be used
+    /// Deduplicates record schemas. Maps sets of symbols to a record schema id that can be used
     /// to construct a record with those symbols as keys. Spans can be used for querying.
-    absl::node_hash_map<RecordKey, BytecodeRecordTemplateId, RecordHash, RecordEqual> record_index_;
+    absl::node_hash_map<RecordKey, BytecodeRecordSchemaId, RecordHash, RecordEqual> record_index_;
 
     /// Compiled functions. Bytecode must be patched when the module is linked (indices
     /// to module constants point into data_).

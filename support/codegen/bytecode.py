@@ -405,10 +405,10 @@ InstructionList = [
     ),
     Instr(
         "Record",
-        [Module("template"), Local("target")],
+        [Module("schema"), Local("target")],
         doc=dedent(
             """\
-            Constructs a new record with the keys specified in the given record template.
+            Constructs a new record with the keys specified in the given record schema.
             All values will be initialized to null.
             """
         ),
@@ -663,13 +663,13 @@ BytecodeMember = (
                 ],
             ),
             Struct(
-                "RecordTemplate",
-                doc="Represents a record template.",
+                "RecordSchema",
+                doc="Represents a record schema.",
                 members=[
                     Field(
                         "id",
-                        "BytecodeRecordTemplateId",
-                        doc="References the compiled record template.",
+                        "BytecodeRecordSchemaId",
+                        doc="References the compiled record schema.",
                     ),
                 ],
             ),

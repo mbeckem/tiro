@@ -4,14 +4,13 @@
 
 namespace tiro {
 
-BytecodeRecordTemplate::BytecodeRecordTemplate() {}
+BytecodeRecordSchema::BytecodeRecordSchema() {}
 
-BytecodeRecordTemplate::~BytecodeRecordTemplate() {}
+BytecodeRecordSchema::~BytecodeRecordSchema() {}
 
-BytecodeRecordTemplate::BytecodeRecordTemplate(BytecodeRecordTemplate&&) noexcept = default;
+BytecodeRecordSchema::BytecodeRecordSchema(BytecodeRecordSchema&&) noexcept = default;
 
-BytecodeRecordTemplate&
-BytecodeRecordTemplate::operator=(BytecodeRecordTemplate&&) noexcept = default;
+BytecodeRecordSchema& BytecodeRecordSchema::operator=(BytecodeRecordSchema&&) noexcept = default;
 
 /* [[[cog
     from codegen.unions import implement
@@ -34,8 +33,8 @@ std::string_view to_string(BytecodeMemberType type) {
         return "Variable";
     case BytecodeMemberType::Function:
         return "Function";
-    case BytecodeMemberType::RecordTemplate:
-        return "RecordTemplate";
+    case BytecodeMemberType::RecordSchema:
+        return "RecordSchema";
     }
     TIRO_UNREACHABLE("Invalid BytecodeMemberType.");
 }
@@ -75,8 +74,8 @@ BytecodeMember BytecodeMember::make_function(const BytecodeFunctionId& id) {
     return {Function{id}};
 }
 
-BytecodeMember BytecodeMember::make_record_template(const BytecodeRecordTemplateId& id) {
-    return {RecordTemplate{id}};
+BytecodeMember BytecodeMember::make_record_schema(const BytecodeRecordSchemaId& id) {
+    return {RecordSchema{id}};
 }
 
 BytecodeMember::BytecodeMember(Integer integer)
@@ -107,9 +106,9 @@ BytecodeMember::BytecodeMember(Function function)
     : type_(BytecodeMemberType::Function)
     , function_(std::move(function)) {}
 
-BytecodeMember::BytecodeMember(RecordTemplate record_template)
-    : type_(BytecodeMemberType::RecordTemplate)
-    , record_template_(std::move(record_template)) {}
+BytecodeMember::BytecodeMember(RecordSchema record_schema)
+    : type_(BytecodeMemberType::RecordSchema)
+    , record_schema_(std::move(record_schema)) {}
 
 const BytecodeMember::Integer& BytecodeMember::as_integer() const {
     TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::Integer,
@@ -153,10 +152,10 @@ const BytecodeMember::Function& BytecodeMember::as_function() const {
     return function_;
 }
 
-const BytecodeMember::RecordTemplate& BytecodeMember::as_record_template() const {
-    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::RecordTemplate,
-        "Bad member access on BytecodeMember: not a RecordTemplate.");
-    return record_template_;
+const BytecodeMember::RecordSchema& BytecodeMember::as_record_schema() const {
+    TIRO_DEBUG_ASSERT(type_ == BytecodeMemberType::RecordSchema,
+        "Bad member access on BytecodeMember: not a RecordSchema.");
+    return record_schema_;
 }
 
 void BytecodeMember::format(FormatStream& stream) const {
@@ -192,8 +191,8 @@ void BytecodeMember::format(FormatStream& stream) const {
             stream.format("Function(id: {})", function.id);
         }
 
-        void visit_record_template([[maybe_unused]] const RecordTemplate& record_template) {
-            stream.format("RecordTemplate(id: {})", record_template.id);
+        void visit_record_schema([[maybe_unused]] const RecordSchema& record_schema) {
+            stream.format("RecordSchema(id: {})", record_schema.id);
         }
     };
     visit(FormatVisitor{stream});
@@ -221,8 +220,8 @@ void BytecodeMember::hash(Hasher& h) const {
 
         void visit_function([[maybe_unused]] const Function& function) { h.append(function.id); }
 
-        void visit_record_template([[maybe_unused]] const RecordTemplate& record_template) {
-            h.append(record_template.id);
+        void visit_record_schema([[maybe_unused]] const RecordSchema& record_schema) {
+            h.append(record_schema.id);
         }
     };
     return visit(HashVisitor{h});
@@ -270,10 +269,10 @@ bool operator==(const BytecodeMember& lhs, const BytecodeMember& rhs) {
             return function.id == other.id;
         }
 
-        bool visit_record_template(
-            [[maybe_unused]] const BytecodeMember::RecordTemplate& record_template) {
-            [[maybe_unused]] const auto& other = rhs.as_record_template();
-            return record_template.id == other.id;
+        bool
+        visit_record_schema([[maybe_unused]] const BytecodeMember::RecordSchema& record_schema) {
+            [[maybe_unused]] const auto& other = rhs.as_record_schema();
+            return record_schema.id == other.id;
         }
     };
     return lhs.visit(EqualityVisitor{rhs});

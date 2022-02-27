@@ -9,8 +9,8 @@ class BytecodeFunctionId;
 enum class BytecodeFunctionType : u8;
 class BytecodeFunction;
 
-class BytecodeRecordTemplateId;
-class BytecodeRecordTemplate;
+class BytecodeRecordSchemaId;
+class BytecodeRecordSchema;
 
 enum class BytecodeMemberType : u8;
 class BytecodeMember;

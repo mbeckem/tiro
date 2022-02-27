@@ -365,12 +365,12 @@ enum class BytecodeOp : u8 {
     ///   - target (local, u32)
     Closure,
 
-    /// Constructs a new record with the keys specified in the given record template.
+    /// Constructs a new record with the keys specified in the given record schema.
     /// All values will be initialized to null.
     ///
     ///
     /// Arguments:
-    ///   - template (module, u32)
+    ///   - schema (module, u32)
     ///   - target (local, u32)
     Record,
 

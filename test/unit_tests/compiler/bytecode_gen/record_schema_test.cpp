@@ -4,7 +4,7 @@
 
 namespace tiro::test {
 
-TEST_CASE("Using the same record structure multiple times should only generate one record template",
+TEST_CASE("Using the same record structure multiple times should only generate one record schema",
     "[bytecode_gen]") {
     std::string_view source = R"(
         export func a() {

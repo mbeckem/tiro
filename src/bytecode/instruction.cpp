@@ -223,8 +223,8 @@ BytecodeInstr BytecodeInstr::make_closure(
 }
 
 BytecodeInstr
-BytecodeInstr::make_record(const BytecodeMemberId& tmpl, const BytecodeRegister& target) {
-    return {Record{tmpl, target}};
+BytecodeInstr::make_record(const BytecodeMemberId& schema, const BytecodeRegister& target) {
+    return {Record{schema, target}};
 }
 
 BytecodeInstr
@@ -1162,7 +1162,7 @@ void BytecodeInstr::format(FormatStream& stream) const {
         }
 
         void visit_record([[maybe_unused]] const Record& record) {
-            stream.format("Record(tmpl: {}, target: {})", record.tmpl, record.target);
+            stream.format("Record(schema: {}, target: {})", record.schema, record.target);
         }
 
         void visit_iterator([[maybe_unused]] const Iterator& iterator) {

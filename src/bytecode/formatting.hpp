@@ -6,7 +6,7 @@
 
 namespace tiro {
 
-void format_record_template(const BytecodeRecordTemplate& tmpl, FormatStream& stream);
+void format_record_schema(const BytecodeRecordSchema& tmpl, FormatStream& stream);
 void format_function(const BytecodeFunction& func, FormatStream& stream);
 void format_module(const BytecodeModule& module, FormatStream& stream);
 

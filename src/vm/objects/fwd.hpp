@@ -50,7 +50,7 @@ class NativeObject;
 class NativePointer;
 class Null;
 class Record;
-class RecordTemplate;
+class RecordSchema;
 class Result;
 class Set;
 class SetIterator;

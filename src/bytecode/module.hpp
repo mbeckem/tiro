@@ -17,16 +17,16 @@
 
 namespace tiro {
 
-/// Represents a record template. Record templates are used to construct records
+/// Represents a record schema. Record schemas are used to construct records
 /// with a statically determined set of keys.
-/// The keys referenced by a bytecode record template must be symbol constants.
-class BytecodeRecordTemplate final {
+/// The keys referenced by a bytecode record schema must be symbol constants.
+class BytecodeRecordSchema final {
 public:
-    BytecodeRecordTemplate();
-    ~BytecodeRecordTemplate();
+    BytecodeRecordSchema();
+    ~BytecodeRecordSchema();
 
-    BytecodeRecordTemplate(BytecodeRecordTemplate&&) noexcept;
-    BytecodeRecordTemplate& operator=(BytecodeRecordTemplate&&) noexcept;
+    BytecodeRecordSchema(BytecodeRecordSchema&&) noexcept;
+    BytecodeRecordSchema& operator=(BytecodeRecordSchema&&) noexcept;
 
     std::vector<BytecodeMemberId>& keys() { return keys_; }
     const std::vector<BytecodeMemberId>& keys() const { return keys_; }
@@ -49,7 +49,7 @@ enum class BytecodeMemberType : u8 {
     Import,
     Variable,
     Function,
-    RecordTemplate,
+    RecordSchema,
 };
 
 std::string_view to_string(BytecodeMemberType type);
@@ -127,12 +127,12 @@ public:
             : id(id_) {}
     };
 
-    /// Represents a record template.
-    struct RecordTemplate final {
-        /// References the compiled record template.
-        BytecodeRecordTemplateId id;
+    /// Represents a record schema.
+    struct RecordSchema final {
+        /// References the compiled record schema.
+        BytecodeRecordSchemaId id;
 
-        explicit RecordTemplate(const BytecodeRecordTemplateId& id_)
+        explicit RecordSchema(const BytecodeRecordSchemaId& id_)
             : id(id_) {}
     };
 
@@ -144,7 +144,7 @@ public:
     static BytecodeMember
     make_variable(const BytecodeMemberId& name, const BytecodeMemberId& initial_value);
     static BytecodeMember make_function(const BytecodeFunctionId& id);
-    static BytecodeMember make_record_template(const BytecodeRecordTemplateId& id);
+    static BytecodeMember make_record_schema(const BytecodeRecordSchemaId& id);
 
     BytecodeMember(Integer integer);
     BytecodeMember(Float f);
@@ -153,7 +153,7 @@ public:
     BytecodeMember(Import import);
     BytecodeMember(Variable variable);
     BytecodeMember(Function function);
-    BytecodeMember(RecordTemplate record_template);
+    BytecodeMember(RecordSchema record_schema);
 
     BytecodeMemberType type() const noexcept { return type_; }
 
@@ -168,7 +168,7 @@ public:
     const Import& as_import() const;
     const Variable& as_variable() const;
     const Function& as_function() const;
-    const RecordTemplate& as_record_template() const;
+    const RecordSchema& as_record_schema() const;
 
     template<typename Visitor, typename... Args>
     TIRO_FORCE_INLINE decltype(auto) visit(Visitor&& vis, Args&&... args) {
@@ -194,7 +194,7 @@ private:
         Import import_;
         Variable variable_;
         Function function_;
-        RecordTemplate record_template_;
+        RecordSchema record_schema_;
     };
 };
 
@@ -213,7 +213,7 @@ bool operator!=(const BytecodeMember& lhs, const BytecodeMember& rhs);
 /// - Bytecode inside a function must be valid (TODO: document in BytecodeFunction struct)
 /// - The member referenced by 'init' (if present) must be a normal function
 /// - Export keys must be symbols.
-///   Exported members must NOT be of type RecordTemplate or Import.
+///   Exported members must NOT be of type RecordSchema or Import.
 class BytecodeModule final {
 public:
     BytecodeModule();
@@ -245,7 +245,7 @@ public:
     /// Iterate over the function ids in this module.
     auto function_ids() const { return functions_.keys(); }
 
-    /// Iterate over the record template ids in this module.
+    /// Iterate over the record schema ids in this module.
     auto record_ids() const { return records_.keys(); }
 
     size_t member_count() const { return members_.size(); }
@@ -260,14 +260,14 @@ public:
         return functions_;
     }
 
-    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId>& records() { return records_; }
-    const EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId>& records() const {
+    EntityStorage<BytecodeRecordSchema, BytecodeRecordSchemaId>& records() { return records_; }
+    const EntityStorage<BytecodeRecordSchema, BytecodeRecordSchemaId>& records() const {
         return records_;
     }
 
     TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeMember, BytecodeMemberId, members_)
     TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeFunction, BytecodeFunctionId, functions_)
-    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordTemplate, BytecodeRecordTemplateId, records_)
+    TIRO_ENTITY_STORAGE_ACCESSORS(BytecodeRecordSchema, BytecodeRecordSchemaId, records_)
 
 private:
     StringTable strings_;
@@ -276,7 +276,7 @@ private:
     std::vector<std::tuple<BytecodeMemberId, BytecodeMemberId>> exports_; // symbol -> value
     EntityStorage<BytecodeMember, BytecodeMemberId> members_;
     EntityStorage<BytecodeFunction, BytecodeFunctionId> functions_;
-    EntityStorage<BytecodeRecordTemplate, BytecodeRecordTemplateId> records_;
+    EntityStorage<BytecodeRecordSchema, BytecodeRecordSchemaId> records_;
 };
 
 /* [[[cog
@@ -301,8 +301,8 @@ decltype(auto) BytecodeMember::visit_impl(Self&& self, Visitor&& vis, Args&&... 
         return vis.visit_variable(self.variable_, std::forward<Args>(args)...);
     case BytecodeMemberType::Function:
         return vis.visit_function(self.function_, std::forward<Args>(args)...);
-    case BytecodeMemberType::RecordTemplate:
-        return vis.visit_record_template(self.record_template_, std::forward<Args>(args)...);
+    case BytecodeMemberType::RecordSchema:
+        return vis.visit_record_schema(self.record_schema_, std::forward<Args>(args)...);
     }
     TIRO_UNREACHABLE("Invalid BytecodeMember type.");
 }

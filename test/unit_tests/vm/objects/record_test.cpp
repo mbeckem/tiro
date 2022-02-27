@@ -22,7 +22,7 @@ static void check_keys(Context& ctx, Handle<Record> record, Span<const std::stri
     }
 }
 
-TEST_CASE("Record templates should correctly store the configured keys", "[record]") {
+TEST_CASE("Record schemas should correctly store the configured keys", "[record]") {
     Context ctx;
     Scope sc(ctx);
 
@@ -32,7 +32,7 @@ TEST_CASE("Record templates should correctly store the configured keys", "[recor
     keys->append(ctx, foo).must("append failed");
     keys->append(ctx, bar).must("append failed");
 
-    Local tmpl = sc.local(RecordTemplate::make(ctx, keys));
+    Local tmpl = sc.local(RecordSchema::make(ctx, keys));
     REQUIRE(tmpl->size() == 2);
 
     Local actual_keys = sc.local(Array::make(ctx, 0));
@@ -43,7 +43,7 @@ TEST_CASE("Record templates should correctly store the configured keys", "[recor
     REQUIRE(actual_keys->checked_get(1).same(*bar));
 }
 
-TEST_CASE("Record template construction fails for duplicate keys", "[record]") {
+TEST_CASE("Record schema construction fails for duplicate keys", "[record]") {
     Context ctx;
     Scope sc(ctx);
 
@@ -52,7 +52,7 @@ TEST_CASE("Record template construction fails for duplicate keys", "[record]") {
     keys->append(ctx, foo).must("append failed");
     keys->append(ctx, foo).must("append failed");
 
-    REQUIRE_THROWS(sc.local(RecordTemplate::make(ctx, keys)));
+    REQUIRE_THROWS(sc.local(RecordSchema::make(ctx, keys)));
 }
 
 TEST_CASE("Records should be constructible from an array of symbols", "[record]") {
@@ -91,7 +91,7 @@ TEST_CASE("Records should be constructible from a static set of handles", "[reco
     check_keys(ctx, record, names);
 }
 
-TEST_CASE("Records should be constructible from a record template", "[record]") {
+TEST_CASE("Records should be constructible from a record schema", "[record]") {
     static constexpr std::string_view names[] = {"foo", "bar", "baz"};
 
     Context ctx;
@@ -104,7 +104,7 @@ TEST_CASE("Records should be constructible from a record template", "[record]") 
         keys->append(ctx, key).must("append failed");
     }
 
-    Local tmpl = sc.local(RecordTemplate::make(ctx, keys));
+    Local tmpl = sc.local(RecordSchema::make(ctx, keys));
     Local record = sc.local(Record::make(ctx, tmpl));
     check_keys(ctx, record, names);
 }

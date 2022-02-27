@@ -134,9 +134,9 @@ BytecodeMemberId LinkObject::use_record(Span<const BytecodeMemberId> keys) {
         if (auto pos = record_index_.find(keys); pos != record_index_.end())
             return pos->second;
 
-        BytecodeRecordTemplateId id;
+        BytecodeRecordSchemaId id;
         {
-            BytecodeRecordTemplate tmpl;
+            BytecodeRecordSchema tmpl;
             tmpl.keys().assign(keys.begin(), keys.end());
             id = records_.push_back(std::move(tmpl));
         }
@@ -144,8 +144,7 @@ BytecodeMemberId LinkObject::use_record(Span<const BytecodeMemberId> keys) {
         return id;
     }();
 
-    return add_member(
-        LinkItem::make_definition({}, BytecodeMember::make_record_template(record_id)));
+    return add_member(LinkItem::make_definition({}, BytecodeMember::make_record_schema(record_id)));
 }
 
 BytecodeMemberId LinkObject::use_import(InternedString name) {

@@ -310,7 +310,7 @@ void FunctionCompiler::compile_value(const ir::Value& source, ir::InstId target)
             for (const auto& pair : record)
                 keys.push_back(self.object().use_symbol(pair.first));
 
-            // Fetch (or create) a record template for the current composition of keys.
+            // Fetch (or create) a record schema for the current composition of keys.
             auto tmpl = self.object().use_record({keys.data(), keys.size()});
             self.writer().record(tmpl, target_value);
 

@@ -13,29 +13,29 @@
 
 namespace tiro::vm {
 
-/// A record template contains the keys for the construction of record instances.
+/// A record schema contains the keys for the construction of record instances.
 ///
 /// TODO: This initial implementation is not very efficient (records have their own hash tables).
 /// Records should simply be a dynamic array of flat slots (only containing values) with a pointer
 /// to the immutable template for name -> value index mapping.
 /// This should be implemented when classes exist, since they need a similar machinery.
-class RecordTemplate final : public HeapValue {
+class RecordSchema final : public HeapValue {
 private:
     enum { PropertiesSlot, SlotCount_ };
 
 public:
     using Layout = StaticLayout<StaticSlotsPiece<SlotCount_>>;
 
-    /// Creates a new record template with the given property keys. All keys must be (unique) symbols.
-    static RecordTemplate make(Context& ctx, Handle<Array> keys);
+    /// Creates a new record schema with the given property keys. All keys must be (unique) symbols.
+    static RecordSchema make(Context& ctx, Handle<Array> keys);
 
-    explicit RecordTemplate(Value v)
-        : HeapValue(v, DebugCheck<RecordTemplate>()) {}
+    explicit RecordSchema(Value v)
+        : HeapValue(v, DebugCheck<RecordSchema>()) {}
 
     /// Returns the number of properties configured for this template.
     size_t size();
 
-    /// Iterates over all symbols in the record template.
+    /// Iterates over all symbols in the record schema.
     template<typename Iter>
     void for_each(Context& ctx, Iter&& iter) {
         Scope sc(ctx);
@@ -76,13 +76,13 @@ public:
     static Record make(Context& ctx, HandleSpan<Symbol> symbols);
 
     /// Creates a new record from an existing template. All values are initialized to null.
-    static Record make(Context& ctx, Handle<RecordTemplate> tmpl);
+    static Record make(Context& ctx, Handle<RecordSchema> tmpl);
 
     explicit Record(Value v)
         : HeapValue(v, DebugCheck<Record>()) {}
 
     /// Returns the set of keys valid for this record.
-    /// TODO: This data should live in the record template and should be immutable.
+    /// TODO: This data should live in the record schema and should be immutable.
     /// This function should just return an iterable to tiro code.
     static Array keys(Context& ctx, Handle<Record> record);
 
@@ -94,7 +94,7 @@ public:
     static bool set(Context& ctx, Handle<Record> record, Handle<Symbol> key, Handle<Value> value);
 
     /// Quick-and-dirty iteration for record inspection without allocation.
-    /// TODO: Should be replaced with a link to the record template, which should store the keys.
+    /// TODO: Should be replaced with a link to the record schema, which should store the keys.
     template<typename Function>
     void for_each_unsafe(Function&& fn) {
         HashTable props = get_props();

@@ -404,9 +404,9 @@ std::variant<BytecodeInstr, BytecodeReaderError> BytecodeReader::read() {
         case BytecodeOp::Record: {
             static constexpr auto operand_size = 8;
             TIRO_CHECK_OPERAND_SIZE(operand_size);
-            const auto p_template = BytecodeMemberId(r_.read_u32());
+            const auto p_schema = BytecodeMemberId(r_.read_u32());
             const auto p_target = BytecodeRegister(r_.read_u32());
-            return BytecodeInstr::Record{p_template, p_target};
+            return BytecodeInstr::Record{p_schema, p_target};
         }
         case BytecodeOp::Iterator: {
             static constexpr auto operand_size = 8;

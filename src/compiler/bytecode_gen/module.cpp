@@ -109,7 +109,7 @@ static int module_type_order(BytecodeMemberType type) {
         return 4;
     case BytecodeMemberType::Variable:
         return 5;
-    case BytecodeMemberType::RecordTemplate:
+    case BytecodeMemberType::RecordSchema:
         return 6;
     case BytecodeMemberType::Function:
         return 7;
@@ -189,9 +189,9 @@ static bool module_order_less(BytecodeMemberId lhs, BytecodeMemberId rhs, const 
             return false;
         }
 
-        bool visit_record_template(const BytecodeMember::RecordTemplate& lhs) const {
+        bool visit_record_schema(const BytecodeMember::RecordSchema& lhs) const {
             const auto& lkeys = object[lhs.id].keys();
-            const auto& rkeys = object[rhs.as_record_template().id].keys();
+            const auto& rkeys = object[rhs.as_record_schema().id].keys();
             return std::lexicographical_compare(lkeys.begin(), lkeys.end(), rkeys.begin(),
                 rkeys.end(),
                 [&](auto l, auto r) { return module_order_less(l, r, object, strings); });
@@ -324,7 +324,7 @@ void ModuleCompiler::fix_references(std::vector<BytecodeMember>& members) {
             self.fix_func_references(func.id);
         }
 
-        void visit_record_template(const BytecodeMember::RecordTemplate& rec) {
+        void visit_record_schema(const BytecodeMember::RecordSchema& rec) {
             auto& record = self.object_[rec.id];
             auto& keys = record.keys();
 
@@ -382,7 +382,7 @@ void ModuleCompiler::fix_strings(BytecodeMember& member) {
         void visit_import(BytecodeMember::Import&) {}
         void visit_variable(BytecodeMember::Variable&) {}
         void visit_function(BytecodeMember::Function&) {}
-        void visit_record_template(BytecodeMember::RecordTemplate&) {}
+        void visit_record_schema(BytecodeMember::RecordSchema&) {}
     };
     member.visit(Visitor{*this});
 }

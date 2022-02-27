@@ -91,7 +91,7 @@ bool may_contain_references(ValueType type) {
         TIRO_CASE(NativePointer)
         TIRO_CASE(Null)
         TIRO_CASE(Record)
-        TIRO_CASE(RecordTemplate)
+        TIRO_CASE(RecordSchema)
         TIRO_CASE(Result)
         TIRO_CASE(Set)
         TIRO_CASE(SetIterator)
@@ -182,7 +182,7 @@ size_t hash(Value v) {
     case ValueType::NativeObject:
     case ValueType::NativePointer:
     case ValueType::Record:
-    case ValueType::RecordTemplate:
+    case ValueType::RecordSchema:
     case ValueType::Result:
     case ValueType::Set:
     case ValueType::SetIterator:
@@ -395,7 +395,7 @@ TIRO_CHECK_VM_TYPE(NativeObject)
 TIRO_CHECK_VM_TYPE(NativePointer)
 TIRO_CHECK_VM_TYPE(Null)
 TIRO_CHECK_VM_TYPE(Record)
-TIRO_CHECK_VM_TYPE(RecordTemplate)
+TIRO_CHECK_VM_TYPE(RecordSchema)
 TIRO_CHECK_VM_TYPE(Result)
 TIRO_CHECK_VM_TYPE(Set)
 TIRO_CHECK_VM_TYPE(SetIterator)

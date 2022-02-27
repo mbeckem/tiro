@@ -8,7 +8,7 @@
 
 namespace tiro::vm {
 
-RecordTemplate RecordTemplate::make(Context& ctx, Handle<Array> keys) {
+RecordSchema RecordSchema::make(Context& ctx, Handle<Array> keys) {
     Scope sc(ctx);
     Local props = sc.local(HashTable::make(ctx));
     Local key = sc.local();
@@ -22,16 +22,16 @@ RecordTemplate RecordTemplate::make(Context& ctx, Handle<Array> keys) {
         TIRO_CHECK(inserted, "record keys must be unique");
     }
 
-    Layout* data = create_object<RecordTemplate>(ctx, StaticSlotsInit());
+    Layout* data = create_object<RecordSchema>(ctx, StaticSlotsInit());
     data->write_static_slot(PropertiesSlot, props);
-    return RecordTemplate(from_heap(data));
+    return RecordSchema(from_heap(data));
 }
 
-size_t RecordTemplate::size() {
+size_t RecordSchema::size() {
     return get_props().size();
 }
 
-HashTable RecordTemplate::get_props() {
+HashTable RecordSchema::get_props() {
     return layout()->read_static_slot<HashTable>(PropertiesSlot);
 }
 
@@ -60,7 +60,7 @@ Record Record::make(Context& ctx, HandleSpan<Symbol> symbols) {
     return make_from_map(ctx, props);
 }
 
-Record Record::make(Context& ctx, Handle<RecordTemplate> tmpl) {
+Record Record::make(Context& ctx, Handle<RecordSchema> tmpl) {
     Scope sc(ctx);
     Local props = sc.local(
         HashTable::make(ctx, tmpl->size()).must("failed to allocate record storage"));

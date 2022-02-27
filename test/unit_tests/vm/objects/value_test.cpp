@@ -53,7 +53,7 @@ TEST_CASE("Only expected types should be able to contain references", "[value]")
         {ValueType::Module, true},
         {ValueType::NativeFunction, true},
         {ValueType::Record, true},
-        {ValueType::RecordTemplate, true},
+        {ValueType::RecordSchema, true},
         {ValueType::Result, true},
         {ValueType::Set, true},
         {ValueType::SetIterator, true},

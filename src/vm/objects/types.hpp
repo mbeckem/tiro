@@ -53,7 +53,7 @@ enum class ValueType : u8 {
     HashTableValueIterator = 31,
     HashTableStorage = 32,
     Record = 33,
-    RecordTemplate = 34,
+    RecordSchema = 34,
     Set = 35,
     SetIterator = 36,
     Tuple = 37,
@@ -155,7 +155,7 @@ TIRO_REGISTER_VM_TYPE(NativeObject, ValueType::NativeObject)
 TIRO_REGISTER_VM_TYPE(NativePointer, ValueType::NativePointer)
 TIRO_REGISTER_VM_TYPE(Null, ValueType::Null)
 TIRO_REGISTER_VM_TYPE(Record, ValueType::Record)
-TIRO_REGISTER_VM_TYPE(RecordTemplate, ValueType::RecordTemplate)
+TIRO_REGISTER_VM_TYPE(RecordSchema, ValueType::RecordSchema)
 TIRO_REGISTER_VM_TYPE(Result, ValueType::Result)
 TIRO_REGISTER_VM_TYPE(Set, ValueType::Set)
 TIRO_REGISTER_VM_TYPE(SetIterator, ValueType::SetIterator)

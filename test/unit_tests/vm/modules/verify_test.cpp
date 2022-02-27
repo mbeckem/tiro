@@ -83,19 +83,19 @@ TEST_CASE(
     REQUIRE_THROWS_MATCHES(verify_module(mod), Error, exception_contains_string("is not a string"));
 }
 
-TEST_CASE("verifier rejects invalid record template references", "[module-verify]") {
+TEST_CASE("verifier rejects invalid record schema references", "[module-verify]") {
     BytecodeModule mod = empty_module();
-    mod.members().push_back(BytecodeMember::make_record_template({}));
+    mod.members().push_back(BytecodeMember::make_record_schema({}));
     REQUIRE_THROWS_MATCHES(
-        verify_module(mod), Error, exception_contains_string("invalid record template reference"));
+        verify_module(mod), Error, exception_contains_string("invalid record schema reference"));
 }
 
-TEST_CASE("verifier rejects record templates whose keys are not symbols", "[module-verify]") {
+TEST_CASE("verifier rejects record schemas whose keys are not symbols", "[module-verify]") {
     BytecodeModule mod = empty_module();
     const auto int_id = mod.members().push_back(BytecodeMember::make_integer(123));
     const auto tmpl_id = mod.records().emplace_back();
     mod[tmpl_id].keys().push_back(int_id);
-    mod.members().push_back(BytecodeMember::make_record_template(tmpl_id));
+    mod.members().push_back(BytecodeMember::make_record_schema(tmpl_id));
     REQUIRE_THROWS_MATCHES(verify_module(mod), Error, exception_contains_string("is not a symbol"));
 }
 
@@ -140,9 +140,9 @@ TEST_CASE("verifier rejects forbidden export values", "[module-verify]") {
             verify_module(mod), Error, exception_contains_string("forbidden export"));
     }
 
-    SECTION("exported record template") {
+    SECTION("exported record schema") {
         auto rec_id = mod.records().emplace_back();
-        auto rec_member_id = mod.members().push_back(BytecodeMember::make_record_template(rec_id));
+        auto rec_member_id = mod.members().push_back(BytecodeMember::make_record_schema(rec_id));
         mod.add_export(sym_id, rec_member_id);
         REQUIRE_THROWS_MATCHES(
             verify_module(mod), Error, exception_contains_string("forbidden export"));

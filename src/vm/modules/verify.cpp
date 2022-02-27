@@ -33,7 +33,7 @@ public:
     void visit_import(const BytecodeMember::Import& i, BytecodeMemberId id);
     void visit_variable(const BytecodeMember::Variable& v, BytecodeMemberId id);
     void visit_function(const BytecodeMember::Function& f, BytecodeMemberId id);
-    void visit_record_template(const BytecodeMember::RecordTemplate& r, BytecodeMemberId id);
+    void visit_record_schema(const BytecodeMember::RecordSchema& r, BytecodeMemberId id);
 
 private:
     const BytecodeModule& module_;
@@ -219,7 +219,7 @@ void ModuleVerifier::verify() {
         const auto& value = check_reference(value_id, {});
         switch (value.type()) {
         case BytecodeMemberType::Import:
-        case BytecodeMemberType::RecordTemplate:
+        case BytecodeMemberType::RecordSchema:
             fail("forbidden export of internal type");
 
         case BytecodeMemberType::Function: {
@@ -284,17 +284,17 @@ void ModuleVerifier::visit_function(const BytecodeMember::Function& f, BytecodeM
     // Code and handlers are verified when all members have been seen (see FunctionVerifier).
 }
 
-void ModuleVerifier::visit_record_template(
-    const BytecodeMember::RecordTemplate& r, BytecodeMemberId id) {
+void ModuleVerifier::visit_record_schema(
+    const BytecodeMember::RecordSchema& r, BytecodeMemberId id) {
     if (!r.id) {
-        fail(fmt::format("invalid record template reference (in member {})", id.value()));
+        fail(fmt::format("invalid record schema reference (in member {})", id.value()));
     }
 
     const auto& tmpl = module_[r.id];
     for (auto key_id : tmpl.keys()) {
         const auto& key = check_reference(key_id, id);
         if (key.type() != BytecodeMemberType::Symbol) {
-            fail(fmt::format("member {} is not a symbol (required by record template at {})",
+            fail(fmt::format("member {} is not a symbol (required by record schema at {})",
                 key_id.value(), id.value()));
         }
     }
@@ -717,8 +717,8 @@ void FunctionVerifier::InstructionVisitor::visit_closure(const BytecodeInstr::Cl
 }
 
 void FunctionVerifier::InstructionVisitor::visit_record(const BytecodeInstr::Record& record) {
-    if (self.check(record.tmpl) != BytecodeMemberType::RecordTemplate)
-        self.fail("Record instruction must reference a record template");
+    if (self.check(record.schema) != BytecodeMemberType::RecordSchema)
+        self.fail("Record instruction must reference a record schema");
     self.check(record.target);
 }
 

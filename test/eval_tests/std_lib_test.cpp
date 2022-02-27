@@ -39,7 +39,7 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
             assert(r((1,)) == "(1,)");
             assert(r((1,2,3)) == "(1, 2, 3)");
             assert(r((:)) == "(:)");
-            assert(r((foo: 1, bar: 2)) == "(bar: 2, foo: 1)"); // VM happens to sort keys in static record templates at the moment
+            assert(r((foo: 1, bar: 2)) == "(bar: 2, foo: 1)"); // VM happens to sort keys in static record schemas at the moment
             assert(r([]) == "[]");
             assert(r([1,2]) == "[1, 2]");
             assert(r(map{}) == "map{}");
@@ -69,7 +69,7 @@ TEST_CASE("Debug representation should support pretty printing", "[std-lib]") {
             assert(r((1,)) == "(\n    1,\n)");
             assert(r((1,2,3)) == "(\n    1,\n    2,\n    3\n)");
             assert(r((:)) == "(:)");
-            assert(r((foo: 1, bar: 2)) == "(\n    bar: 2,\n    foo: 1\n)"); // VM happens to sort keys in static record templates at the moment
+            assert(r((foo: 1, bar: 2)) == "(\n    bar: 2,\n    foo: 1\n)"); // VM happens to sort keys in static record schemas at the moment
             assert(r([]) == "[]");
             assert(r([1,2]) == "[\n    1,\n    2\n]");
             assert(r(map{}) == "map{}");

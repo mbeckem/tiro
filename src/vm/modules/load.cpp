@@ -27,7 +27,7 @@ public:
     Value visit_import(const BytecodeMember::Import& i);
     Value visit_variable(const BytecodeMember::Variable& v);
     Value visit_function(const BytecodeMember::Function& f);
-    Value visit_record_template(const BytecodeMember::RecordTemplate& r);
+    Value visit_record_schema(const BytecodeMember::RecordSchema& r);
 
 private:
     void create_export(u32 symbol_index, u32 value_index);
@@ -157,7 +157,7 @@ Value ModuleLoader::visit_function(const BytecodeMember::Function& f) {
     TIRO_UNREACHABLE("Invalid function type.");
 }
 
-Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& r) {
+Value ModuleLoader::visit_record_schema(const BytecodeMember::RecordSchema& r) {
     const auto& compiled_tmpl = compiled_[r.id];
     Scope sc(ctx_);
     Local keys = sc.local(Array::make(ctx_, compiled_tmpl.keys().size()));
@@ -166,7 +166,7 @@ Value ModuleLoader::visit_record_template(const BytecodeMember::RecordTemplate& 
         key = members_->checked_get(compiled_key.value()).must_cast<Symbol>();
         keys->append(ctx_, key).must("failed to add record key"); // array has enough capacity
     }
-    return RecordTemplate::make(ctx_, keys);
+    return RecordSchema::make(ctx_, keys);
 }
 
 void ModuleLoader::create_export(u32 symbol_index, u32 value_index) {
