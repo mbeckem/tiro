@@ -21,7 +21,8 @@ static tiro::record make_record(tiro::vm& vm, const std::vector<std::string>& ke
     for (const auto& key : keys) {
         array.push(tiro::make_string(vm, key));
     }
-    return tiro::make_record(vm, array);
+    tiro::record_schema schema = tiro::make_record_schema(vm, array);
+    return tiro::make_record(vm, schema);
 }
 
 TEST_CASE("tiro::handle should throw on invalid cast", "[api]") {

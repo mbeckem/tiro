@@ -97,6 +97,9 @@ public:
     /// This function should just return an iterable to tiro code.
     static Array keys(Context& ctx, Handle<Record> record);
 
+    /// Returns the schema associated with this record.
+    RecordSchema schema() { return get_schema(); }
+
     /// Returns the value associated with that key, or an empty optional if the key is invalid for this record.
     std::optional<Value> get(Symbol key);
 

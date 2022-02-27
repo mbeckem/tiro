@@ -127,6 +127,7 @@ TEST_CASE("The type_of function should return the correct type.", "[std-lib]") {
             add("module", std, std.Module);
             add("null", null, std.Null);
             add("record", (foo: "bar"), std.Record);
+            add("record schema", std.schema_of((foo: "bar")), std.RecordSchema);
             add("result", std.success(123), std.Result);
             add("set", set{1, 2, 3}, std.Set);
             add("small integer", 1, std.Integer);
@@ -190,6 +191,7 @@ TEST_CASE("The type_of function should return the correct type.", "[std-lib]") {
     require_entry("module", "Module");
     require_entry("null", "Null");
     require_entry("record", "Record");
+    require_entry("record schema", "RecordSchema");
     require_entry("result", "Result");
     require_entry("set", "Set");
     require_entry("small integer", "Integer");

@@ -58,6 +58,15 @@ static void std_type_of(SyncFrameContext& frame) {
     frame.return_value(ctx.types().type_of(object));
 }
 
+static void std_schema_of(SyncFrameContext& frame) {
+    Context& ctx = frame.ctx();
+    auto maybe_record = frame.arg(0).try_cast<Record>();
+    if (!maybe_record)
+        return frame.panic(TIRO_FORMAT_EXCEPTION(ctx, "schema_of: argument must be a record"));
+
+    frame.return_value(maybe_record.handle()->schema());
+}
+
 static void std_print(SyncFrameContext& frame) {
     const size_t args = frame.arg_count();
 
@@ -288,6 +297,7 @@ static constexpr ExposedType types[] = {
     {"NativePointer"sv, PublicType::NativePointer},
     {"Null"sv, PublicType::Null},
     {"Record"sv, PublicType::Record},
+    {"RecordSchema"sv, PublicType::RecordSchema},
     {"Result"sv, PublicType::Result},
     {"Set"sv, PublicType::Set},
     {"String"sv, PublicType::String},
@@ -331,6 +341,7 @@ static constexpr FunctionDesc functions[] = {
 
     // Utilities
     FunctionDesc::plain("type_of"sv, 1, std_type_of),
+    FunctionDesc::plain("schema_of"sv, 1, std_schema_of),
 
     // Error handling
     FunctionDesc::plain("success"sv, 1, std_new_success),

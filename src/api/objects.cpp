@@ -22,6 +22,7 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
         TIRO_CASE(RECORD)
+        TIRO_CASE(RECORD_SCHEMA)
         TIRO_CASE(ARRAY)
         TIRO_CASE(RESULT)
         TIRO_CASE(EXCEPTION)
@@ -57,6 +58,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
             TIRO_MAP(String, STRING)
             TIRO_MAP(Tuple, TUPLE)
             TIRO_MAP(Record, RECORD)
+            TIRO_MAP(RecordSchema, RECORD_SCHEMA)
             TIRO_MAP(BoundMethod, FUNCTION)
             TIRO_MAP(CodeFunction, FUNCTION)
             TIRO_MAP(MagicFunction, FUNCTION)
@@ -101,6 +103,7 @@ static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
         TIRO_MAP(STRING, String)
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(RECORD, Record)
+        TIRO_MAP(RECORD_SCHEMA, RecordSchema)
         TIRO_MAP(FUNCTION, Function)
         TIRO_MAP(ARRAY, Array)
         TIRO_MAP(RESULT, Result)
@@ -350,7 +353,8 @@ void tiro_tuple_set(
     });
 }
 
-void tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err) {
+void tiro_make_record_schema(
+    tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!vm || !keys || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
@@ -380,7 +384,24 @@ void tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, ti
         }
 
         auto result_handle = to_internal(result);
-        result_handle.set(vm::Record::make(ctx, symbols));
+        result_handle.set(vm::RecordSchema::make(ctx, symbols));
+    });
+}
+
+void tiro_make_record(tiro_vm_t vm, tiro_handle_t schema, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !schema || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+
+        auto maybe_schema = to_internal(schema).try_cast<vm::RecordSchema>();
+        if (!maybe_schema)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+
+        auto schema_handle = maybe_schema.handle();
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Record::make(ctx, schema_handle));
     });
 }
 

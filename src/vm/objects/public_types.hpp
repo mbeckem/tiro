@@ -45,6 +45,7 @@ enum class PublicType : u8 {
     NativePointer,
     Null,
     Record,
+    RecordSchema,
     Result,
     Set,
     SetIterator,
@@ -108,6 +109,7 @@ TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::NativeObject, ValueType::NativeObjec
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::NativePointer, ValueType::NativePointer)
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::Null, ValueType::Null)
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::Record, ValueType::Record)
+TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::RecordSchema, ValueType::RecordSchema)
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::Result, ValueType::Result)
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::Set, ValueType::Set)
 TIRO_PUBLIC_TYPE_TO_VALUE_TYPES(PublicType::SetIterator, ValueType::SetIterator)
@@ -157,6 +159,7 @@ case pt:             \
         TIRO_MAP(PublicType::NativePointer)
         TIRO_MAP(PublicType::Null)
         TIRO_MAP(PublicType::Record)
+        TIRO_MAP(PublicType::RecordSchema)
         TIRO_MAP(PublicType::Result)
         TIRO_MAP(PublicType::Set)
         TIRO_MAP(PublicType::SetIterator)
@@ -213,6 +216,7 @@ case ValueType::vt:      \
         TIRO_MAP(NativePointer, PublicType::NativePointer);
         TIRO_MAP(Null, PublicType::Null);
         TIRO_MAP(Record, PublicType::Record);
+        TIRO_MAP(RecordSchema, PublicType::RecordSchema);
         TIRO_MAP(Result, PublicType::Result);
         TIRO_MAP(Set, PublicType::Set);
         TIRO_MAP(SetIterator, PublicType::SetIterator);

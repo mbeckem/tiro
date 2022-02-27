@@ -223,7 +223,7 @@ def gather_public_types(root):
             Node("HashTableValueIterator", public="MapValueIterator"),
             Node("HashTableStorage"),
             Node("Record", public=True),
-            Node("RecordSchema"),
+            Node("RecordSchema", public=True),
             Node("Set", public=True),
             Node("SetIterator", public=True),
             Node("Tuple", public=True),

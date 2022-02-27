@@ -353,6 +353,7 @@ void TypeSystem::init_public(Context& ctx) {
     TIRO_INIT(NativePointer, simple_type(ctx, "NativePointer"));
     TIRO_INIT(Null, simple_type(ctx, "Null"));
     TIRO_INIT(Record, simple_type(ctx, "Record"));
+    TIRO_INIT(RecordSchema, simple_type(ctx, "RecordSchema"));
     TIRO_INIT(Result, from_desc(ctx, result_type_desc));
     TIRO_INIT(Set, from_desc(ctx, set_type_desc));
     TIRO_INIT(SetIterator, simple_type(ctx, "SetIterator"));
@@ -375,6 +376,7 @@ void TypeSystem::init_public(Context& ctx) {
                 TIRO_ERROR("public type instance for '{}' is not initialized",
                     static_cast<PublicType>(index));
             }
+            ++index;
         }
     }
 #endif

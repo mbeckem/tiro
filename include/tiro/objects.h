@@ -24,6 +24,7 @@ typedef enum tiro_kind {
     TIRO_KIND_FUNCTION,        ///< Value is a function
     TIRO_KIND_TUPLE,           ///< Value is a tuple
     TIRO_KIND_RECORD,          ///< Value is a record
+    TIRO_KIND_RECORD_SCHEMA,   ///< Value is a record schema
     TIRO_KIND_ARRAY,           ///< Value is an array
     TIRO_KIND_RESULT,          ///< Value is a result
     TIRO_KIND_EXCEPTION,       ///< Value is an exception
@@ -171,14 +172,25 @@ TIRO_API void tiro_tuple_set(
     tiro_vm_t vm, tiro_handle_t tuple, size_t index, tiro_handle_t value, tiro_error_t* err);
 
 /**
- * Constructs a new record with the given key names. `keys` must be an array consisting of strings (which mus be unique).
- * The specified keys will be valid property names on the new record. The value associated with each key will be initialized to null.
+ * Constructs a new record schema from the given array of keys.
+ * The record schema can be used to construct records with the property names specified in `keys`.
  *
- * Returns `TIRO_ERROR_BAD_TYPE` if `keys` is not an array, or if its contents are not all strings.
+ * Returns `TIRO_ERROR_BAD_TYPE` if `keys` is not an array or if its content is not composed entirely of strings.
+ * On success, the constructed record schema will be assigned to `result`.
+ */
+TIRO_API void
+tiro_make_record_schema(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Constructs a new record with the properties defined by the given schema.
+ * `schema` must reference a value of type `TIRO_RECORD_SCHEMA`.
+ * The values associated with the new record's property names will be initialized to `null`.
+ *
+ * Returns `TIRO_ERROR_BAD_TYPE` if `schema` is not a record schema.
  * On success, the constructed record will be assigned to `result`.
  */
 TIRO_API void
-tiro_make_record(tiro_vm_t vm, tiro_handle_t keys, tiro_handle_t result, tiro_error_t* err);
+tiro_make_record(tiro_vm_t vm, tiro_handle_t schema, tiro_handle_t result, tiro_error_t* err);
 
 /** Retrieves an array of valid keys for the given record. Returns `TIRO_ERROR_BAD_TYPE` if the instance is not a record. */
 TIRO_API void

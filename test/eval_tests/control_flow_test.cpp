@@ -175,7 +175,7 @@ TEST_CASE("Optional property access should evaluate to the correct result", "[co
     {
         auto keys = make_array(vm);
         keys.push(make_string(vm, "foo"));
-        auto record = make_record(vm, keys);
+        auto record = make_record(vm, tiro::make_record_schema(vm, keys));
         record.set(keys.get(0).as<string>(), make_integer(vm, 3));
         test.call("test_object", record).returns_int(3);
     }
@@ -245,7 +245,7 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[c
         auto props = make_array(vm);
         props.push(make_string(vm, "foo"));
 
-        auto record = make_record(vm, props);
+        auto record = make_record(vm, tiro::make_record_schema(vm, props));
         record.set(props.get(0).as<string>(), make_null(vm));
         test.call("test_method_function", record).returns_null();
     }
@@ -258,7 +258,7 @@ TEST_CASE("Optional call expressions should evaluate to the correct result", "[c
         auto props = make_array(vm);
         props.push(make_string(vm, "foo"));
 
-        auto record = make_record(vm, props);
+        auto record = make_record(vm, tiro::make_record_schema(vm, props));
         record.set(props.get(0).as<string>(), incr);
         test.call("test_method_function", record).returns_int(4);
     }

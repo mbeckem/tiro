@@ -45,6 +45,9 @@ enum class value_kind : int {
     /// Value is a record
     record = TIRO_KIND_RECORD,
 
+    /// Value is a record schema
+    record_schema = TIRO_KIND_RECORD_SCHEMA,
+
     /// Value is an array
     array = TIRO_KIND_ARRAY,
 
@@ -92,6 +95,7 @@ TIRO_MAP_TYPE(string);
 TIRO_MAP_TYPE(function);
 TIRO_MAP_TYPE(tuple);
 TIRO_MAP_TYPE(record);
+TIRO_MAP_TYPE(record_schema);
 TIRO_MAP_TYPE(array);
 TIRO_MAP_TYPE(result);
 TIRO_MAP_TYPE(exception);
@@ -510,6 +514,23 @@ inline tuple make_tuple(vm& v, size_t size) {
     return tuple(std::move(result));
 }
 
+/// Refers to a record schema.
+class record_schema : public handle {
+public:
+    explicit record_schema(handle h)
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
+
+    record_schema(const record_schema&) = default;
+    record_schema(record_schema&&) noexcept = default;
+
+    record_schema& operator=(const record_schema&) = default;
+    record_schema& operator=(record_schema&&) noexcept = default;
+};
+
+/// Creates a new record schema from the given array of keys.
+/// All keys must be strings.
+inline record_schema make_record_schema(vm& v, const array& keys);
+
 /// Refers to a record value.
 class record final : public handle {
 public:
@@ -542,9 +563,9 @@ public:
     }
 };
 
-/// Constructs a new record with the given keys. All keys must be unique strings.
+/// Constructs a new record with the property names specified by the given schema.
 /// All values of the record will be initialized to null.
-inline record make_record(vm& v, const array& keys);
+inline record make_record(vm& v, const record_schema& schema);
 
 /// Refers to an array value.
 class array final : public handle {
@@ -908,31 +929,38 @@ public:
     }
 };
 
-type handle::type_of() const {
+inline type handle::type_of() const {
     handle result(raw_vm());
     detail::check_handles(raw_vm(), *this, result);
     tiro_value_type(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
     return type(std::move(result));
 }
 
-string handle::to_string() const {
+inline string handle::to_string() const {
     handle result(raw_vm());
     detail::check_handles(raw_vm(), *this, result);
     tiro_value_to_string(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
     return string(std::move(result));
 }
 
-array record::keys() const {
+inline record_schema make_record_schema(vm& v, const array& keys) {
+    handle result(v.raw_vm());
+    detail::check_handles(v.raw_vm(), keys, result);
+    tiro_make_record_schema(v.raw_vm(), keys.raw_handle(), result.raw_handle(), error_adapter());
+    return record_schema(std::move(result));
+}
+
+inline array record::keys() const {
     handle result(raw_vm());
     detail::check_handles(raw_vm(), *this, result);
     tiro_record_keys(raw_vm(), raw_handle(), result.raw_handle(), error_adapter());
     return array(std::move(result));
 }
 
-inline record make_record(vm& v, const array& keys) {
+inline record make_record(vm& v, const record_schema& schema) {
     handle result(v.raw_vm());
-    detail::check_handles(v.raw_vm(), keys, result);
-    tiro_make_record(v.raw_vm(), keys.raw_handle(), result.raw_handle(), error_adapter());
+    detail::check_handles(v.raw_vm(), schema, result);
+    tiro_make_record(v.raw_vm(), schema.raw_handle(), result.raw_handle(), error_adapter());
     return record(std::move(result));
 }
 
