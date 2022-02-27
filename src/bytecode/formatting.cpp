@@ -78,7 +78,7 @@ static DumpHelper<Entity> dump(Entity entity) {
 }
 
 void format_record_schema(const BytecodeRecordSchema& tmpl, FormatStream& stream) {
-    stream.format("Record schema\n");
+    stream.format("RecordSchema\n");
     for (const auto& key : tmpl.keys()) {
         stream.format("- {}\n", dump(key));
     }
