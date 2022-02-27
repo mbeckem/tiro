@@ -40,6 +40,9 @@ TEST_CASE("The debug representation of builtin objects should be as expected", "
             assert(r((1,2,3)) == "(1, 2, 3)");
             assert(r((:)) == "(:)");
             assert(r((foo: 1, bar: 2)) == "(bar: 2, foo: 1)"); // VM happens to sort keys in static record schemas at the moment
+            assert(r(std.schema_of((:))) == "RecordSchema{}");
+            assert(r(std.schema_of((a:1))) == "RecordSchema{a}");
+            assert(r(std.schema_of((b:2, a:1))) == "RecordSchema{a, b}");
             assert(r([]) == "[]");
             assert(r([1,2]) == "[1, 2]");
             assert(r(map{}) == "map{}");

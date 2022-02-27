@@ -166,7 +166,7 @@ protected:
 
 class [[nodiscard]] DumpStruct : DumpBase {
 public:
-    explicit DumpStruct(std::string_view name, DumpHelper& parent)
+    explicit DumpStruct(std::string_view name, DumpHelper & parent)
         : DumpBase(parent) {
         stream_.format("{}{{", name);
     }
@@ -208,7 +208,7 @@ private:
 
 class [[nodiscard]] DumpList : DumpBase {
 public:
-    explicit DumpList(std::string_view open, std::string_view close, DumpHelper& parent)
+    explicit DumpList(std::string_view open, std::string_view close, DumpHelper & parent)
         : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
@@ -251,7 +251,7 @@ private:
 
 class [[nodiscard]] DumpTuple : DumpBase {
 public:
-    explicit DumpTuple(DumpHelper& parent)
+    explicit DumpTuple(DumpHelper & parent)
         : DumpBase(parent) {
         stream_.format("(");
     }
@@ -302,7 +302,7 @@ private:
 
 class [[nodiscard]] DumpRecord : DumpBase {
 public:
-    explicit DumpRecord(DumpHelper& parent)
+    explicit DumpRecord(DumpHelper & parent)
         : DumpBase(parent) {
         stream_.format("(");
     }
@@ -348,7 +348,7 @@ private:
 
 class [[nodiscard]] DumpMap : DumpBase {
 public:
-    explicit DumpMap(std::string_view open, std::string_view close, DumpHelper& parent)
+    explicit DumpMap(std::string_view open, std::string_view close, DumpHelper & parent)
         : DumpBase(parent)
         , close_(close) {
         stream_.format("{}", open);
@@ -468,11 +468,11 @@ void DumpHelper::dump_value(Value value) {
         break;
     }
 
-        // Containers
+    // Containers
     case ValueType::Tuple: {
         auto tuple = value.must_cast<Tuple>();
         auto dump = dump_tuple();
-        for (const auto item : tuple.values()) {
+        for (auto item : tuple.values()) {
             dump.field(item);
         }
         dump.finish();
@@ -485,10 +485,18 @@ void DumpHelper::dump_value(Value value) {
         dump.finish();
         break;
     }
+    case ValueType::RecordSchema: {
+        auto schema = value.must_cast<RecordSchema>();
+        auto dump = dump_list("RecordSchema{", "}");
+        schema.for_each_unsafe(
+            [&](Symbol k, [[maybe_unused]] size_t index) { dump.item(k.name().view()); });
+        dump.finish();
+        break;
+    }
     case ValueType::Array: {
         auto array = value.must_cast<Array>();
         auto dump = dump_list("[", "]");
-        for (const auto item : array.values()) {
+        for (auto item : array.values()) {
             dump.item(item);
         }
         dump.finish();
