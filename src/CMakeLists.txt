@@ -127,13 +127,14 @@ if (NOT TIRO_SKIP_SHARED)
     )
     target_link_libraries(tiro PRIVATE common_flags)
     target_link_libraries(tiro PRIVATE tiro_objects)
+
+    # Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
+    # TODO: This should be done for msvc as well.
+    if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
+        target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
+    endif()
 endif()
 
-# Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
-# TODO: This should be done for msvc as well.
-if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
-    target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
-endif()
 
 add_library(tiropp INTERFACE)
 add_library(tiro::tiropp ALIAS tiropp)
