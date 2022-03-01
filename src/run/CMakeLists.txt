@@ -1,7 +1,7 @@
 add_executable(tiro_run
     main.cpp
 )
-target_link_libraries(tiro_run PRIVATE common_flags tiro cxxopts fmt::fmt)
+target_link_libraries(tiro_run PRIVATE common_flags tiropp cxxopts fmt::fmt)
 target_compile_options(tiro_run PRIVATE "-frtti")
 
 # stdc++fs not needed for apple clang
