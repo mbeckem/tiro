@@ -37,7 +37,7 @@ add_library(tiro_objects OBJECT)
 tiro_set_common_options(tiro_objects)
 target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
 target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
-target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
+target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_LIBRARY")
 target_link_libraries_system(tiro_objects PUBLIC
     absl::hash absl::flat_hash_map
     fmt::fmt nlohmann_json::nlohmann_json utf8::cpp

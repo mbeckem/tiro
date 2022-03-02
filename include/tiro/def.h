@@ -16,7 +16,7 @@
 #if TIRO_BUILDING_DOCS
 #    define TIRO_API
 #elif defined(_WIN32) || defined(__CYGWIN__)
-#    ifdef TIRO_BUILDING_DLL
+#    ifdef TIRO_BUILDING_LIBRARY
 #        ifdef __GNUC__
 #            define TIRO_API __attribute__((dllexport))
 #        else
