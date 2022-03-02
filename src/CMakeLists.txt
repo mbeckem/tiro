@@ -1,51 +1,3 @@
-add_library(common_flags INTERFACE)
-target_include_directories(common_flags INTERFACE "${PROJECT_SOURCE_DIR}/src")
-
-# Compiler warnings and compiler specific flags
-# TODO MSCV
-if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    if (TIRO_WARNINGS)
-        target_compile_options(common_flags INTERFACE
-            -Wno-unknown-warning-option
-
-            # Disabled because of flexible array members :/
-            # -pedantic
-            # -pedantic-errors
-
-            -Wall
-            -Wextra
-
-            -Wshadow
-            -Wcast-align
-            -Wunused
-            -Wmisleading-indentation
-            -Wduplicated-cond
-            -Wduplicated-branches
-            -Wlogical-op
-            -Wnull-dereference
-            -Wdouble-promotion
-            -Wformat=2
-            #    -Wlifetime # Recent clang only
-            -Wno-exceptions
-        )
-
-        target_compile_options(common_flags INTERFACE
-            $<$<COMPILE_LANGUAGE:CXX>:
-                -Wnon-virtual-dtor
-                -Wno-noexcept-type
-                -Wno-terminate
-
-                # Really annoying on some clang versions
-                -Wno-range-loop-analysis
-            >
-        )
-    endif()
-
-    if (TIRO_WERROR)
-        target_compile_options(common_flags INTERFACE -Werror)
-    endif()
-endif()
-
 set(SOURCE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
 set(BUILD_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
 
@@ -82,10 +34,10 @@ set(VERSION_CONFIGURE_COMMAND "${CMAKE_COMMAND}" "-P" "${VERSION_SCRIPT}")
 execute_process(COMMAND ${VERSION_CONFIGURE_COMMAND})
 
 add_library(tiro_objects OBJECT)
+tiro_set_common_options(tiro_objects)
 target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
 target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_DLL")
-target_link_libraries(tiro_objects PRIVATE common_flags)
 target_link_libraries_system(tiro_objects PUBLIC
     absl::hash absl::flat_hash_map
     fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
@@ -106,28 +58,27 @@ add_subdirectory(vm)
 # TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
 add_library(tiro_static STATIC)
 add_library(tiro::tiro_static ALIAS tiro_static)
+tiro_set_common_options(tiro_static)
 target_include_directories(tiro_static
     PUBLIC
         $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
         $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
-target_link_libraries(tiro_static PRIVATE common_flags)
 target_link_libraries(tiro_static PRIVATE tiro_objects)
 
 # TODO: Silly duplication
 if (NOT TIRO_SKIP_SHARED)
     add_library(tiro SHARED)
     add_library(tiro::tiro ALIAS tiro)
+    tiro_set_common_options(tiro)
     target_include_directories(tiro
         PUBLIC
             $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
             $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
-    target_link_libraries(tiro PRIVATE common_flags)
     target_link_libraries(tiro PRIVATE tiro_objects)
-
     # Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
     # TODO: This should be done for msvc as well.
     if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))

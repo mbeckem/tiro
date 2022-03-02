@@ -15,6 +15,6 @@ add_executable(api_tests
     tiropp_objects_test.cpp
     tiropp_vm_test.cpp
 )
-
-target_link_libraries(api_tests PRIVATE common_flags tiro::tiro fmt::fmt Catch2::Catch2)
+tiro_set_common_options(api_tests)
+target_link_libraries(api_tests PRIVATE tiro::tiro fmt::fmt Catch2::Catch2)
 target_include_directories(api_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

@@ -9,7 +9,57 @@ function(target_link_libraries_system target visibility)
     endforeach(lib)
 endfunction(target_link_libraries_system)
 
-function(tiro_add_headers VAR BASE) 
+# Set common options for targets developed in this project.
+function(tiro_set_common_options target)
+    target_include_directories(${target} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+
+    # Compiler warnings and compiler specific flags
+    # TODO MSCV
+    if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+        if (TIRO_WARNINGS)
+            target_compile_options(${target} PRIVATE
+                -Wno-unknown-warning-option
+
+                # Disabled because of flexible array members :/
+                # -pedantic
+                # -pedantic-errors
+
+                -Wall
+                -Wextra
+
+                -Wshadow
+                -Wcast-align
+                -Wunused
+                -Wmisleading-indentation
+                -Wduplicated-cond
+                -Wduplicated-branches
+                -Wlogical-op
+                -Wnull-dereference
+                -Wdouble-promotion
+                -Wformat=2
+                #    -Wlifetime # Recent clang only
+                -Wno-exceptions
+            )
+
+            target_compile_options(${target} PRIVATE
+                $<$<COMPILE_LANGUAGE:CXX>:
+                    -Wnon-virtual-dtor
+                    -Wno-noexcept-type
+                    -Wno-terminate
+
+                    # Really annoying on some clang versions
+                    -Wno-range-loop-analysis
+                >
+            )
+        endif()
+
+        if (TIRO_WERROR)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+endfunction()
+
+function(tiro_add_headers VAR BASE)
     set(headers ${${VAR}})
     foreach (header ${ARGN})
         list(APPEND headers "${BASE}/${header}")
