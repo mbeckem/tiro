@@ -55,22 +55,8 @@ add_subdirectory(compiler)
 add_subdirectory(run)
 add_subdirectory(vm)
 
-# TODO: Strip all unexported symbols from c api and export this (must resolve the internal unexported dependencies issue with cmake somehow)
-add_library(tiro_static STATIC)
-add_library(tiro::tiro_static ALIAS tiro_static)
-tiro_set_common_options(tiro_static)
-target_include_directories(tiro_static
-    PUBLIC
-        $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
-        $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-target_link_libraries(tiro_static PRIVATE tiro_objects)
-
-# TODO: Silly duplication
-if (NOT TIRO_SKIP_SHARED)
+if (TIRO_BUILD_SHARED)
     add_library(tiro SHARED)
-    add_library(tiro::tiro ALIAS tiro)
     tiro_set_common_options(tiro)
     target_include_directories(tiro
         PUBLIC
@@ -84,16 +70,24 @@ if (NOT TIRO_SKIP_SHARED)
     if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
         target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
     endif()
-endif()
+else()
+    add_library(tiro_static_internal STATIC)
+    tiro_set_common_options(tiro_static_internal)
+    target_include_directories(tiro_static_internal PUBLIC
+            $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+            $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> # TODO unnecessary after bundling
+    )
+    target_link_libraries(tiro_static_internal PRIVATE tiro_objects)
 
+    add_library(tiro INTERFACE) # TODO partial linking
+    target_link_libraries(tiro INTERFACE tiro_static_internal)
+endif()
+add_library(tiro::tiro ALIAS tiro)
 
 add_library(tiropp INTERFACE)
 add_library(tiro::tiropp ALIAS tiropp)
-if (TIRO_SKIP_SHARED)
-    target_link_libraries(tiropp INTERFACE tiro_static)
-else()
-    target_link_libraries(tiropp INTERFACE tiro::tiro)
-endif()
+target_link_libraries(tiropp INTERFACE tiro)
 target_include_directories(tiropp
     INTERFACE
         $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>

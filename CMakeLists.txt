@@ -25,6 +25,7 @@ option(TIRO_TESTS "Build unit test target." ${TIRO_DEV})
 option(TIRO_EXAMPLES "Build example projects." ${TIRO_DEV})
 option(TIRO_DOCS "Enable documentation build target (use target doc to build)." OFF)
 option(TIRO_RTTI "Enable or disable building with runtime type information." OFF)
+option(TIRO_BUILD_SHARED "Enable or disable building tiro as a shared libray" ON)
 
 # These options should only be enabled during development!
 option(TIRO_WARNINGS "Build with pedantic warnings." ${TIRO_DEV})
@@ -34,7 +35,6 @@ option(TIRO_COLORS "Always produce ANSI-colored output (GNU/Clang only)." ${TIRO
 # For emscripten build ..
 option(TIRO_SKIP_THREADS "Build without looking for a threading library." OFF)
 option(TIRO_SKIP_INSTALL "Build without installation targets" OFF)
-option(TIRO_SKIP_SHARED "Build without shared libaries" OFF)
 
 message(STATUS "TIRO_DEV=${TIRO_DEV}")
 message(STATUS "TIRO_TESTS=${TIRO_TESTS}")
