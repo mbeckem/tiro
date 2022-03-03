@@ -25,7 +25,6 @@ option(TIRO_TESTS "Build unit test target." ${TIRO_DEV})
 option(TIRO_EXAMPLES "Build example projects." ${TIRO_DEV})
 option(TIRO_DOCS "Enable documentation build target (use target doc to build)." OFF)
 option(TIRO_RTTI "Enable or disable building with runtime type information." OFF)
-option(TIRO_BUILD_SHARED "Enable or disable building tiro as a shared libray" ON)
 
 # These options should only be enabled during development!
 option(TIRO_WARNINGS "Build with pedantic warnings." ${TIRO_DEV})
@@ -48,6 +47,7 @@ message(STATUS "TIRO_IWYU=${TIRO_IWYU}")
 message(STATUS "TIRO_SKIP_THREADS=${TIRO_SKIP_THREADS}")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 set(CMAKE_C_STANDARD 90)

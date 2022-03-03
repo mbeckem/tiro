@@ -42,8 +42,6 @@ The following additional options can be supplied to CMake at configuration time:
 -   `TIRO_LTO=<ON|OFF>`  
      Enables link time optimization for compilers that support it. Results in smaller and more efficient binaries
     at the cost of slower builds. Should be enabled for optimized builds. Defaults to `OFF`.
--   `TIRO_BUILD_SHARED=<ON|OFF>`  
-     Build tiro as a shared library (e.g. `libtiro.so`). Defaults to `ON`. Disabling this option will build a static archive (`.a`) instead.
 
 ## Examples
 

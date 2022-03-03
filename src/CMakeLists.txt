@@ -36,7 +36,10 @@ execute_process(COMMAND ${VERSION_CONFIGURE_COMMAND})
 add_library(tiro_objects OBJECT)
 tiro_set_common_options(tiro_objects)
 target_sources(tiro_objects PRIVATE ${TIRO_HEADERS})
-target_include_directories(tiro_objects PUBLIC "${SOURCE_INCLUDE_DIR}" "${BUILD_INCLUDE_DIR}")
+target_include_directories(tiro_objects PUBLIC
+    $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
+)
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_LIBRARY")
 target_link_libraries_system(tiro_objects PUBLIC
     absl::hash absl::flat_hash_map
@@ -55,33 +58,19 @@ add_subdirectory(compiler)
 add_subdirectory(run)
 add_subdirectory(vm)
 
-if (TIRO_BUILD_SHARED)
-    add_library(tiro SHARED)
-    tiro_set_common_options(tiro)
-    target_include_directories(tiro
-        PUBLIC
-            $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
-            $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-    )
-    target_link_libraries(tiro PRIVATE tiro_objects)
-    # Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
-    # TODO: This should be done for msvc as well.
-    if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
-        target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
-    endif()
-else()
-    add_library(tiro_static_internal STATIC)
-    tiro_set_common_options(tiro_static_internal)
-    target_include_directories(tiro_static_internal PUBLIC
-            $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
-            $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
-            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> # TODO unnecessary after bundling
-    )
-    target_link_libraries(tiro_static_internal PRIVATE tiro_objects)
-
-    add_library(tiro INTERFACE) # TODO partial linking
-    target_link_libraries(tiro INTERFACE tiro_static_internal)
+add_library(tiro SHARED)
+tiro_set_common_options(tiro)
+target_include_directories(tiro
+    PUBLIC
+        $<BUILD_INTERFACE:${SOURCE_INCLUDE_DIR}>
+        $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+target_link_libraries(tiro PRIVATE tiro_objects)
+# Make sure that only exported symbols (i.e. tiro_*) are exported by the shared library.
+# TODO: This should be done for msvc as well.
+if(NOT EMSCRIPTEN AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")))
+    target_link_libraries(tiro PRIVATE "-Wl,--version-script=${PROJECT_SOURCE_DIR}/support/api.version.gcc")
 endif()
 add_library(tiro::tiro ALIAS tiro)
 
@@ -108,12 +97,14 @@ if (NOT TIRO_SKIP_INSTALL)
         INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/tiro/cmake
     )
 
-    install(TARGETS tiro tiropp
+    set(INSTALL_TARGETS tiro tiropp)
+    install(TARGETS ${INSTALL_TARGETS}
         EXPORT ${TARGETS_EXPORT_NAME}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
+
     install(EXPORT ${TARGETS_EXPORT_NAME}
         FILE ${TARGETS_EXPORT_NAME}.cmake
         NAMESPACE tiro::
