@@ -56,7 +56,7 @@ tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, tiro_
  * TODO: Allow user defined exception objects instead of plain string?
  */
 TIRO_API void
-tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string message, tiro_error_t* err);
+tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string_t message, tiro_error_t* err);
 
 /**
  * Constructs a new function object with the given name that will invoke the native function `func` when called.
@@ -121,7 +121,7 @@ tiro_async_frame_return_value(tiro_async_frame_t frame, tiro_handle_t value, tir
  * TODO: Allow user defined exception objects instead of plain string?
  */
 TIRO_API void
-tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err);
+tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string_t message, tiro_error_t* err);
 
 /**
  * Returns a token for resuming an async function call after yielding.
@@ -347,7 +347,7 @@ TIRO_API void tiro_resumable_frame_return_value(
  * TODO: Allow user defined exception objects instead of plain string?
  */
 TIRO_API void tiro_resumable_frame_panic_msg(
-    tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err);
+    tiro_resumable_frame_t frame, tiro_string_t message, tiro_error_t* err);
 
 /** Represents construction parameters for a resumable function. */
 typedef struct tiro_resumable_frame_desc {

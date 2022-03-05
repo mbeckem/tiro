@@ -54,7 +54,7 @@ void tiro_sync_frame_return_value(tiro_sync_frame_t frame, tiro_handle_t value, 
     });
 }
 
-void tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string message, tiro_error_t* err) {
+void tiro_sync_frame_panic_msg(tiro_sync_frame_t frame, tiro_string_t message, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!frame || !valid_string(message))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
@@ -100,7 +100,8 @@ void tiro_async_frame_return_value(
     });
 }
 
-void tiro_async_frame_panic_msg(tiro_async_frame_t frame, tiro_string message, tiro_error_t* err) {
+void tiro_async_frame_panic_msg(
+    tiro_async_frame_t frame, tiro_string_t message, tiro_error_t* err) {
     return entry_point(err, [&] {
         if (!frame || !valid_string(message))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
@@ -307,7 +308,7 @@ void tiro_resumable_frame_return_value(
 }
 
 void tiro_resumable_frame_panic_msg(
-    tiro_resumable_frame_t frame, tiro_string message, tiro_error_t* err) {
+    tiro_resumable_frame_t frame, tiro_string_t message, tiro_error_t* err) {
     return entry_point(err, [&]() {
         if (!frame || !valid_string(message))
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
