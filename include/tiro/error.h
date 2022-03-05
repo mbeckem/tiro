@@ -17,7 +17,7 @@ extern "C" {
  * Defines all possible error codes.
  * TODO: Better numbering scheme
  */
-typedef enum tiro_errc_t {
+typedef enum tiro_errc {
     TIRO_OK = 0,                     ///< Success
     TIRO_ERROR_BAD_STATE = 1,        ///< Instance is not in the correct state
     TIRO_ERROR_BAD_ARG = 2,          ///< Invalid argument
