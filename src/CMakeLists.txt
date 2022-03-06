@@ -47,10 +47,6 @@ target_link_libraries_system(tiro_objects PUBLIC
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 
-if (TIRO_IWYU)
-    set_property(TARGET tiro_objects PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
-endif()
-
 add_subdirectory(api)
 add_subdirectory(bytecode)
 add_subdirectory(common)
