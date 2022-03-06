@@ -8,7 +8,7 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/support/cmake")
-include(TiroFunctions)
+include(TiroHelpers)
 include(CMakePackageConfigHelpers)
 
 project(tiro LANGUAGES CXX C)
@@ -25,6 +25,11 @@ option(TIRO_TESTS "Build unit test target." ${TIRO_DEV})
 option(TIRO_EXAMPLES "Build example projects." ${TIRO_DEV})
 option(TIRO_DOCS "Enable documentation build target (use target doc to build)." OFF)
 option(TIRO_RTTI "Enable or disable building with runtime type information." OFF)
+
+# Note: incomplete support for static libraries because of of nested subprojects.
+# The fact that we use absl/fmt/utf8cpp etc. leaks and may lead to linking errors.
+# It would be better to use a package manager here..
+option(TIRO_BUILD_SHARED "Enable or disable building as a shared library" ON)
 
 # These options should only be enabled during development!
 option(TIRO_WARNINGS "Build with pedantic warnings." ${TIRO_DEV})
