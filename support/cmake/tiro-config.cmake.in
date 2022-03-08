@@ -1,4 +1,15 @@
+include(CMakeFindDependencyMacro)
+
 @PACKAGE_INIT@
 
+# Reference static library dependencies when building as a static library
+if (NOT @TIRO_BUILD_SHARED@)
+    find_dependency(absl)
+    find_dependency(fmt)
+    find_dependency(nlohmann_json)
+    find_dependency(utf8cpp)
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/@TARGETS_EXPORT_NAME@.cmake)
+
 check_required_components(tiro)

@@ -41,9 +41,9 @@ target_include_directories(tiro_objects PUBLIC
     $<BUILD_INTERFACE:${BUILD_INCLUDE_DIR}>
 )
 target_compile_definitions(tiro_objects PRIVATE "TIRO_BUILDING_LIBRARY")
-target_link_libraries_system(tiro_objects PUBLIC
-    absl::hash absl::flat_hash_map
-    fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
+target_link_libraries_system(tiro_objects
+    PUBLIC
+        absl::hash absl::flat_hash_map fmt::fmt nlohmann_json::nlohmann_json utf8::cpp
 )
 target_link_libraries(tiro_objects PUBLIC Threads::Threads)
 
