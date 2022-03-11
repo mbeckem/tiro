@@ -18,8 +18,10 @@ extern "C" {
  * Defines the possible values for the severity of diagnostic compiler messages.
  */
 typedef enum tiro_severity {
-    TIRO_SEVERITY_WARNING = 1, ///< A compiler warning
-    TIRO_SEVERITY_ERROR = 2,   ///< A compiler error (compilation fails)
+    /** A compiler warning */
+    TIRO_SEVERITY_WARNING = 1,
+    /** A compiler error (compilation fails) */
+    TIRO_SEVERITY_ERROR = 2,
 } tiro_severity_t;
 
 /**
@@ -28,6 +30,20 @@ typedef enum tiro_severity {
  * be freed.
  */
 TIRO_API const char* tiro_severity_str(tiro_severity_t severity);
+
+/**
+ * Defines the possible attachments that can be emitted by the compiler.
+ */
+typedef enum tiro_attachment {
+    /** Concrete syntax tree */
+    TIRO_ATTACHMENT_CST = 1,
+    /** Abstract syntax tree */
+    TIRO_ATTACHMENT_AST = 2,
+    /** Internal representation */
+    TIRO_ATTACHMENT_IR = 3,
+    /** Disassembled bytecode */
+    TIRO_ATTACHMENT_BYTECODE = 4,
+} tiro_attachment_t;
 
 /**
  * Represents a diagnostic message emitted by the compiler.
@@ -51,41 +67,10 @@ typedef struct tiro_compiler_message {
 } tiro_compiler_message_t;
 
 /**
- * An instance of this type can be passed to the compiler to configure it.
- * Use tiro_compiler_settings_init to initialize this struct to default values.
+ * Will be invoked for every diagnostic message emitted by the compiler.
+ * Should usually return true, but may return false to indicate a fatal error (compilation will halt).
  */
-typedef struct tiro_compiler_settings {
-    /* Compiler will remember the CST, this enables the `tiro_compiler_dump_cst` function. */
-    bool enable_dump_cst;
-
-    /* Compiler will remember the AST, this enables the `tiro_compiler_dump_ast` function. */
-    bool enable_dump_ast;
-
-    /* Compiler will remember the IR, this enables the `tiro_compiler_dump_ir` function. */
-    bool enable_dump_ir;
-
-    /* Compiler will remember the diassembled bytecode, this enables
-     * the `tiro_compiler_dump_bytecode` function. */
-    bool enable_dump_bytecode;
-
-    /* TODO: Skip codegen flag */
-
-    /* Userdata pointer that will be passed to message_callback. Defaults to NULL. */
-    void* message_callback_data;
-
-    /*
-     * Will be invoked for every diagnostic message emitted by the compiler.
-     * The default function prints messages to stdout.
-     *
-     * Should usually return true, but may return false to indicate a fatal error (compilation will halt).
-     */
-    bool (*message_callback)(const tiro_compiler_message_t* message, void* userdata);
-} tiro_compiler_settings_t;
-
-/**
- * Initializes the given compiler settings object with default values.
- */
-TIRO_API void tiro_compiler_settings_init(tiro_compiler_settings_t* settings);
+typedef bool (*tiro_message_callback_t)(const tiro_compiler_message_t* message, void* userdata);
 
 /**
  * The compiler instance translates a set of source file into a module.
@@ -100,13 +85,9 @@ struct tiro_compiler;
  * \param module_name
  *      The name of the compiled module. Must be a valid, non-empty string.
  *      Does not have to remain valid for after the completion of this function, a copy is made internally.
- *
- * \param settings
- *      The compiler settings (optional). Default values will be used if this parameter is NULL.
- *      Does not have to remain valid after the completion of this function.
  */
 TIRO_API TIRO_WARN_UNUSED tiro_compiler_t tiro_compiler_new(
-    tiro_string_t module_name, const tiro_compiler_settings_t* settings, tiro_error_t* err);
+    tiro_string_t module_name, tiro_error_t* err);
 
 /**
  * Destroys and frees the given compiler instance. Must be called exactly once
@@ -123,6 +104,26 @@ TIRO_API void tiro_compiler_free(tiro_compiler_t compiler);
  */
 TIRO_API void tiro_compiler_add_file(tiro_compiler_t compiler, tiro_string_t file_name,
     tiro_string_t file_content, tiro_error_t* err);
+
+/**
+ * Sets the callback function that will be invoked for every diagnostic message emitted by the compiler.
+ * The callback will only be invoked from `tiro_compiler_run`.
+ * The default function prints messages to stdout.
+ *
+ * The userdata pointer will be passed to every invocation of the message callback.
+ */
+TIRO_API void tiro_compiler_set_message_callback(tiro_compiler_t compiler,
+    tiro_message_callback_t message_callback, void* userdata, tiro_error_t* err);
+
+/**
+ * Requests generation of the given attachment when the compiler runs.
+ * After `tiro_compiler_run` has finished execution, the attachments may be retrieved
+ * by calling `tiro_compiler_get_attachment`.
+ *
+ * Note that some attachments may not be available if the compilation process failed.
+ */
+TIRO_API void tiro_compiler_request_attachment(
+    tiro_compiler_t compiler, tiro_attachment_t attachment, tiro_error_t* err);
 
 /**
  * Run the compiler on the set of source files provided via `tiro_compiler_add_file`.
@@ -153,51 +154,16 @@ TIRO_API void
 tiro_compiler_take_module(tiro_compiler_t compiler, tiro_module_t* module, tiro_error_t* err);
 
 /**
- * Returns the string representation of the concrete syntax tree (CST).
- * Can only be called after `tiro_compiler_run` has been executed. The compile
- * process can have failed; a somewhat useful CST can often still be produced.
+ * Returns the given attachment from the compiler.
+ * Requires that `tiro_compiler_run` has finished execution.
  *
- * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the CST.
- *
- * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
- * output parameter. The string must be passed to `free` to release memory.
- */
-TIRO_API void tiro_compiler_dump_cst(tiro_compiler_t compiler, char** string, tiro_error_t* err);
-
-/**
- * Returns the string representation of the abstract syntax tree (AST).
- * Can only be called after `tiro_compiler_run` has been executed. The compile
- * process can have failed; a somewhat useful AST can often still be produced.
- *
- * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the AST.
+ * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the given attachment type.
  *
  * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
  * output parameter. The string must be passed to `free` to release memory.
  */
-TIRO_API void tiro_compiler_dump_ast(tiro_compiler_t compiler, char** string, tiro_error_t* err);
-
-/**
- * Returns the string representation of the internal representation immediately before
- * code generation. Can only be called after `tiro_compiler_run` has been executed successfully.
- *
- * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the internal representation.
- *
- * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
- * output parameter. The string must be passed to `free` to release memory.
- */
-TIRO_API void tiro_compiler_dump_ir(tiro_compiler_t compiler, char** string, tiro_error_t* err);
-
-/**
- * Returns the string representation of the compiled bytecode module.
- * Can only be called after `tiro_compiler_run` has been executed successfully.
- *
- * Returns `TIRO_ERROR_BAD_STATE` if the compiler cannot produce the disassembled output.
- *
- * Otherwise, this function returns `TIRO_OK` and returns a new string using the provided
- * output parameter. The string must be passed to `free` to release memory.
- */
-TIRO_API void
-tiro_compiler_dump_bytecode(tiro_compiler_t compiler, char** string, tiro_error_t* err);
+TIRO_API void tiro_compiler_get_attachment(
+    tiro_compiler_t compiler, tiro_attachment_t attachment, char** string, tiro_error_t* err);
 
 /**
  * Represents a compiled module. Modules can be loaded into a vm for execution.

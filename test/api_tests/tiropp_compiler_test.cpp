@@ -45,9 +45,8 @@ TEST_CASE("tiro::compiler should support multiple files in a module", "[api]") {
 TEST_CASE("tiro::compiler should throw if file names are not unique", "[api]") {
     tiro::compiler comp("test");
     comp.add_file("foo", "export func foo() {}");
-
-    REQUIRE_THROWS_MATCHES(comp.add_file("foo", "export func bar() {}"), tiro::api_error,
-        throws_code(tiro::api_errc::bad_arg));
+    comp.add_file("foo", "export func bar() {}");
+    REQUIRE_THROWS_MATCHES(comp.run(), tiro::api_error, throws_code(tiro::api_errc::bad_arg));
 }
 
 TEST_CASE("tiro::compiler should throw if files are added after run", "[api]") {
@@ -61,33 +60,34 @@ TEST_CASE("tiro::compiler should throw if files are added after run", "[api]") {
         throws_code(tiro::api_errc::bad_state));
 }
 
-TEST_CASE("tiro::compiler throws on dump_* when not configured", "[api]") {
+TEST_CASE("tiro::compiler throws on get_attachment when not configured", "[api]") {
     tiro::compiler comp("test");
     comp.add_file("foo", "export func bar() {}");
     comp.run();
 
-    REQUIRE_THROWS_MATCHES(
-        comp.dump_ast(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
-    REQUIRE_THROWS_MATCHES(comp.dump_ir(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
-    REQUIRE_THROWS_MATCHES(
-        comp.dump_bytecode(), tiro::api_error, throws_code(tiro::api_errc::bad_state));
+    REQUIRE_THROWS_MATCHES(comp.get_attachment(tiro::attachment::cst), tiro::api_error,
+        throws_code(tiro::api_errc::bad_state));
+    REQUIRE_THROWS_MATCHES(comp.get_attachment(tiro::attachment::ast), tiro::api_error,
+        throws_code(tiro::api_errc::bad_state));
+    REQUIRE_THROWS_MATCHES(comp.get_attachment(tiro::attachment::ir), tiro::api_error,
+        throws_code(tiro::api_errc::bad_state));
+    REQUIRE_THROWS_MATCHES(comp.get_attachment(tiro::attachment::bytecode), tiro::api_error,
+        throws_code(tiro::api_errc::bad_state));
 }
 
 TEST_CASE("tiro::compiler supports dump_* when configured", "[api]") {
-    tiro::compiler_settings settings;
-    settings.enable_dump_cst = true;
-    settings.enable_dump_ast = true;
-    settings.enable_dump_bytecode = true;
-    settings.enable_dump_ir = true;
-
-    tiro::compiler comp("test", settings);
+    tiro::compiler comp("test");
+    comp.request_attachment(tiro::attachment::cst);
+    comp.request_attachment(tiro::attachment::ast);
+    comp.request_attachment(tiro::attachment::ir);
+    comp.request_attachment(tiro::attachment::bytecode);
     comp.add_file("foo", "export func bar() {}");
     comp.run();
 
-    REQUIRE(comp.dump_cst() != "");
-    REQUIRE(comp.dump_ast() != "");
-    REQUIRE(comp.dump_ir() != "");
-    REQUIRE(comp.dump_bytecode() != "");
+    REQUIRE(comp.get_attachment(tiro::attachment::cst) != "");
+    REQUIRE(comp.get_attachment(tiro::attachment::ast) != "");
+    REQUIRE(comp.get_attachment(tiro::attachment::ir) != "");
+    REQUIRE(comp.get_attachment(tiro::attachment::bytecode) != "");
 }
 
 TEST_CASE("tiro::compiler supports move construction", "[api]") {
@@ -110,13 +110,12 @@ TEST_CASE("tiro::compiler supports move assignment", "[api]") {
 }
 
 TEST_CASE("tiro::compiler supports custom message callbacks", "[api]") {
-    tiro::compiler_settings settings;
     std::vector<std::string> messages;
-    settings.message_callback = [&](const tiro::compiler_message& message) {
-        messages.push_back(std::string(message.text));
-    };
 
-    tiro::compiler comp("test", settings);
+    tiro::compiler comp("test");
+    comp.set_message_callback([&](const tiro::compiler_message& message) {
+        messages.push_back(std::string(message.text));
+    });
     comp.add_file("foo", "export func bar() {");
     REQUIRE_THROWS_MATCHES(comp.run(), tiro::api_error, throws_code(tiro::api_errc::bad_source));
 
@@ -130,14 +129,13 @@ TEST_CASE("tiro::compiler supports throwing message callbacks", "[api]") {
             : runtime_error("my custom exception") {}
     };
 
-    tiro::compiler_settings settings;
     int called = 0;
-    settings.message_callback = [&](const tiro::compiler_message&) {
+
+    tiro::compiler comp("test");
+    comp.set_message_callback([&](const tiro::compiler_message&) {
         ++called;
         throw custom_exception();
-    };
-
-    tiro::compiler comp("test", settings);
+    });
     comp.add_file("foo", "export func bar() {a b c d f e");
     REQUIRE_THROWS_MATCHES(comp.run(), custom_exception, Catch::Message("my custom exception"));
     REQUIRE(called == 1);

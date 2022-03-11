@@ -5,7 +5,7 @@ namespace tiro {
 
 // tiropp/compiler.hpp
 enum class severity : int;
-struct compiler_settings;
+enum class attachment : int;
 struct compiler_message;
 class compiler;
 class compiled_module;

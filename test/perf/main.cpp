@@ -9,12 +9,10 @@ extern const char* EXAMPLE_SOURCE;
 } // namespace
 
 tiro::compiled_module compile(std::string_view source) {
-    tiro::compiler_settings settings;
-    settings.message_callback = [&](auto& message) {
+    tiro::compiler compiler("perf");
+    compiler.set_message_callback([&](auto& message) {
         std::cout << message.line << ":" << message.column << ": " << message.text << "\n";
-    };
-
-    tiro::compiler compiler("perf", settings);
+    });
     compiler.add_file("main", EXAMPLE_SOURCE);
     compiler.run();
 

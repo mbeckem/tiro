@@ -35,21 +35,23 @@ eval_test::compile_sources(const std::vector<std::string>& sources, int flags) {
     std::string cst, ast, ir, bytecode;
     std::string output;
 
-    compiler_settings settings;
-    settings.enable_dump_cst = flags & enable_cst;
-    settings.enable_dump_ast = flags & enable_ast;
-    settings.enable_dump_ir = flags & enable_ir;
-    settings.enable_dump_bytecode = flags & enable_bytecode;
-    settings.message_callback = [&](const compiler_message& message) {
+    compiler comp(test_module_name);
+    if (flags & enable_cst)
+        comp.request_attachment(attachment::cst);
+    if (flags & enable_ast)
+        comp.request_attachment(attachment::ast);
+    if (flags & enable_ir)
+        comp.request_attachment(attachment::ir);
+    if (flags & enable_bytecode)
+        comp.request_attachment(attachment::bytecode);
+    comp.set_message_callback([&](const compiler_message& message) {
         // TODO: Must not throw.
         if (!output.empty())
             output += "\n";
 
         output += fmt::format("{} {}:{}:{}: {}", to_string(message.severity), message.file,
             message.line, message.column, message.text);
-    };
-
-    compiler comp(test_module_name, settings);
+    });
 
     for (size_t i = 0, n = sources.size(); i < n; ++i) {
         comp.add_file(fmt::format("input-{}", i), sources[i]);
@@ -73,14 +75,14 @@ eval_test::compile_sources(const std::vector<std::string>& sources, int flags) {
         throw compile_error(e.code(), std::move(combined));
     }
 
-    if (settings.enable_dump_cst)
-        cst = comp.dump_cst();
-    if (settings.enable_dump_ast)
-        ast = comp.dump_ast();
-    if (settings.enable_dump_ir)
-        ir = comp.dump_ir();
-    if (settings.enable_dump_bytecode)
-        bytecode = comp.dump_bytecode();
+    if (flags & enable_cst)
+        cst = comp.get_attachment(attachment::cst);
+    if (flags & enable_ast)
+        ast = comp.get_attachment(attachment::ast);
+    if (flags & enable_ir)
+        ir = comp.get_attachment(attachment::ir);
+    if (flags & enable_bytecode)
+        bytecode = comp.get_attachment(attachment::bytecode);
 
     compiled_module mod = comp.take_module();
     return compile_result{

@@ -146,20 +146,6 @@ OptionsResult parse_options(int argc, char** argv) {
 }
 
 tiro::compiled_module compile(const std::vector<InputFile>& files, const Options& options) {
-    tiro::compiler_settings settings;
-    settings.enable_dump_cst = options.dump_cst;
-    settings.enable_dump_ast = options.dump_ast;
-    settings.enable_dump_ir = options.dump_ir;
-    settings.enable_dump_bytecode = options.dump_bytecode;
-    settings.message_callback = [](const tiro::compiler_message& msg) {
-        std::string_view file = msg.file;
-        if (file.empty())
-            file = "<UNAVAILABLE>";
-
-        fmt::print(
-            "{} {}:{}:{}: {}\n", to_string(msg.severity), file, msg.line, msg.column, msg.text);
-    };
-
     std::exception_ptr error;
     std::optional<std::string> cst, ast, ir, bytecode;
     auto try_extract = [](auto fn) -> std::optional<decltype(fn())> {
@@ -170,7 +156,25 @@ tiro::compiled_module compile(const std::vector<InputFile>& files, const Options
         }
     };
 
-    tiro::compiler compiler(test_module_name, settings);
+    tiro::compiler compiler(test_module_name);
+    if (options.dump_cst)
+        compiler.request_attachment(tiro::attachment::cst);
+    if (options.dump_ast)
+        compiler.request_attachment(tiro::attachment::ast);
+    if (options.dump_ir)
+        compiler.request_attachment(tiro::attachment::ir);
+    if (options.dump_bytecode)
+        compiler.request_attachment(tiro::attachment::bytecode);
+
+    compiler.set_message_callback([](const tiro::compiler_message& msg) {
+        std::string_view file = msg.file;
+        if (file.empty())
+            file = "<UNAVAILABLE>";
+
+        fmt::print(
+            "{} {}:{}:{}: {}\n", to_string(msg.severity), file, msg.line, msg.column, msg.text);
+    });
+
     for (const auto& file : files) {
         compiler.add_file(file.filename, file.content);
     }
@@ -182,10 +186,10 @@ tiro::compiled_module compile(const std::vector<InputFile>& files, const Options
     }
 
     // Print as much as possible, regardless of errors
-    cst = try_extract([&] { return compiler.dump_cst(); });
-    ast = try_extract([&] { return compiler.dump_ast(); });
-    ir = try_extract([&] { return compiler.dump_ir(); });
-    bytecode = try_extract([&] { return compiler.dump_bytecode(); });
+    cst = try_extract([&] { return compiler.get_attachment(tiro::attachment::cst); });
+    ast = try_extract([&] { return compiler.get_attachment(tiro::attachment::ast); });
+    ir = try_extract([&] { return compiler.get_attachment(tiro::attachment::ir); });
+    bytecode = try_extract([&] { return compiler.get_attachment(tiro::attachment::bytecode); });
     for (const auto* opt : {&cst, &ast, &ir, &bytecode}) {
         if (opt->has_value())
             fmt::print("{}\n\n", **opt);

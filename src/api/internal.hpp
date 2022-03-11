@@ -200,34 +200,32 @@ inline tiro::vm::ResumableFrameContext* to_internal(tiro_resumable_frame_t frame
 }
 
 struct tiro_compiler {
-    using InternalMessageCallback = std::function<bool(const tiro_compiler_message_t&)>;
+    struct file {
+        std::string name;
+        std::string content;
+    };
 
-    tiro::Compiler compiler;
-    InternalMessageCallback message_callback; // optional
+    std::string module_name;
+    bool dump_cst = false;
+    bool dump_ast = false;
+    bool dump_ir = false;
+    bool dump_bytecode = false;
+
+    tiro_message_callback_t message_callback = default_message_callback;
+    void* message_userdata = nullptr;
+
+    std::vector<file> files;
+
+    bool started = false;
     std::optional<tiro::CompilerResult> result;
 
-    explicit tiro_compiler(std::string_view module_name, const tiro_compiler_settings& settings)
-        : compiler(module_name, map_settings(settings)) {
-        if (settings.message_callback) {
-            auto cb = settings.message_callback;
-            auto data = settings.message_callback_data;
-            message_callback = [cb, data](const auto& message) { return cb(&message, data); };
-        }
-    }
+    explicit tiro_compiler(std::string_view module_name_)
+        : module_name(module_name_) {}
 
     tiro_compiler(const tiro_compiler&) = delete;
     tiro_compiler& operator=(const tiro_compiler&) = delete;
 
-private:
-    static tiro::CompilerOptions map_settings(const tiro_compiler_settings& settings) {
-        tiro::CompilerOptions options;
-        options.analyze = options.parse = options.compile = true;
-        options.keep_cst = settings.enable_dump_cst;
-        options.keep_ast = settings.enable_dump_ast;
-        options.keep_ir = settings.enable_dump_ir;
-        options.keep_bytecode = settings.enable_dump_bytecode;
-        return options;
-    }
+    static bool default_message_callback(const tiro_compiler_message_t* msg, void* userdata);
 };
 
 struct tiro_module {
