@@ -172,6 +172,13 @@ TIRO_API TIRO_WARN_UNUSED tiro_handle_t tiro_global_new(tiro_vm_t vm, tiro_error
  */
 TIRO_API void tiro_global_free(tiro_handle_t global);
 
+/**
+ * Given a global handle allocated via `tiro_global_new`, returns the associated vm.
+ *
+ * Warning: May only be used if the handle and the associated vm are still valid.
+ */
+TIRO_API tiro_vm_t tiro_global_get_vm(tiro_handle_t global);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

@@ -315,3 +315,20 @@ TEST_CASE("Allocation of global handles should succeed", "[api]") {
     REQUIRE(tiro_value_kind(vm.raw_vm(), global) == TIRO_KIND_INTEGER);
     REQUIRE(tiro_integer_value(vm.raw_vm(), global) == 123);
 }
+
+TEST_CASE("Global handle should return the address of their owning vm", "[api]") {
+    tiro::vm vm;
+
+    struct Holder {
+        tiro_vm_t vm = nullptr;
+        tiro_handle_t global = nullptr;
+
+        ~Holder() { tiro_global_free(global); }
+    } h;
+    h.vm = vm.raw_vm();
+    h.global = tiro_global_new(vm.raw_vm(), tiro::error_adapter());
+
+    tiro_handle_t& global = h.global;
+    REQUIRE(global != nullptr);
+    REQUIRE(tiro_global_get_vm(global) == h.vm);
+}

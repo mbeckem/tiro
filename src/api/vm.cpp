@@ -192,3 +192,15 @@ void tiro_global_free(tiro_handle_t global) {
         storage->free(external);
     });
 }
+
+tiro_vm_t tiro_global_get_vm(tiro_handle_t global) {
+    return entry_point(nullptr, nullptr, [&]() -> tiro_vm_t {
+        if (!global)
+            return nullptr;
+
+        auto global_handle = to_internal(global);
+        auto external = vm::External<vm::Value>::from_raw_slot(vm::get_valid_slot(global_handle));
+        auto ctx = vm::ExternalStorage::from_external(external)->must_ctx();
+        return vm_from_context(*ctx);
+    });
+}
