@@ -287,7 +287,7 @@ private:
 
         void reset() {
             if (handle) {
-                tiro_global_free(vm, handle);
+                tiro_global_free(handle);
                 handle = nullptr;
             }
         }

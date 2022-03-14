@@ -35,7 +35,7 @@ static void sync_call(tiro_vm_t vm, tiro_handle_t func, tiro_handle_t args, tiro
             },
             NULL, (void*) &context, tiro::error_adapter());
         tiro_coroutine_start(vm, coro, tiro::error_adapter());
-        tiro_global_free(vm, coro);
+        tiro_global_free(coro);
     }
 
     while (tiro_vm_has_ready(vm)) {
@@ -302,7 +302,7 @@ TEST_CASE("Allocation of global handles should succeed", "[api]") {
         tiro_vm_t vm = nullptr;
         tiro_handle_t global = nullptr;
 
-        ~Holder() { tiro_global_free(vm, global); }
+        ~Holder() { tiro_global_free(global); }
     } h;
     h.vm = vm.raw_vm();
     h.global = tiro_global_new(vm.raw_vm(), tiro::error_adapter());

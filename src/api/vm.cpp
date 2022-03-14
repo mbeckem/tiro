@@ -181,14 +181,14 @@ tiro_handle_t tiro_global_new(tiro_vm_t vm, tiro_error_t* err) {
     });
 }
 
-void tiro_global_free(tiro_vm_t vm, tiro_handle_t global) {
+void tiro_global_free(tiro_handle_t global) {
     return entry_point(nullptr, [&] {
-        if (!vm || !global)
+        if (!global)
             return;
 
-        vm::Context& ctx = vm->ctx;
         auto global_handle = to_internal(global);
         auto external = vm::External<vm::Value>::from_raw_slot(vm::get_valid_slot(global_handle));
-        ctx.externals().free(external);
+        auto storage = vm::ExternalStorage::from_external(external);
+        storage->free(external);
     });
 }
