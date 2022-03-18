@@ -39,7 +39,7 @@ typedef enum tiro_attachment {
     TIRO_ATTACHMENT_CST = 1,
     /** Abstract syntax tree */
     TIRO_ATTACHMENT_AST = 2,
-    /** Internal representation */
+    /** Intermediate representation */
     TIRO_ATTACHMENT_IR = 3,
     /** Disassembled bytecode */
     TIRO_ATTACHMENT_BYTECODE = 4,
