@@ -785,8 +785,10 @@ void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
     tiro_coroutine_callback_t callback, tiro_coroutine_cleanup_t cleanup, void* userdata,
     tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !coroutine || !callback)
+        if (!vm || !coroutine || !callback) {
+            cleanup(userdata);
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+        }
 
         struct Callback final : vm::CoroutineCallback {
             tiro_coroutine_callback_t callback;
@@ -837,8 +839,10 @@ void tiro_coroutine_set_callback(tiro_vm_t vm, tiro_handle_t coroutine,
         vm::Context& ctx = vm->ctx;
 
         auto maybe_coro = to_internal(coroutine).try_cast<vm::Coroutine>();
-        if (!maybe_coro)
+        if (!maybe_coro) {
+            cleanup(userdata);
             return TIRO_REPORT(err, TIRO_ERROR_BAD_TYPE);
+        }
 
         auto coro_handle = maybe_coro.handle();
 

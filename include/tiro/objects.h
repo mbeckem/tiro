@@ -367,6 +367,7 @@ typedef void (*tiro_coroutine_cleanup_t)(void* userdata);
  * `cleanup` will be invoked to release state that may be owned by the callback. It will be called directly after the callback
  * has been invoked, or as part of the virtual machine's shutdown procedure. The cleanup function receives the original `userdata` argument.
  * When present, `cleanup` will be called exactly once. The `cleanup` function is optional.
+ * Note: `cleanup` will also be invoked if this function call fails.
  *
  * `userdata` will be passed to `callback` and `cleanup` when appropriate, and it will not be used in any other way.
  */
