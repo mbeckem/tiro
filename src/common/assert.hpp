@@ -44,7 +44,7 @@ unreachable(const SourceLocation& loc, const char* message);
 #endif
 
 /// Mark unimplemented code parts.
-#define TIRO_NOT_IMPLEMENTED() TIRO_ERROR("Not implemented yet.")
+#define TIRO_NOT_IMPLEMENTED() TIRO_ERROR("not implemented yet")
 
 } // namespace tiro
 

@@ -29,3 +29,5 @@
     -   Compiler/VM: Dynamic member lookup for symbols? For example "a.#var" where var is a symbol variable
 
 -   VM/Compiler: Small integers in instructions only, large into constants at module level?
+
+-   Use builder syntax for native function object creation
