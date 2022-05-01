@@ -67,7 +67,7 @@ public:
     explicit native_type(std::string name)
         : holder_(std::make_unique<detail::native_type_data>()) {
         holder_->name = std::move(name);
-        holder_->descriptor.name = holder_->name.c_str();
+        holder_->descriptor.name = detail::to_raw(holder_->name);
         holder_->descriptor.finalizer = native_traits::finalizer;
     }
 

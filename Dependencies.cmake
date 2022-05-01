@@ -11,7 +11,7 @@ FetchContent_Declare(
 FetchContent_Declare(
     catch2
     GIT_REPOSITORY  https://github.com/catchorg/Catch2.git
-    GIT_TAG         v2.13.0
+    GIT_TAG         v2.13.9
     GIT_PROGRESS    TRUE
     GIT_SHALLOW     TRUE
 )

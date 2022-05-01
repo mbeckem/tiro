@@ -13,8 +13,10 @@
 namespace tiro::vm {
 
 static constexpr tiro_native_type_t coroutine_callback_type = []() {
+    std::string_view name = "<internal coroutine callback>";
+
     tiro_native_type_t type{};
-    type.name = "<internal coroutine callback>";
+    type.name = {name.data(), name.size()};
     type.finalizer = [](void* data, [[maybe_unused]] size_t size) {
         TIRO_DEBUG_ASSERT(data, "Invalid memory location");
         static_cast<CoroutineCallback*>(data)->~CoroutineCallback();

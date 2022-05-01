@@ -209,7 +209,7 @@ void ModuleVerifier::verify() {
     }
 
     // Validate exports
-    for (const auto [symbol_id, value_id] : module_.exports()) {
+    for (const auto& [symbol_id, value_id] : module_.exports()) {
         const auto& symbol = check_reference(symbol_id, {});
         if (symbol.type() != BytecodeMemberType::Symbol) {
             fail(fmt::format(

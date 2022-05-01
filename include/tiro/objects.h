@@ -430,9 +430,9 @@ tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro_erro
 typedef struct tiro_native_type {
     /**
      * The human readable name of this type, mainly for debugging.
-     * Must be a valid zero terminated string.
+     * Must be a valid string.
      */
-    const char* name;
+    tiro_string_t name;
 
     /**
      * This function will be invoked exactly once for each object when it is being garbage collected.

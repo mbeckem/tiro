@@ -49,7 +49,9 @@ TEST_CASE("Null values should be constructible", "[api]") {
 TEST_CASE("Same values should be reported", "[api]") {
     tiro::vm vm;
 
-    SECTION("both handles invalid") { REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr)); }
+    SECTION("both handles invalid") {
+        REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr));
+    }
 
     SECTION("one handle invalid") {
         tiro::null null = tiro::make_null(vm);
@@ -105,8 +107,12 @@ TEST_CASE("Boolean values should be constructible", "[api]") {
         REQUIRE(tiro_boolean_value(vm.raw_vm(), handle.raw_handle()) == value);
     };
 
-    SECTION("true") { test_value(true); }
-    SECTION("false") { test_value(false); }
+    SECTION("true") {
+        test_value(true);
+    }
+    SECTION("false") {
+        test_value(false);
+    }
 }
 
 TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
@@ -346,9 +352,15 @@ TEST_CASE("Tuple construction should succeed", "[api]") {
         REQUIRE(tiro_tuple_size(vm.raw_vm(), handle.raw_handle()) == size);
     };
 
-    SECTION("Zero size tuple") { construct(0); }
-    SECTION("Normal tuple") { construct(7); }
-    SECTION("Huge tuple") { construct(1 << 15); }
+    SECTION("Zero size tuple") {
+        construct(0);
+    }
+    SECTION("Normal tuple") {
+        construct(7);
+    }
+    SECTION("Huge tuple") {
+        construct(1 << 15);
+    }
 }
 
 TEST_CASE("Tuple elements should be initialized to null", "[api]") {
@@ -525,9 +537,13 @@ TEST_CASE("Record construction should succeed for valid parameters", "[api]") {
         REQUIRE(key_strings == actual_key_strings);
     };
 
-    SECTION("Empty record") { construct({}); }
+    SECTION("Empty record") {
+        construct({});
+    }
 
-    SECTION("Normal record") { construct({"a", "b", "c"}); }
+    SECTION("Normal record") {
+        construct({"a", "b", "c"});
+    }
 }
 
 TEST_CASE("Record values should be initialized to null", "[api]") {
@@ -1354,7 +1370,7 @@ TEST_CASE("Native object construction should fail when invalid arguments are pas
     tiro::handle result = tiro::make_null(vm);
 
     tiro_native_type_t descriptor{};
-    descriptor.name = "Test type";
+    descriptor.name = tiro_cstr("Test type");
     descriptor.finalizer = nullptr;
 
     SECTION("Invalid vm") {
@@ -1384,7 +1400,7 @@ TEST_CASE("Native object construction should fail when invalid arguments are pas
 
 TEST_CASE("Native object construction should be successful", "[api]") {
     tiro_native_type_t descriptor{};
-    descriptor.name = "Test type";
+    descriptor.name = tiro_cstr("Test type");
     descriptor.finalizer = nullptr;
 
     tiro::vm vm;
@@ -1406,7 +1422,7 @@ TEST_CASE("Native object finalizer is invoked on garbage collection", "[api]") {
     context ctx;
     {
         tiro_native_type_t descriptor{};
-        descriptor.name = "Test type";
+        descriptor.name = tiro_cstr("Test type");
         descriptor.finalizer = [](void* data, size_t size) {
             context* fin_ctx = *static_cast<context**>(data);
 

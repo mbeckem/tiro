@@ -12,8 +12,10 @@ namespace {
 using function_t = std::function<void()>;
 
 constexpr tiro_native_type_t native_type = []() {
+    std::string_view name = "TestType";
+
     tiro_native_type_t type{};
-    type.name = "TestType";
+    type.name = {name.data(), name.size()};
     type.finalizer = [](void* data, size_t size) {
         REQUIRE(data != nullptr);
         REQUIRE(size == sizeof(function_t));
