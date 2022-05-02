@@ -27,6 +27,8 @@ struct native_traits {
 
     static constexpr size_t size = sizeof(layout);
 
+    static constexpr size_t alignment = alignof(layout);
+
     static void constructor(T&& instance, void* data) {
         layout* l = new (data) layout();
         new (std::addressof(l->instance)) T(std::move(instance));
@@ -68,6 +70,7 @@ public:
         : holder_(std::make_unique<detail::native_type_data>()) {
         holder_->name = std::move(name);
         holder_->descriptor.name = detail::to_raw(holder_->name);
+        holder_->descriptor.alignment = native_traits::alignment;
         holder_->descriptor.finalizer = native_traits::finalizer;
     }
 

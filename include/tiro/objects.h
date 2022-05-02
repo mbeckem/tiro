@@ -435,6 +435,14 @@ typedef struct tiro_native_type {
     tiro_string_t name;
 
     /**
+     * The alignment required for this type.
+     * The allocated storage address for native objects will be a multiple of this value.
+     *
+     * Must be a power of two. Larger values may result in allocation failure.
+     */
+    size_t alignment;
+
+    /**
      * This function will be invoked exactly once for each object when it is being garbage collected.
      * It may be NULL if no finalization is needed.
      *

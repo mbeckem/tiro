@@ -49,9 +49,7 @@ TEST_CASE("Null values should be constructible", "[api]") {
 TEST_CASE("Same values should be reported", "[api]") {
     tiro::vm vm;
 
-    SECTION("both handles invalid") {
-        REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr));
-    }
+    SECTION("both handles invalid") { REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr)); }
 
     SECTION("one handle invalid") {
         tiro::null null = tiro::make_null(vm);
@@ -107,12 +105,8 @@ TEST_CASE("Boolean values should be constructible", "[api]") {
         REQUIRE(tiro_boolean_value(vm.raw_vm(), handle.raw_handle()) == value);
     };
 
-    SECTION("true") {
-        test_value(true);
-    }
-    SECTION("false") {
-        test_value(false);
-    }
+    SECTION("true") { test_value(true); }
+    SECTION("false") { test_value(false); }
 }
 
 TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
@@ -352,15 +346,9 @@ TEST_CASE("Tuple construction should succeed", "[api]") {
         REQUIRE(tiro_tuple_size(vm.raw_vm(), handle.raw_handle()) == size);
     };
 
-    SECTION("Zero size tuple") {
-        construct(0);
-    }
-    SECTION("Normal tuple") {
-        construct(7);
-    }
-    SECTION("Huge tuple") {
-        construct(1 << 15);
-    }
+    SECTION("Zero size tuple") { construct(0); }
+    SECTION("Normal tuple") { construct(7); }
+    SECTION("Huge tuple") { construct(1 << 15); }
 }
 
 TEST_CASE("Tuple elements should be initialized to null", "[api]") {
@@ -537,13 +525,9 @@ TEST_CASE("Record construction should succeed for valid parameters", "[api]") {
         REQUIRE(key_strings == actual_key_strings);
     };
 
-    SECTION("Empty record") {
-        construct({});
-    }
+    SECTION("Empty record") { construct({}); }
 
-    SECTION("Normal record") {
-        construct({"a", "b", "c"});
-    }
+    SECTION("Normal record") { construct({"a", "b", "c"}); }
 }
 
 TEST_CASE("Record values should be initialized to null", "[api]") {
@@ -1371,6 +1355,7 @@ TEST_CASE("Native object construction should fail when invalid arguments are pas
 
     tiro_native_type_t descriptor{};
     descriptor.name = tiro_cstr("Test type");
+    descriptor.alignment = 1;
     descriptor.finalizer = nullptr;
 
     SECTION("Invalid vm") {
@@ -1383,6 +1368,35 @@ TEST_CASE("Native object construction should fail when invalid arguments are pas
         tiro_errc_t errc = TIRO_OK;
         tiro_make_native(vm.raw_vm(), nullptr, 123, result.raw_handle(), error_observer(errc));
         REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("invalid type name") {
+        descriptor.name.data = nullptr;
+        descriptor.name.length = 5;
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_native(vm.raw_vm(), &descriptor, 123, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid alignment (zero)") {
+        descriptor.alignment = 0;
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_native(vm.raw_vm(), &descriptor, 123, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid alignment (not pow2)") {
+        descriptor.alignment = 7;
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_native(vm.raw_vm(), &descriptor, 123, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid alignment (too big)") {
+        descriptor.alignment = 128;
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_native(vm.raw_vm(), &descriptor, 123, result.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_ALLOC);
     }
 
     SECTION("Invalid result handle") {
@@ -1401,6 +1415,7 @@ TEST_CASE("Native object construction should fail when invalid arguments are pas
 TEST_CASE("Native object construction should be successful", "[api]") {
     tiro_native_type_t descriptor{};
     descriptor.name = tiro_cstr("Test type");
+    descriptor.alignment = 1;
     descriptor.finalizer = nullptr;
 
     tiro::vm vm;
@@ -1413,6 +1428,22 @@ TEST_CASE("Native object construction should be successful", "[api]") {
     REQUIRE(tiro_native_size(vm.raw_vm(), result.raw_handle()) == 123);
 }
 
+TEST_CASE("Native objects should be aligned", "[api]") {
+    tiro_native_type_t descriptor{};
+    descriptor.name = tiro_cstr("Test type");
+    descriptor.alignment = 8;
+    descriptor.finalizer = nullptr;
+
+    tiro::vm vm;
+    tiro::handle result = tiro::make_null(vm);
+
+    tiro_make_native(vm.raw_vm(), &descriptor, 123, result.raw_handle(), tiro::error_adapter());
+
+    auto data = tiro_native_data(vm.raw_vm(), result.raw_handle());
+    REQUIRE(data);
+    REQUIRE((reinterpret_cast<uintptr_t>(data) % descriptor.alignment) == 0);
+}
+
 TEST_CASE("Native object finalizer is invoked on garbage collection", "[api]") {
     struct context {
         int finalizer_called = 0;
@@ -1423,6 +1454,7 @@ TEST_CASE("Native object finalizer is invoked on garbage collection", "[api]") {
     {
         tiro_native_type_t descriptor{};
         descriptor.name = tiro_cstr("Test type");
+        descriptor.alignment = alignof(void*);
         descriptor.finalizer = [](void* data, size_t size) {
             context* fin_ctx = *static_cast<context**>(data);
 

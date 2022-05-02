@@ -252,9 +252,17 @@ AsyncResumeToken::AsyncResumeToken(AsyncResumeToken&& other) noexcept = default;
 AsyncResumeToken& AsyncResumeToken::operator=(AsyncResumeToken&& other) noexcept = default;
 
 NativeObject NativeObject::make(Context& ctx, const tiro_native_type_t* type, size_t size) {
+    TIRO_DEBUG_ASSERT(type, "invalid type");
+    TIRO_DEBUG_ASSERT(is_pow2(type->alignment), "alignment must be a power of two");
+    TIRO_DEBUG_ASSERT(type->alignment <= max_alignment, "alignment too large");
+
     Layout* data = create_object<NativeObject>(ctx, size,
         BufferInit(size, [&](Span<byte> bytes) { std::memset(bytes.begin(), 0, bytes.size()); }),
         StaticPayloadInit(), FinalizerPiece());
+    TIRO_DEBUG_ASSERT(
+        is_aligned(reinterpret_cast<uintptr_t>(data->buffer_begin()), type->alignment),
+        "object storage is not aligned correctly");
+
     data->static_payload()->type = type;
     return NativeObject(from_heap(data));
 }

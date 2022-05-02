@@ -526,17 +526,20 @@ Handle<T> check_instance(SyncFrameContext& frame) {
 }
 
 class NativeObject final : public HeapValue {
-private:
+public:
+    static constexpr size_t max_alignment = alignof(std::max_align_t);
+
     struct Payload {
         // TODO: Don't refer to public type directly, introduce an indirection in the API.
-        const tiro_native_type_t* type;
+        const tiro_native_type_t* type = nullptr;
     };
 
 public:
-    using Layout =
-        BufferLayout<byte, alignof(std::max_align_t), StaticPayloadPiece<Payload>, FinalizerPiece>;
+    /// TODO: Optimize native objects that do not have a finalizer
+    using Layout = BufferLayout<byte, max_alignment, StaticPayloadPiece<Payload>, FinalizerPiece>;
     static_assert(LayoutTraits<Layout>::has_finalizer);
 
+    // NOTE: does not check alignment at runtime, only uses asserts
     static NativeObject make(Context& ctx, const tiro_native_type_t* type, size_t size);
 
     explicit NativeObject(Value v)

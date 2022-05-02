@@ -16,6 +16,7 @@ constexpr tiro_native_type_t native_type = []() {
 
     tiro_native_type_t type{};
     type.name = {name.data(), name.size()};
+    type.alignment = alignof(function_t);
     type.finalizer = [](void* data, size_t size) {
         REQUIRE(data != nullptr);
         REQUIRE(size == sizeof(function_t));

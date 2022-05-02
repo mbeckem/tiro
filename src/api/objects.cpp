@@ -948,8 +948,12 @@ void tiro_type_name(tiro_vm_t vm, tiro_handle_t type, tiro_handle_t result, tiro
 void tiro_make_native(tiro_vm_t vm, const tiro_native_type_t* type_descriptor, size_t size,
     tiro_handle_t result, tiro_error_t* err) {
     return entry_point(err, [&] {
-        if (!vm || !type_descriptor || size == 0 || !result)
+        if (!vm || !type_descriptor || !valid_string(type_descriptor->name)
+            || !is_pow2(type_descriptor->alignment) || size == 0 || !result)
             return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        if (type_descriptor->alignment > vm::NativeObject::max_alignment)
+            return TIRO_REPORT(err, TIRO_ERROR_ALLOC);
 
         vm::Context& ctx = vm->ctx;
 

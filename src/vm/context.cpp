@@ -17,6 +17,7 @@ static constexpr tiro_native_type_t coroutine_callback_type = []() {
 
     tiro_native_type_t type{};
     type.name = {name.data(), name.size()};
+    type.alignment = NativeObject::max_alignment;
     type.finalizer = [](void* data, [[maybe_unused]] size_t size) {
         TIRO_DEBUG_ASSERT(data, "Invalid memory location");
         static_cast<CoroutineCallback*>(data)->~CoroutineCallback();
