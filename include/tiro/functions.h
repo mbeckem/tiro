@@ -224,7 +224,11 @@ typedef enum tiro_resumable_state {
     /** The initial state value. */
     TIRO_RESUMABLE_STATE_START = 0,
 
-    /** Signals that the function has finished executing. */
+    /**
+     * Signals that the function has finished executing.
+     * Manually placing a resumable function into its end state
+     * is equivalent to returning `Null` via `return_value()`.
+     */
     TIRO_RESUMABLE_STATE_END = -1,
 } tiro_resumable_state_t;
 

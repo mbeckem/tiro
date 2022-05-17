@@ -1026,8 +1026,10 @@ void Interpreter::run_frame(Handle<Coroutine> coro, NotNull<ResumableFrame*> fra
     TIRO_DEBUG_ASSERT(frame->type == FrameType::Resumable, "expected a resumable frame");
     TIRO_DEBUG_ASSERT(
         coro->state() == CoroutineState::Running, "the coroutine must be marked as running");
-    TIRO_DEBUG_ASSERT(
-        frame->state != ResumableFrame::END, "resumable function must not be in end state");
+
+    // This can happen when the function uses an explicit transition to `next_state == END`.
+    if (frame->state == ResumableFrame::END)
+        return return_function(coro, Value::null());
 
     ScopeExit reset_regs = [&] { regs_.reset(); };
     ResumableFrameContinuation cont({regs_.alloc(), regs_.alloc()});

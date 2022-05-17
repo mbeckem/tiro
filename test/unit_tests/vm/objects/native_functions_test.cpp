@@ -179,6 +179,27 @@ TEST_CASE("Trivial resumable functions should be invocable", "[native_functions]
     REQUIRE(value->must_cast<SmallInteger>().value() == 3);
 }
 
+TEST_CASE("Explicit end state returns null", "[native_functions]") {
+    auto native_func = [](ResumableFrameContext& frame) {
+        switch (frame.state()) {
+        case ResumableFrame::START:
+            return frame.set_state(ResumableFrame::END);
+        }
+        FAIL("invalid state");
+    };
+
+    Context ctx;
+    Scope sc(ctx);
+    Local name = sc.local(String::make(ctx, "Test"));
+    Local func = sc.local(NativeFunction::resumable(native_func).name(name).make(ctx));
+
+    Local result = sc.local(ctx.run_init(func, {}));
+    REQUIRE(result->is_success());
+
+    Local value = sc.local(result->unchecked_value());
+    REQUIRE(value.get().is_null());
+}
+
 TEST_CASE("Resumable functions should be able to call other functions", "[native_functions]") {
     enum UserState {
         START = 0,
