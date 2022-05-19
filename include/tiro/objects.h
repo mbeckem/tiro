@@ -185,7 +185,7 @@ TIRO_API size_t tiro_buffer_size(tiro_vm_t vm, tiro_handle_t buffer);
  * for as long as the buffer itself.
  * Otherwise, the pointer will be invalidated by every allocating / garbage collecting function invocation.
  */
-TIRO_API char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer);
+TIRO_API unsigned char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer);
 
 /** Constructs a new tuple with `size` entries. All entries are initially null. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API void tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err);

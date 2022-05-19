@@ -357,7 +357,7 @@ TEST_CASE("Buffer construction should succeed", "[api]") {
         REQUIRE(tiro_buffer_is_pinned(vm.raw_vm(), handle.raw_handle())); // currently always pinned
         REQUIRE(tiro_buffer_size(vm.raw_vm(), handle.raw_handle()) == size);
 
-        char* data = tiro_buffer_data(vm.raw_vm(), handle.raw_handle());
+        unsigned char* data = tiro_buffer_data(vm.raw_vm(), handle.raw_handle());
         REQUIRE(data != nullptr);
 
         // Initialized to zero

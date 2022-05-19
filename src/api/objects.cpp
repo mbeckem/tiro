@@ -335,8 +335,8 @@ size_t tiro_buffer_size(tiro_vm_t vm, tiro_handle_t buffer) {
     });
 }
 
-char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer) {
-    return entry_point(nullptr, nullptr, [&]() -> char* {
+unsigned char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer) {
+    return entry_point(nullptr, nullptr, [&]() -> unsigned char* {
         if (!vm || !buffer)
             return nullptr;
 
@@ -345,7 +345,7 @@ char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer) {
             return nullptr;
 
         auto buf = maybe_buffer.handle();
-        return reinterpret_cast<char*>(buf->data());
+        return reinterpret_cast<unsigned char*>(buf->data());
     });
 }
 
