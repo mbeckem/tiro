@@ -27,6 +27,10 @@ public:
     explicit Buffer(Value v)
         : HeapValue(v, DebugCheck<Buffer>()) {}
 
+    /// Returns whether the buffer's address remains stable in memory.
+    /// This is currently always the case as the GC does not move objects.
+    bool is_pinned() { return true; }
+
     byte get(size_t index);
     void set(size_t index, byte value);
 

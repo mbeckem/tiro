@@ -203,9 +203,6 @@ Heap::~Heap() {
 std::tuple<void*, ChunkType> Heap::allocate(size_t bytes_request) {
     TIRO_DEBUG_ASSERT(!collector_.running(), "collector must not be running");
     TIRO_DEBUG_ASSERT(bytes_request > 0, "zero sized allocation");
-    if (TIRO_UNLIKELY(bytes_request > max_allocation_size))
-        TIRO_ERROR_WITH_CODE(
-            TIRO_ERROR_ALLOC, "allocation request is too large: {} bytes", bytes_request);
 
     // TODO: Improve the decision when the collector runs.
     //  - Should also run if the allocation would exceed the max_size

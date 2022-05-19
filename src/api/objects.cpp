@@ -19,6 +19,7 @@ const char* tiro_kind_str(tiro_kind_t kind) {
         TIRO_CASE(INTEGER)
         TIRO_CASE(FLOAT)
         TIRO_CASE(STRING)
+        TIRO_CASE(BUFFER)
         TIRO_CASE(FUNCTION)
         TIRO_CASE(TUPLE)
         TIRO_CASE(RECORD)
@@ -56,6 +57,7 @@ tiro_kind_t tiro_value_kind(tiro_vm_t vm, tiro_handle_t value) {
             TIRO_MAP(HeapInteger, INTEGER)
             TIRO_MAP(Float, FLOAT)
             TIRO_MAP(String, STRING)
+            TIRO_MAP(Buffer, BUFFER)
             TIRO_MAP(Tuple, TUPLE)
             TIRO_MAP(Record, RECORD)
             TIRO_MAP(RecordSchema, RECORD_SCHEMA)
@@ -101,6 +103,7 @@ static std::optional<vm::PublicType> get_type(tiro_kind_t kind) {
         TIRO_MAP(INTEGER, Integer)
         TIRO_MAP(FLOAT, Float)
         TIRO_MAP(STRING, String)
+        TIRO_MAP(BUFFER, Buffer)
         TIRO_MAP(TUPLE, Tuple)
         TIRO_MAP(RECORD, Record)
         TIRO_MAP(RECORD_SCHEMA, RecordSchema)
@@ -290,6 +293,59 @@ void tiro_string_cstr(tiro_vm_t vm, tiro_handle_t string, char** result, tiro_er
 
         auto string_handle = maybe_string_handle.handle();
         *result = copy_to_cstr(string_handle->view());
+    });
+}
+
+void tiro_make_buffer(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err) {
+    return entry_point(err, [&] {
+        if (!vm || !result)
+            return TIRO_REPORT(err, TIRO_ERROR_BAD_ARG);
+
+        vm::Context& ctx = vm->ctx;
+        auto result_handle = to_internal(result);
+        result_handle.set(vm::Buffer::make(ctx, size, 0));
+    });
+}
+
+bool tiro_buffer_is_pinned(tiro_vm_t vm, tiro_handle_t buffer) {
+    return entry_point(nullptr, false, [&] {
+        if (!vm || !buffer)
+            return false;
+
+        auto maybe_buffer = to_internal(buffer).try_cast<vm::Buffer>();
+        if (!maybe_buffer)
+            return false;
+
+        auto buf = maybe_buffer.handle();
+        return buf->is_pinned();
+    });
+}
+
+size_t tiro_buffer_size(tiro_vm_t vm, tiro_handle_t buffer) {
+    return entry_point(nullptr, 0, [&]() -> size_t {
+        if (!vm || !buffer)
+            return 0;
+
+        auto maybe_buffer = to_internal(buffer).try_cast<vm::Buffer>();
+        if (!maybe_buffer)
+            return 0;
+
+        auto buf = maybe_buffer.handle();
+        return buf->size();
+    });
+}
+
+char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer) {
+    return entry_point(nullptr, nullptr, [&]() -> char* {
+        if (!vm || !buffer)
+            return nullptr;
+
+        auto maybe_buffer = to_internal(buffer).try_cast<vm::Buffer>();
+        if (!maybe_buffer)
+            return nullptr;
+
+        auto buf = maybe_buffer.handle();
+        return reinterpret_cast<char*>(buf->data());
     });
 }
 

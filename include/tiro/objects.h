@@ -21,6 +21,7 @@ typedef enum tiro_kind {
     TIRO_KIND_INTEGER,         ///< Value is an integer
     TIRO_KIND_FLOAT,           ///< Value is a floating point number
     TIRO_KIND_STRING,          ///< Value is a string
+    TIRO_KIND_BUFFER,          ///< Value is a buffer
     TIRO_KIND_FUNCTION,        ///< Value is a function
     TIRO_KIND_TUPLE,           ///< Value is a tuple
     TIRO_KIND_RECORD,          ///< Value is a record
@@ -150,6 +151,41 @@ tiro_string_value(tiro_vm_t vm, tiro_handle_t string, tiro_string_t* value, tiro
  */
 TIRO_API void
 tiro_string_cstr(tiro_vm_t vm, tiro_handle_t string, char** result, tiro_error_t* err);
+
+/**
+ * Constructs a new buffer of `size` bytes. All bytes are initialized to zero.
+ *
+ * NOTE: There is currently no way to specify whether a buffer shall be pinned or not - all buffers
+ * are currently pinned.
+ * However, one should still use the `tiro_buffer_is_pinned()` function to check whether a buffer is pinned,
+ * as that behaviour will change in the future.
+ */
+TIRO_API void tiro_make_buffer(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err);
+
+/**
+ * Returns true if the buffer is pinned in memory.
+ * The storage managed by buffers (returned by `tiro_buffer_data()`) will not move in memory
+ * for as long as the buffer exists.
+ *
+ * Returns false if the value is not a buffer.
+ */
+TIRO_API bool tiro_buffer_is_pinned(tiro_vm_t vm, tiro_handle_t buffer);
+
+/**
+ * Returns the number of bytes managed by the buffer.
+ * Returns `0` if the value is not a buffer.
+ */
+TIRO_API size_t tiro_buffer_size(tiro_vm_t vm, tiro_handle_t buffer);
+
+/**
+ * Returns a pointer to the raw bytes managed by the buffer.
+ * Returns `NULL` if the value is not a buffer.
+ *
+ * If the buffer is pinned (see `tiro_buffer_is_pinned()`), then the pointer is guaranteed to stay valid
+ * for as long as the buffer itself.
+ * Otherwise, the pointer will be invalidated by every allocating / garbage collecting function invocation.
+ */
+TIRO_API char* tiro_buffer_data(tiro_vm_t vm, tiro_handle_t buffer);
 
 /** Constructs a new tuple with `size` entries. All entries are initially null. Returns `TIRO_ERROR_ALLOC` on allocation failure. */
 TIRO_API void tiro_make_tuple(tiro_vm_t vm, size_t size, tiro_handle_t result, tiro_error_t* err);

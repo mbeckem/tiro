@@ -49,7 +49,9 @@ TEST_CASE("Null values should be constructible", "[api]") {
 TEST_CASE("Same values should be reported", "[api]") {
     tiro::vm vm;
 
-    SECTION("both handles invalid") { REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr)); }
+    SECTION("both handles invalid") {
+        REQUIRE(tiro_value_same(vm.raw_vm(), nullptr, nullptr));
+    }
 
     SECTION("one handle invalid") {
         tiro::null null = tiro::make_null(vm);
@@ -105,8 +107,12 @@ TEST_CASE("Boolean values should be constructible", "[api]") {
         REQUIRE(tiro_boolean_value(vm.raw_vm(), handle.raw_handle()) == value);
     };
 
-    SECTION("true") { test_value(true); }
-    SECTION("false") { test_value(false); }
+    SECTION("true") {
+        test_value(true);
+    }
+    SECTION("false") {
+        test_value(false);
+    }
 }
 
 TEST_CASE("Boolean value retrieval should support conversions", "[api]") {
@@ -313,6 +319,65 @@ TEST_CASE("String should be convertible to a c string for convenience", "[api]")
     REQUIRE(data == "Hello World!");
 }
 
+TEST_CASE("Buffer construction should fail if the parameters are invalid", "[api]") {
+    tiro::vm_settings settings;
+    settings.max_heap_size = 10 << 20;
+
+    tiro::vm vm(settings);
+    tiro::handle handle = tiro::make_null(vm);
+
+    SECTION("Invalid vm") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_buffer(nullptr, 123, handle.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Invalid handle") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_buffer(vm.raw_vm(), 123, nullptr, error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_BAD_ARG);
+    }
+
+    SECTION("Size too large") {
+        tiro_errc_t errc = TIRO_OK;
+        tiro_make_buffer(vm.raw_vm(), 10 << 20, handle.raw_handle(), error_observer(errc));
+        REQUIRE(errc == TIRO_ERROR_ALLOC);
+    }
+}
+
+TEST_CASE("Buffer construction should succeed", "[api]") {
+    tiro::vm_settings settings;
+    settings.max_heap_size = std::numeric_limits<size_t>::max();
+    tiro::vm vm(settings);
+
+    auto construct = [&](size_t size) {
+        tiro::handle handle = tiro::make_null(vm);
+        tiro_make_buffer(vm.raw_vm(), size, handle.raw_handle(), tiro::error_adapter());
+        REQUIRE(tiro_value_kind(vm.raw_vm(), handle.raw_handle()) == TIRO_KIND_BUFFER);
+        REQUIRE(tiro_buffer_is_pinned(vm.raw_vm(), handle.raw_handle())); // currently always pinned
+        REQUIRE(tiro_buffer_size(vm.raw_vm(), handle.raw_handle()) == size);
+
+        char* data = tiro_buffer_data(vm.raw_vm(), handle.raw_handle());
+        REQUIRE(data != nullptr);
+
+        // Initialized to zero
+        bool is_zero = std::all_of(data, data + size, [](char value) { return value == 0; });
+        REQUIRE(is_zero);
+    };
+
+    SECTION("Zero size") {
+        construct(0);
+    }
+
+    SECTION("Medium size") {
+        construct(16 * 1024);
+    }
+
+    SECTION("Huge size") {
+        construct(1 << 30); // 1 GiB
+    }
+}
+
 TEST_CASE("Tuple construction should fail if parameters are invalid", "[api]") {
     tiro::vm vm;
     tiro::handle handle = tiro::make_null(vm);
@@ -346,9 +411,15 @@ TEST_CASE("Tuple construction should succeed", "[api]") {
         REQUIRE(tiro_tuple_size(vm.raw_vm(), handle.raw_handle()) == size);
     };
 
-    SECTION("Zero size tuple") { construct(0); }
-    SECTION("Normal tuple") { construct(7); }
-    SECTION("Huge tuple") { construct(1 << 15); }
+    SECTION("Zero size tuple") {
+        construct(0);
+    }
+    SECTION("Normal tuple") {
+        construct(7);
+    }
+    SECTION("Huge tuple") {
+        construct(1 << 15);
+    }
 }
 
 TEST_CASE("Tuple elements should be initialized to null", "[api]") {
@@ -525,9 +596,13 @@ TEST_CASE("Record construction should succeed for valid parameters", "[api]") {
         REQUIRE(key_strings == actual_key_strings);
     };
 
-    SECTION("Empty record") { construct({}); }
+    SECTION("Empty record") {
+        construct({});
+    }
 
-    SECTION("Normal record") { construct({"a", "b", "c"}); }
+    SECTION("Normal record") {
+        construct({"a", "b", "c"});
+    }
 }
 
 TEST_CASE("Record values should be initialized to null", "[api]") {

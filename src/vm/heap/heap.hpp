@@ -158,8 +158,6 @@ struct HeapStats {
 /// The heap manages all memory dynamically allocated by the vm.
 class Heap final {
 public:
-    static constexpr size_t max_allocation_size = 16 * (1 << 20);
-
     explicit Heap(size_t page_size, HeapAllocator& alloc);
     ~Heap();
 
