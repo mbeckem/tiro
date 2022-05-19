@@ -152,6 +152,14 @@ TEST_CASE("tiro::string should store strings", "[api]") {
     REQUIRE(s.value() == "hello world");
 }
 
+TEST_CASE("tiro::buffer should store buffers", "[api]") {
+    tiro::vm vm;
+    tiro::buffer b = tiro::make_buffer(vm, 123);
+    REQUIRE(b.kind() == tiro::value_kind::buffer);
+    REQUIRE(b.size() == 123);
+    REQUIRE(b.data() != nullptr);
+}
+
 TEST_CASE("tiro::tuple should store tuples", "[api]") {
     tiro::vm vm;
     tiro::tuple tuple = tiro::make_tuple(vm, 3);

@@ -181,6 +181,7 @@ TIRO_API size_t tiro_buffer_size(tiro_vm_t vm, tiro_handle_t buffer);
  * Returns a pointer to the raw bytes managed by the buffer.
  * Returns `NULL` if the value is not a buffer.
  *
+ * \warning
  * If the buffer is pinned (see `tiro_buffer_is_pinned()`), then the pointer is guaranteed to stay valid
  * for as long as the buffer itself.
  * Otherwise, the pointer will be invalidated by every allocating / garbage collecting function invocation.

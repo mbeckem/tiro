@@ -36,6 +36,9 @@ enum class value_kind : int {
     /// Value is a string
     string = TIRO_KIND_STRING,
 
+    /// Value is a buffer
+    buffer = TIRO_KIND_BUFFER,
+
     /// Value is a function
     function = TIRO_KIND_FUNCTION,
 
@@ -92,6 +95,7 @@ TIRO_MAP_TYPE(boolean);
 TIRO_MAP_TYPE(integer);
 TIRO_MAP_TYPE(float_);
 TIRO_MAP_TYPE(string);
+TIRO_MAP_TYPE(buffer)
 TIRO_MAP_TYPE(function);
 TIRO_MAP_TYPE(tuple);
 TIRO_MAP_TYPE(record);
@@ -457,6 +461,50 @@ inline string make_string(vm& v, std::string_view value) {
     detail::check_handles(v.raw_vm(), result);
     tiro_make_string(v.raw_vm(), detail::to_raw(value), result.raw_handle(), error_adapter());
     return string(std::move(result));
+}
+
+/// Refers to a buffer value.
+class buffer final : public handle {
+public:
+    explicit buffer(handle h)
+        : handle(check_kind, std::move(h), detail::kind_of(this)) {}
+
+    buffer(const buffer&) = default;
+    buffer(buffer&&) noexcept = default;
+
+    buffer& operator=(const buffer&) = default;
+    buffer& operator=(buffer&&) = default;
+
+    /// Returns `true` if this buffer is pinned in memory.
+    /// Pinned buffers will not move, i.e. the pointer returned by `data()` will remain
+    /// valid for as long as the buffer exists.
+    bool is_pinned() const { return tiro_buffer_is_pinned(raw_vm(), raw_handle()); }
+
+    /// Returns a pointer to the bytes managed by this buffer.
+    ///
+    /// \warning If the buffer is not pinned, then the pointer will be invalidated by
+    /// any library calls that may allocate or collect garbage.
+    unsigned char* data() const {
+        detail::check_handles(raw_vm(), *this);
+        unsigned char* ptr = tiro_buffer_data(raw_vm(), raw_handle());
+        TIRO_ASSERT(ptr != nullptr);
+        return ptr;
+    }
+
+    /// Returns the size of this buffer, in bytes.
+    size_t size() const {
+        detail::check_handles(raw_vm(), *this);
+        return tiro_buffer_size(raw_vm(), raw_handle());
+    }
+};
+
+/// Constructs a new buffer value with the given `size` in bytes.
+/// Note that currently all buffers are always pinned.
+inline buffer make_buffer(vm& v, size_t size) {
+    handle result(v.raw_vm());
+    detail::check_handles(v.raw_vm(), result);
+    tiro_make_buffer(v.raw_vm(), size, result.raw_handle(), error_adapter());
+    return buffer(std::move(result));
 }
 
 /// Refers to a function value.

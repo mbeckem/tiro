@@ -24,6 +24,7 @@ class boolean;
 class integer;
 class float_;
 class string;
+class buffer;
 class function;
 class tuple;
 class record_schema;
